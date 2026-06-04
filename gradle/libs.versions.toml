@@ -6,6 +6,7 @@ agp = "9.1.0"
 kotlinx-datetime = "0.6.0"
 kotlinx-collections-immutable = "0.3.7"
 arrow = "2.1.2"
+ionspin-bignum = "0.3.10"
 # kctfork 0.12.1 — KSP2-aware maintained fork of kotlin-compile-testing
 compile-testing = "0.12.1"
 vanniktech-publish = "0.33.0"
@@ -19,6 +20,7 @@ kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collec
 compile-testing-core = { module = "dev.zacsweers.kctfork:core", version.ref = "compile-testing" }
 compile-testing-ksp = { module = "dev.zacsweers.kctfork:ksp", version.ref = "compile-testing" }
 arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
+ionspin-bignum = { module = "com.ionspin.kotlin:bignum", version.ref = "ionspin-bignum" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
