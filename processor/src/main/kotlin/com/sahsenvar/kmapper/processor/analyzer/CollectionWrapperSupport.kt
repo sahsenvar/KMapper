@@ -20,12 +20,23 @@ private const val GENERATED_PACKAGE = "com.sahsenvar.kmapper.generated"
  * Round-invariant: once a descriptor object is emitted we track its name to avoid re-emitting
  * on subsequent KSP rounds (which would cause duplicate-class errors).
  *
- * Cross-module strategy: [generateDescriptors] reads @CollectionWrapper functions via
- * getSymbolsWithAnnotation (which sees BINARY-retention annotations from dependencies) and
- * caches the forType→wrapFqn mapping in-memory. [discoverWrappers] merges this in-memory
- * cache with getDeclarationsFromPackage results (for binary descriptor objects from external
- * artifacts). This ensures wrappers from dependency modules are available in the SAME round
- * they are first seen, without requiring a separate compilation step.
+ * Cross-module strategy — JVM path (kspJvm):
+ *   [generateDescriptors] reads @CollectionWrapper functions via getSymbolsWithAnnotation
+ *   (BINARY-retention) and caches in-memory. [discoverWrappers] merges in-memory cache with
+ *   getDeclarationsFromPackage results (from compiled .class files in dependency JARs) and
+ *   getSymbolsWithAnnotation(@CollectionWrapperDescriptor) (from binary descriptor objects).
+ *   This gives correct results in a single-invocation JVM KSP run.
+ *
+ * Cross-module strategy — KMP metadata path (kspCommonMainMetadata):
+ *   KSP2 runs the processor in per-module invocations. The consumer module's invocation
+ *   (invocation 3 for integration-test) has a resolver scope limited to its own sources;
+ *   getDeclarationsFromPackage and getSymbolsWithAnnotation both return 0 for dependency-module
+ *   packages. This is a KSP2 KMP limitation: cross-module symbol visibility in metadata mode.
+ *   As a workaround, wrapper descriptor objects are committed as static source files in each
+ *   converter module (not just KSP-generated), but even this does not fix the isolation;
+ *   getDeclarationsFromPackage still returns 0 in the consumer invocation.
+ *   Known consequence: kspCommonMainMetadata cannot generate correct KMP mappers for fields
+ *   using collection wrappers from dependency modules. Use kspJvm for JVM-target consumers.
  */
 class CollectionWrapperSupport(
     private val codeGenerator: CodeGenerator,
@@ -80,6 +91,18 @@ class CollectionWrapperSupport(
             inMemoryWrappers[forTypeFqn] = wrapFqn
 
             if (objectName in emittedDescriptors) continue
+
+            // Skip generation if the descriptor already exists as a source declaration.
+            // This handles the case where the descriptor was committed as a static source file
+            // in the converter module (the canonical pattern for KSP2 KMP cross-module discovery).
+            val alreadyDeclared = resolver
+                .getDeclarationsFromPackage(GENERATED_PACKAGE)
+                .any { it.simpleName.asString() == objectName }
+            if (alreadyDeclared) {
+                emittedDescriptors.add(objectName)
+                logger.info("CollectionWrapper descriptor $objectName already declared as source; skipping generation.")
+                continue
+            }
 
             try {
                 val file = codeGenerator.createNewFile(
@@ -137,8 +160,34 @@ class CollectionWrapperSupport(
         entries.addAll(inMemoryWrappers.entries.map { it.key to it.value })
 
         // Source 2: getDeclarationsFromPackage (binary descriptor objects from dependency artifacts).
+        // Source 2a: getDeclarationsFromPackage — works on JVM (descriptor .class files visible in
+        // dependency JARs). Returns 0 in kspCommonMainMetadata's consumer invocation (KSP2 KMP
+        // limitation: dependency module packages not enumerable from consumer invocation scope).
         val declarations = resolver.getDeclarationsFromPackage(GENERATED_PACKAGE)
-        for (decl in declarations) {
+        val declList = declarations.toList()
+        for (decl in declList) {
+            val descriptorAnnotation = decl.annotations.firstOrNull {
+                it.shortName.asString() == "CollectionWrapperDescriptor"
+            } ?: continue
+
+            val forType = descriptorAnnotation.arguments
+                .firstOrNull { it.name?.asString() == "forType" }
+                ?.value as? String ?: continue
+            val wrapFunction = descriptorAnnotation.arguments
+                .firstOrNull { it.name?.asString() == "wrapFunction" }
+                ?.value as? String ?: continue
+
+            entries.add(forType to wrapFunction)
+        }
+
+        // Source 2b: getSymbolsWithAnnotation(@CollectionWrapperDescriptor) — also works on JVM.
+        // Same KSP2 KMP limitation applies: returns 0 in consumer module invocation's metadata mode.
+        // Both this and 2a are retained as they provide redundancy for future KSP2 fixes and for
+        // published-artifact consumers where getDeclarationsFromPackage does work.
+        val descriptorSymbols = resolver
+            .getSymbolsWithAnnotation(COLLECTION_WRAPPER_DESCRIPTOR_ANNOTATION)
+            .toList()
+        for (decl in descriptorSymbols) {
             val descriptorAnnotation = decl.annotations.firstOrNull {
                 it.shortName.asString() == "CollectionWrapperDescriptor"
             } ?: continue

@@ -7,4 +7,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 
-include(":core", ":processor", ":converters-immutable", ":converters-arrow", ":converters-datetime", ":converters-bignumber", ":sample")
+include(":core", ":processor", ":converters-immutable", ":converters-arrow", ":converters-datetime", ":converters-bignumber", ":sample", ":integration-test")
