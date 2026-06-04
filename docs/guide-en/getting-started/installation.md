@@ -10,15 +10,12 @@ kmap consists of two required pieces: the runtime library (`core`) and the KSP p
 
 ## 1. Add Repositories
 
-> **Pre-release note:** kmap is **not on Maven Central yet** (namespace verification + the first `0.1.0` release are pending). To consume it today: clone the repo, run `./gradlew publishToMavenLocal`, and add `mavenLocal()`. The coordinates below will also resolve from Maven Central once `0.1.0` ships.
-
 `settings.gradle.kts`:
 
 ```kotlin
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
-        mavenLocal() // during pre-release: after publishToMavenLocal
     }
 }
 ```
@@ -42,16 +39,16 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:0.1.0-SNAPSHOT")
+            implementation("io.github.sahsenvar:kmapper-core:0.1.0")
             // Optional: immutable collection support
-            implementation("io.github.sahsenvar:kmapper-converters-compose:0.1.0-SNAPSHOT")
+            implementation("io.github.sahsenvar:kmapper-converters-compose:0.1.0")
         }
     }
 }
 
 dependencies {
     // Generate mapping code for commonMain
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:0.1.0-SNAPSHOT")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:0.1.0")
 }
 
 // KMP + KSP wiring: process commonMain metadata BEFORE compilation
@@ -68,8 +65,8 @@ If you are not using KMP, the setup is simpler:
 
 ```kotlin
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:0.1.0-SNAPSHOT")
-    ksp("io.github.sahsenvar:kmapper-processor:0.1.0-SNAPSHOT")
+    implementation("io.github.sahsenvar:kmapper-core:0.1.0")
+    ksp("io.github.sahsenvar:kmapper-processor:0.1.0")
 }
 ```
 

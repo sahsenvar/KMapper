@@ -19,6 +19,6 @@ Group `io.github.sahsenvar`:
 | `kmapper-processor` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()` extensions) |
 | `kmapper-converters-compose` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet` wrappers |
 
-**Status:** pre-release (`0.1.0-SNAPSHOT`).
+**Latest release:** `0.1.0` — on [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core). See the [installation guide](docs/guide-en/getting-started/installation.md).
 
 Design & implementation plan live in [`docs/superpowers/`](docs/superpowers/).
