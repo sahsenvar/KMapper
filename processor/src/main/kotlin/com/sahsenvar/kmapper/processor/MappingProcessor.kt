@@ -103,7 +103,9 @@ class MappingProcessor(
             )
 
             file.bufferedWriter().use { writer ->
-                writer.write("package ${receiverKey.packageName}\n\n")
+                if (receiverKey.packageName.isNotEmpty()) {
+                    writer.write("package ${receiverKey.packageName}\n\n")
+                }
                 val code = fileSpec.toString()
                 val codeWithoutPackage =
                     code.lines().dropWhile { it.startsWith("package ") || it.isBlank() }
