@@ -1,3 +1,4 @@
+import arrow.core.NonEmptyList
 import com.sahsenvar.kmapper.annotations.MapTo
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.PersistentSet
@@ -14,3 +15,8 @@ data class ProductR(val tags: List<TagR>)
 
 @MapTo(CartD::class)
 data class CartR(val items: List<TagR>)
+
+data class TeamD(val members: NonEmptyList<TagD>)
+
+@MapTo(TeamD::class)
+data class TeamR(val members: List<TagR>)
