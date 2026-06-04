@@ -2,6 +2,7 @@ package com.sahsenvar.kmapper
 
 import com.sahsenvar.kmapper.converter.MapTypeConverter
 import com.sahsenvar.kmapper.converter.TypeConverterRegistry
+import kotlin.concurrent.Volatile
 import kotlin.reflect.KClass
 
 interface MappingListener {
@@ -12,17 +13,29 @@ interface MappingListener {
 }
 
 object KMapper {
-    private val listeners = mutableListOf<MappingListener>()
+    /**
+     * Listener registry. Uses copy-on-write semantics: addListener/removeListener each
+     * reassign the reference to a new immutable list rather than mutating a shared list.
+     * This avoids data races on platforms with shared-memory concurrency (JVM/Android)
+     * without requiring an external dependency such as atomicfu.
+     *
+     * Listeners are intended to be registered once during app initialisation (e.g. in
+     * Application.onCreate or the iOS app delegate), not toggled frequently at runtime.
+     * dispatch() snapshots the list before iterating (kept for clarity, though copy-on-write
+     * already guarantees a stable reference per read).
+     */
+    @Volatile
+    private var listeners: List<MappingListener> = emptyList()
 
     /** Generated mapper code guards dispatch with this for ~zero cost when unused. */
     val hasListeners: Boolean get() = listeners.isNotEmpty()
 
     fun addListener(listener: MappingListener) {
-        listeners += listener
+        listeners = listeners + listener
     }
 
     fun removeListener(listener: MappingListener) {
-        listeners -= listener
+        listeners = listeners - listener
     }
 
     fun dispatch(block: MappingListener.() -> Unit) {
