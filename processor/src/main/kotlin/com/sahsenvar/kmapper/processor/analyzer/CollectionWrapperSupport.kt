@@ -19,6 +19,13 @@ private const val GENERATED_PACKAGE = "com.sahsenvar.kmapper.generated"
  *
  * Round-invariant: once a descriptor object is emitted we track its name to avoid re-emitting
  * on subsequent KSP rounds (which would cause duplicate-class errors).
+ *
+ * Cross-module strategy: [generateDescriptors] reads @CollectionWrapper functions via
+ * getSymbolsWithAnnotation (which sees BINARY-retention annotations from dependencies) and
+ * caches the forType→wrapFqn mapping in-memory. [discoverWrappers] merges this in-memory
+ * cache with getDeclarationsFromPackage results (for binary descriptor objects from external
+ * artifacts). This ensures wrappers from dependency modules are available in the SAME round
+ * they are first seen, without requiring a separate compilation step.
  */
 class CollectionWrapperSupport(
     private val codeGenerator: CodeGenerator,
@@ -26,6 +33,13 @@ class CollectionWrapperSupport(
 ) {
     /** Names of descriptor objects already generated in this processor run. */
     private val emittedDescriptors = mutableSetOf<String>()
+
+    /**
+     * In-memory cache of forTypeFqn → wrapFqn, built from @CollectionWrapper functions seen
+     * via getSymbolsWithAnnotation (both local and binary-dependency functions).
+     * Populated by generateDescriptors; read by discoverWrappers.
+     */
+    private val inMemoryWrappers = mutableMapOf<String, String>()
 
     /**
      * Step 1 — Generate descriptor objects for all @CollectionWrapper functions in [resolver].
@@ -60,6 +74,10 @@ class CollectionWrapperSupport(
             // Sanitize to make a valid Kotlin identifier for the object name
             val sanitized = wrapFqn.replace('.', '_').replace('<', '_').replace('>', '_')
             val objectName = "KmapWrapper_$sanitized"
+
+            // Always cache in-memory so discoverWrappers can return it immediately,
+            // even before the generated descriptor file is compiled to a .class.
+            inMemoryWrappers[forTypeFqn] = wrapFqn
 
             if (objectName in emittedDescriptors) continue
 
@@ -98,17 +116,28 @@ class CollectionWrapperSupport(
     }
 
     /**
-     * Step 2 — Discover all @CollectionWrapperDescriptor objects (from generated package + dependencies).
+     * Step 2 — Discover all @CollectionWrapper mappings.
      * Called every round after [generateDescriptors].
+     *
+     * Sources (merged, deduplicated):
+     * 1. [inMemoryWrappers]: populated from @CollectionWrapper functions via getSymbolsWithAnnotation.
+     *    Works immediately even before generated descriptor files are compiled (covers same-round
+     *    generation from both local sources and binary-dependency functions).
+     * 2. getDeclarationsFromPackage: covers @CollectionWrapperDescriptor binary objects from
+     *    external artifacts that were NOT seen via getSymbolsWithAnnotation (e.g. wrappers whose
+     *    @CollectionWrapper annotation was stripped but descriptor class was published separately).
      *
      * Returns a Map of forTypeFqn → wrapFunctionFqn.
      * Logs an error (causing COMPILATION_ERROR) if the same forType is registered by multiple wrappers.
      */
     fun discoverWrappers(resolver: Resolver): Map<String, String> {
-        val declarations = resolver.getDeclarationsFromPackage(GENERATED_PACKAGE)
-
         val entries = mutableListOf<Pair<String, String>>() // (forType, wrapFqn)
 
+        // Source 1: in-memory cache from generateDescriptors (immediate, no compile step needed).
+        entries.addAll(inMemoryWrappers.entries.map { it.key to it.value })
+
+        // Source 2: getDeclarationsFromPackage (binary descriptor objects from dependency artifacts).
+        val declarations = resolver.getDeclarationsFromPackage(GENERATED_PACKAGE)
         for (decl in declarations) {
             val descriptorAnnotation = decl.annotations.firstOrNull {
                 it.shortName.asString() == "CollectionWrapperDescriptor"
@@ -124,18 +153,18 @@ class CollectionWrapperSupport(
             entries.add(forType to wrapFunction)
         }
 
-        // Check for duplicates
+        // Deduplicate and check for conflicts.
         val result = mutableMapOf<String, String>()
         val seen = mutableMapOf<String, String>() // forType -> first wrapFqn
 
         for ((forType, wrapFqn) in entries) {
-            if (forType in seen) {
+            if (forType in seen && seen[forType] != wrapFqn) {
                 logger.error(
                     "multiple @CollectionWrapper for the same forType '$forType': " +
                         "'${seen[forType]}' and '$wrapFqn'. Remove one."
                 )
                 // Don't add to result — the error will abort compilation.
-            } else {
+            } else if (forType !in seen) {
                 seen[forType] = wrapFqn
                 result[forType] = wrapFqn
             }

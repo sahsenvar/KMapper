@@ -59,19 +59,18 @@ class MappingProcessor(
         // Clear previous round
         mappingFunctions.clear()
 
-        // STEP 0: @CollectionWrapper descriptor generation + discovery (multi-round safe).
-        // Round N: generate descriptor objects for @CollectionWrapper functions in this compilation.
-        // Round N+1+: discover those descriptors (and any from dependency artifacts) via getDeclarationsFromPackage.
+        // STEP 0: @CollectionWrapper descriptor generation + discovery.
         //
-        // If new descriptors were emitted this round, the generated files aren't yet visible to
-        // getDeclarationsFromPackage in the same round. Defer all @MapTo/@MapFrom symbols back to
-        // KSP so round N+1 re-processes them with the full wrapper map available.
-        val newDescriptorsGenerated = collectionWrapperSupport.generateDescriptors(resolver)
+        // generateDescriptors reads @CollectionWrapper functions (including from binary dependencies
+        // via BINARY-retention annotation) and:
+        //   a) emits @CollectionWrapperDescriptor objects into com.sahsenvar.kmapper.generated
+        //   b) caches forTypeFqn→wrapFqn in-memory so discoverWrappers can return them immediately.
+        //
+        // discoverWrappers merges the in-memory cache with getDeclarationsFromPackage results.
+        // The in-memory cache means wrappers are available in the SAME round they are first seen,
+        // without any deferral — even when KSP2 restarts the processor between rounds.
+        collectionWrapperSupport.generateDescriptors(resolver)
         val collectionWrappers = collectionWrapperSupport.discoverWrappers(resolver)
-
-        // If wrappers were just generated and are not yet discoverable (empty map despite generation),
-        // defer to allow round N+1 to pick them up.
-        val needsAnotherRound = newDescriptorsGenerated > 0 && collectionWrappers.isEmpty()
 
         // STEP 1: Discover custom converters from @KMapperConfig annotations.
         // Returns (typePair → converterFqn) map plus the raw entries list for duplicate-checking.
@@ -92,17 +91,6 @@ class MappingProcessor(
             .filterIsInstance<KSClassDeclaration>()
             .filter { it.validate() }
             .toList()
-
-        // If we just generated wrapper descriptors that aren't yet discoverable, defer all
-        // @MapTo/@MapFrom symbols so the next round can process them with the full wrapper map.
-        if (needsAnotherRound) {
-            logger.info("CollectionWrapper descriptors generated; deferring @MapTo/@MapFrom to round N+1.")
-            val mapFromClasses = resolver.getSymbolsWithAnnotation(MAP_FROM_ANNOTATION)
-                .filterIsInstance<KSClassDeclaration>()
-                .filter { it.validate() }
-                .toList()
-            return (mapToClasses + mapFromClasses)
-        }
 
         // STEP 2: Compile-time cycle detection (unconditional edges only)
         CycleDetector(logger).check(mapToClasses)

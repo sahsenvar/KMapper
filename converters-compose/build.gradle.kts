@@ -25,9 +25,12 @@ kotlin {
 
 dependencies {
     add("kspCommonMainMetadata", project(":processor"))
+    // Also run KSP for JVM target so @CollectionWrapperDescriptor objects are compiled into the
+    // JVM jar and discoverable by consumers via resolver.getDeclarationsFromPackage.
+    add("kspJvm", project(":processor"))
 }
 
-// Standard KMP-KSP wiring: every Kotlin compile task (except kspCommonMainKotlinMetadata itself)
+// Standard KMP-KSP wiring: every Kotlin compile task (except the KSP metadata task itself)
 // depends on kspCommonMainKotlinMetadata so generated sources are available during compilation.
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
     if (name != "kspCommonMainKotlinMetadata") {

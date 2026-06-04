@@ -7,4 +7,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 
-include(":core", ":processor", ":converters-compose", ":converters-arrow")
+include(":core", ":processor", ":converters-compose", ":converters-arrow", ":sample")
