@@ -194,18 +194,9 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
             }
         }
 
-        // filterNotNull for nullable elements
-        val targetTypeFqn = targetField.type.declaration.qualifiedName?.asString()
-
-        // ImmutableList conversion for UiModel
-        if (targetTypeFqn?.startsWith("kotlinx.collections.immutable") == true) {
-            if (targetTypeFqn.contains("ImmutableList")) {
-                builder.add("?.toImmutableList()")
-            } else if (targetTypeFqn.contains("ImmutableSet")) {
-                builder.add("?.toImmutableSet()")
-            }
-        }
-
+        // Non-stdlib collection targets (e.g. kotlinx.collections.immutable.*) go exclusively
+        // through the @CollectionWrapper / MappingStrategy.WrappedCollection path.
+        // stdlib List→List / Set→Set needs no wrapper and no extra call here.
         return builder.build()
     }
 
