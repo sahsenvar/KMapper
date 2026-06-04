@@ -29,5 +29,10 @@ object StringBooleanConverter : MapTypeConverter<String, Boolean>(String::class,
 
 object IntLongConverter : MapTypeConverter<Int, Long>(Int::class, Long::class) {
     override fun convertToNonNull(value: Int): Long = value.toLong()
-    override fun convertFromNonNull(value: Long): Int = value.toInt()
+    override fun convertFromNonNull(value: Long): Int {
+        require(value in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()) {
+            "Long value $value is out of Int range"
+        }
+        return value.toInt()
+    }
 }
