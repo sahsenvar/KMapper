@@ -15,10 +15,12 @@ import com.google.devtools.ksp.symbol.Modifier
  * When no strategy matches for differing types, emits a compile error and returns Unmappable.
  *
  * @param customConverters Map of (sourceFqn to targetFqn) → converterFqn, populated from @KMapperConfig.
+ * @param collectionWrappers Map of target-collection-FQN → wrapper-function-FQN, from @CollectionWrapper descriptors.
  */
 class TypeMatcher(
     private val logger: KSPLogger,
-    private val customConverters: Map<Pair<String, String>, String> = emptyMap()
+    private val customConverters: Map<Pair<String, String>, String> = emptyMap(),
+    private val collectionWrappers: Map<String, String> = emptyMap()
 ) {
 
     fun determineMappingStrategy(
@@ -34,6 +36,32 @@ class TypeMatcher(
         // 2. Check collection types — must come before same-type check because isSameType only
         //    compares the outer type FQN (ignoring generic arguments). Two List<X>/List<Y> types
         //    with different element types would be incorrectly treated as Direct if same-type ran first.
+        //
+        //    Also handles @CollectionWrapper: when the target FQN (e.g. PersistentList) is in
+        //    collectionWrappers, the source must be a standard collection (List/Set) and we emit
+        //    WrappedCollection so the generator appends the wrapper call after .map { }.
+        val targetCollFqn = targetField.type.declaration.qualifiedName?.asString()
+        val wrapperFqn = if (targetCollFqn != null) collectionWrappers[targetCollFqn] else null
+
+        if (wrapperFqn != null && isCollectionType(sourceField.type)) {
+            // Target is a wrapped collection (e.g. PersistentList); source is a plain List/Set.
+            val sourceElementType = extractCollectionElementType(sourceField.type)
+            val targetElementType = extractCollectionElementType(targetField.type)
+            val elementStrategy = if (sourceElementType != null && targetElementType != null) {
+                if (isSameType(sourceElementType, targetElementType)) {
+                    MappingStrategy.Direct
+                } else if (isDataClass(sourceElementType) && isDataClass(targetElementType)) {
+                    val mapperName = "to${targetElementType.declaration.simpleName.asString()}"
+                    MappingStrategy.Nested(mapperName)
+                } else {
+                    MappingStrategy.Direct
+                }
+            } else {
+                MappingStrategy.Direct
+            }
+            return MappingStrategy.WrappedCollection(elementStrategy, wrapperFqn)
+        }
+
         if (isCollectionType(sourceField.type) && isCollectionType(targetField.type)) {
             val sourceElementType = extractCollectionElementType(sourceField.type)
             val targetElementType = extractCollectionElementType(targetField.type)

@@ -44,4 +44,15 @@ sealed class MappingStrategy {
      * Enum → wire value mapping via MappableEnum.wireValue.
      */
     data object EnumToWire : MappingStrategy()
+
+    /**
+     * Collection mapping that terminates with a @CollectionWrapper call.
+     * Emits: source.map { <elementMapping> }.<wrapSimpleName>()
+     * @param elementStrategy how to map each element
+     * @param wrapFunctionFqn fully-qualified name of the wrapper extension function
+     */
+    data class WrappedCollection(
+        val elementStrategy: MappingStrategy,
+        val wrapFunctionFqn: String
+    ) : MappingStrategy()
 }

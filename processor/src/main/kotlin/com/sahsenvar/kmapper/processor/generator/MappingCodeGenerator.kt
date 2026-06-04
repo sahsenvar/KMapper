@@ -45,6 +45,11 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                 strategy
             )
 
+            is MappingStrategy.WrappedCollection -> generateWrappedCollectionMapping(
+                sourceField,
+                strategy
+            )
+
             is MappingStrategy.External -> CodeBlock.of("%N", targetField.name)
 
             is MappingStrategy.EnumFromWire -> generateEnumFromWireMapping(sourceField, strategy)
@@ -198,6 +203,67 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                 builder.add("?.toImmutableList()")
             } else if (targetTypeFqn.contains("ImmutableSet")) {
                 builder.add("?.toImmutableSet()")
+            }
+        }
+
+        return builder.build()
+    }
+
+    /**
+     * Generates code for a @CollectionWrapper field: source.map { elementMapping }.wrapFn().
+     * The wrapper function is an extension on List<T> returning the wrapped collection type.
+     *
+     * Examples:
+     *   tags.map { it.toTagDomain() }.asPersistentList()    (non-null source)
+     *   tags?.map { it.toTagDomain() }?.asPersistentList()  (nullable source)
+     */
+    private fun generateWrappedCollectionMapping(
+        sourceField: FieldInfo,
+        strategy: MappingStrategy.WrappedCollection
+    ): CodeBlock {
+        val builder = CodeBlock.builder()
+
+        val wrapPkg = strategy.wrapFunctionFqn.substringBeforeLast(".", missingDelimiterValue = "")
+        val wrapSimple = strategy.wrapFunctionFqn.substringAfterLast(".")
+        val wrapMember = if (wrapPkg.isNotBlank()) {
+            MemberName(wrapPkg, wrapSimple)
+        } else {
+            MemberName("", wrapSimple)
+        }
+
+        when (strategy.elementStrategy) {
+            is MappingStrategy.Nested -> {
+                val mapperFn = (strategy.elementStrategy as MappingStrategy.Nested).mapperFunctionName
+                if (sourceField.isNullable) {
+                    // tags?.map { it.toTagDomain() }?.asPersistentList()
+                    builder.add(
+                        "%N?.map·{·it.%N()·}?.%M()",
+                        sourceField.name,
+                        mapperFn,
+                        wrapMember
+                    )
+                } else {
+                    // tags.map { it.toTagDomain() }.asPersistentList()
+                    builder.add(
+                        "%N.map·{·it.%N()·}.%M()",
+                        sourceField.name,
+                        mapperFn,
+                        wrapMember
+                    )
+                }
+            }
+
+            is MappingStrategy.Direct -> {
+                if (sourceField.isNullable) {
+                    builder.add("%N?.%M()", sourceField.name, wrapMember)
+                } else {
+                    builder.add("%N.%M()", sourceField.name, wrapMember)
+                }
+            }
+
+            else -> {
+                // Fallback: just emit the source (unlikely in practice)
+                builder.add("%N", sourceField.name)
             }
         }
 

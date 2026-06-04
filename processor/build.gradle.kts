@@ -10,6 +10,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(libs.compile.testing.core)
     testImplementation(libs.compile.testing.ksp)
+    testImplementation(libs.kotlinx.collections.immutable)
 }
 
 tasks.test { useJUnitPlatform() }
