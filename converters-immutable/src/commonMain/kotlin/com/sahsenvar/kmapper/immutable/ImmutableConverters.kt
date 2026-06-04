@@ -11,13 +11,21 @@ import kotlinx.collections.immutable.toPersistentList
 import kotlinx.collections.immutable.toPersistentSet
 
 @CollectionWrapper(forType = PersistentList::class)
-fun <T> List<T>.asPersistentList(): PersistentList<T> = toPersistentList()
+object PersistentListWrapper {
+    fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
+}
 
 @CollectionWrapper(forType = ImmutableList::class)
-fun <T> List<T>.asImmutableList(): ImmutableList<T> = toImmutableList()
+object ImmutableListWrapper {
+    fun <T> wrap(items: List<T>): ImmutableList<T> = items.toImmutableList()
+}
 
 @CollectionWrapper(forType = ImmutableSet::class)
-fun <T> List<T>.asImmutableSet(): ImmutableSet<T> = toImmutableSet()
+object ImmutableSetWrapper {
+    fun <T> wrap(items: List<T>): ImmutableSet<T> = items.toImmutableSet()
+}
 
 @CollectionWrapper(forType = PersistentSet::class)
-fun <T> List<T>.asPersistentSet(): PersistentSet<T> = toPersistentSet()
+object PersistentSetWrapper {
+    fun <T> wrap(items: List<T>): PersistentSet<T> = items.toPersistentSet()
+}

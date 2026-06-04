@@ -9,13 +9,13 @@ class NonEmptyListWrapperTest {
 
     @Test
     fun `non-empty list wraps`() {
-        assertEquals(listOf(1, 2), listOf(1, 2).asNonEmptyList().toList())
+        assertEquals(listOf(1, 2), NonEmptyListWrapper.wrap(listOf(1, 2)).toList())
     }
 
     @Test
     fun `empty list throws EmptyCollection`() {
         assertFailsWith<MappingException.EmptyCollection> {
-            emptyList<Int>().asNonEmptyList()
+            NonEmptyListWrapper.wrap(emptyList<Int>())
         }
     }
 }

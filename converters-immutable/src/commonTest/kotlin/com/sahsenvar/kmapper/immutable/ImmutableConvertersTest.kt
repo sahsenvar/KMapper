@@ -10,74 +10,74 @@ import kotlin.test.Test
 
 class ImmutableConvertersTest {
 
-    // ---- asPersistentList ----
+    // ---- PersistentListWrapper ----
 
     @Test
-    fun asPersistentList_preserves_order() {
-        val result = listOf(3, 1, 2).asPersistentList()
+    fun persistentList_preserves_order() {
+        val result = PersistentListWrapper.wrap(listOf(3, 1, 2))
         (result is PersistentList) shouldBe true
         result shouldContainExactly listOf(3, 1, 2)
     }
 
     @Test
-    fun asPersistentList_empty() {
-        val result = emptyList<Int>().asPersistentList()
+    fun persistentList_empty() {
+        val result = PersistentListWrapper.wrap(emptyList<Int>())
         (result is PersistentList) shouldBe true
         result.size shouldBe 0
     }
 
     @Test
-    fun asPersistentList_single_element() {
-        val result = listOf(42).asPersistentList()
+    fun persistentList_single_element() {
+        val result = PersistentListWrapper.wrap(listOf(42))
         result.size shouldBe 1
         result[0] shouldBe 42
     }
 
-    // ---- asPersistentSet ----
+    // ---- PersistentSetWrapper ----
 
     @Test
-    fun asPersistentSet_dedups() {
-        val result = listOf(1, 2, 2, 3, 3).asPersistentSet()
+    fun persistentSet_dedups() {
+        val result = PersistentSetWrapper.wrap(listOf(1, 2, 2, 3, 3))
         (result is PersistentSet) shouldBe true
         result.size shouldBe 3
         result.toList().sorted() shouldBe listOf(1, 2, 3)
     }
 
     @Test
-    fun asPersistentSet_empty() {
-        val result = emptyList<Int>().asPersistentSet()
+    fun persistentSet_empty() {
+        val result = PersistentSetWrapper.wrap(emptyList<Int>())
         (result is PersistentSet) shouldBe true
         result.size shouldBe 0
     }
 
-    // ---- asImmutableList ----
+    // ---- ImmutableListWrapper ----
 
     @Test
-    fun asImmutableList_preserves_order() {
-        val result = listOf(10, 20, 30).asImmutableList()
+    fun immutableList_preserves_order() {
+        val result = ImmutableListWrapper.wrap(listOf(10, 20, 30))
         (result is ImmutableList) shouldBe true
         result shouldContainExactly listOf(10, 20, 30)
     }
 
     @Test
-    fun asImmutableList_empty() {
-        val result = emptyList<String>().asImmutableList()
+    fun immutableList_empty() {
+        val result = ImmutableListWrapper.wrap(emptyList<String>())
         (result is ImmutableList) shouldBe true
         result.size shouldBe 0
     }
 
-    // ---- asImmutableSet ----
+    // ---- ImmutableSetWrapper ----
 
     @Test
-    fun asImmutableSet_dedups() {
-        val result = listOf("a", "b", "a", "c").asImmutableSet()
+    fun immutableSet_dedups() {
+        val result = ImmutableSetWrapper.wrap(listOf("a", "b", "a", "c"))
         (result is ImmutableSet) shouldBe true
         result.size shouldBe 3
     }
 
     @Test
-    fun asImmutableSet_empty() {
-        val result = emptyList<String>().asImmutableSet()
+    fun immutableSet_empty() {
+        val result = ImmutableSetWrapper.wrap(emptyList<String>())
         (result is ImmutableSet) shouldBe true
         result.size shouldBe 0
     }
