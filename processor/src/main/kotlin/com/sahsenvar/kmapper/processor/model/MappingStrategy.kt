@@ -28,4 +28,20 @@ sealed class MappingStrategy {
      * External field (comes from function parameter).
      */
     data class External(val parameterName: String) : MappingStrategy()
+
+    /**
+     * No mapping strategy could be determined (type mismatch without a converter).
+     * The generator skips this field entirely; the processor emits a compile error.
+     */
+    data object Unmappable : MappingStrategy()
+
+    /**
+     * Wire-backed enum mapping: source wire value → target enum via MappableEnum.entries.
+     */
+    data class EnumFromWire(val enumFqn: String) : MappingStrategy()
+
+    /**
+     * Enum → wire value mapping via MappableEnum.wireValue.
+     */
+    data object EnumToWire : MappingStrategy()
 }

@@ -19,6 +19,11 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
         strategy: MappingStrategy,
         isReverse: Boolean = false
     ): CodeBlock {
+        // Unmappable: processor already emitted a compile error; return empty placeholder
+        if (strategy is MappingStrategy.Unmappable) {
+            return CodeBlock.of("/* unmappable field ${sourceField.name} — see KSP error above */")
+        }
+
         val baseMapping = when (strategy) {
             is MappingStrategy.Direct -> CodeBlock.of("%N", sourceField.name)
             is MappingStrategy.Convert -> generateConvertMapping(
@@ -41,9 +46,50 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
             )
 
             is MappingStrategy.External -> CodeBlock.of("%N", targetField.name)
+
+            is MappingStrategy.EnumFromWire -> generateEnumFromWireMapping(sourceField, strategy)
+
+            is MappingStrategy.EnumToWire -> if (sourceField.isNullable) {
+                CodeBlock.of("%N?.wireValue", sourceField.name)
+            } else {
+                CodeBlock.of("%N.wireValue", sourceField.name)
+            }
+
+            // Unmappable is handled above; this branch is unreachable but required for exhaustiveness
+            is MappingStrategy.Unmappable -> CodeBlock.of("")
         }
 
         return applyNullableHandling(sourceField, targetField, baseMapping)
+    }
+
+    private fun generateEnumFromWireMapping(
+        sourceField: FieldInfo,
+        strategy: MappingStrategy.EnumFromWire
+    ): CodeBlock {
+        val enumClassName = ClassName.bestGuess(strategy.enumFqn)
+        val enumSimpleName = strategy.enumFqn.substringAfterLast(".")
+        val mappingExceptionClass = ClassName("com.sahsenvar.kmapper", "MappingException")
+
+        return if (sourceField.isNullable) {
+            CodeBlock.of(
+                "%N?.let·{·w·->·%T.entries.firstOrNull·{·it.wireValue·==·w·}" +
+                    "·?:·throw·%T.UnknownEnumValue(%S,·w.toString())·}",
+                sourceField.name,
+                enumClassName,
+                mappingExceptionClass,
+                enumSimpleName
+            )
+        } else {
+            CodeBlock.of(
+                "%T.entries.firstOrNull·{·it.wireValue·==·%N·}" +
+                    "·?:·throw·%T.UnknownEnumValue(%S,·%N.toString())",
+                enumClassName,
+                sourceField.name,
+                mappingExceptionClass,
+                enumSimpleName,
+                sourceField.name
+            )
+        }
     }
 
     private fun applyNullableHandling(

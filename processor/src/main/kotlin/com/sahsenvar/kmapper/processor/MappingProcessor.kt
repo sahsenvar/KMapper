@@ -3,6 +3,7 @@ package com.sahsenvar.kmapper.processor
 import com.sahsenvar.kmapper.processor.analyzer.CycleDetector
 import com.sahsenvar.kmapper.processor.analyzer.FieldAnalyzer
 import com.sahsenvar.kmapper.processor.analyzer.TypeMatcher
+import com.sahsenvar.kmapper.processor.analyzer.fqn
 import com.sahsenvar.kmapper.processor.generator.FunctionNameGenerator
 import com.sahsenvar.kmapper.processor.generator.MappingCodeGenerator
 import com.sahsenvar.kmapper.processor.model.FieldInfo
@@ -39,9 +40,11 @@ class MappingProcessor(
     }
 
     private val fieldAnalyzer by lazy { FieldAnalyzer(logger) }
-    private val typeMatcher by lazy { TypeMatcher(logger) }
     private val functionNameGenerator by lazy { FunctionNameGenerator(logger) }
     private val codeGen by lazy { MappingCodeGenerator(logger) }
+
+    // TypeMatcher is created fresh each round with the current custom converters
+    private var typeMatcher: TypeMatcher = TypeMatcher(logger)
 
     // Collect all mapping functions grouped by receiver class
     private val mappingFunctions = mutableMapOf<ReceiverKey, MutableList<FunSpec>>()
@@ -59,6 +62,10 @@ class MappingProcessor(
             logger.error("Converter validation failed. Fix bilateral conflicts before proceeding.")
             return emptyList()
         }
+
+        // STEP 1b: Discover custom converters from @KMapperConfig annotations
+        val customConverters = discoverCustomConverters(resolver)
+        typeMatcher = TypeMatcher(logger, customConverters)
 
         // Process @MapTo annotations (Source → Target)
         val mapToClasses = resolver.getSymbolsWithAnnotation(MAP_TO_ANNOTATION)
@@ -87,6 +94,63 @@ class MappingProcessor(
         writeMappingFiles()
 
         return emptyList()
+    }
+
+    /**
+     * Discovers custom converters declared via @KMapperConfig(converters = [...]).
+     *
+     * For each KSType in the converters array, resolves its MapTypeConverter<S,T> supertype
+     * and builds a (sourceFqn to targetFqn) → converterFqn entry.
+     *
+     * Priority: per-field @UseMapTypeConverter > this custom registry > built-in table.
+     */
+    private fun discoverCustomConverters(resolver: Resolver): Map<Pair<String, String>, String> {
+        val result = mutableMapOf<Pair<String, String>, String>()
+
+        resolver.getSymbolsWithAnnotation("com.sahsenvar.kmapper.annotations.KMapperConfig")
+            .filterIsInstance<KSClassDeclaration>()
+            .forEach { cfg ->
+                val annotation = cfg.annotations.firstOrNull {
+                    it.shortName.asString() == "KMapperConfig"
+                } ?: return@forEach
+
+                val convertersArg = annotation.arguments.firstOrNull {
+                    it.name?.asString() == "converters"
+                } ?: return@forEach
+
+                @Suppress("UNCHECKED_CAST")
+                val converterTypes = convertersArg.value as? List<KSType> ?: return@forEach
+
+                for (converterType in converterTypes) {
+                    val pair = converterType.toConverterPair() ?: continue
+                    result[pair.first] = pair.second
+                }
+            }
+
+        return result
+    }
+
+    /**
+     * Walks a converter type's supertypes to find MapTypeConverter<S,T> and returns
+     * ((sourceFqn to targetFqn) to converterFqn), or null if not a MapTypeConverter.
+     */
+    private fun KSType.toConverterPair(): Pair<Pair<String, String>, String>? {
+        val converterDecl = declaration as? KSClassDeclaration ?: return null
+        val converterFqn = converterDecl.qualifiedName?.asString() ?: return null
+        val mapTypeConverterFqn = "com.sahsenvar.kmapper.converter.MapTypeConverter"
+
+        for (supertype in converterDecl.superTypes) {
+            val resolved = supertype.resolve()
+            val supertypeFqn = resolved.declaration.qualifiedName?.asString() ?: continue
+            if (supertypeFqn == mapTypeConverterFqn) {
+                val sType = resolved.arguments.getOrNull(0)?.type?.resolve() ?: continue
+                val tType = resolved.arguments.getOrNull(1)?.type?.resolve() ?: continue
+                val sFqn = sType.fqn()
+                val tFqn = tType.fqn()
+                return (sFqn to tFqn) to converterFqn
+            }
+        }
+        return null
     }
 
     private fun writeMappingFiles() {
