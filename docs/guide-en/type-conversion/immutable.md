@@ -1,25 +1,25 @@
-# Immutable Collections — converters-compose
+# Immutable Collections — converters-immutable
 
-kmap's `core` module only understands stdlib `List`/`Set` mappings. To use `kotlinx.collections.immutable` types such as `PersistentList`, `ImmutableList`, or `ImmutableSet` as target types, add the **`converters-compose`** module.
+kmap's `core` module only understands stdlib `List`/`Set` mappings. To use `kotlinx.collections.immutable` types such as `PersistentList`, `ImmutableList`, or `ImmutableSet` as target types, add the **`converters-immutable`** module.
 
 ---
 
 ## Setup
 
-Add the `converters-compose` dependency to the relevant module:
+Add the `converters-immutable` dependency to the relevant module:
 
 ```kotlin
 // build.gradle.kts
-commonMainImplementation("com.sahsenvar.kmapper:converters-compose:<version>")
+commonMainImplementation("io.github.sahsenvar:kmapper-converters-immutable:<version>")
 ```
 
-The KSP dependency does not change; the processor discovers wrappers from `converters-compose` automatically via the descriptor mechanism.
+The KSP dependency does not change; the processor discovers wrappers from `converters-immutable` automatically via the descriptor mechanism.
 
 ---
 
 ## Provided Wrapper Functions
 
-`converters-compose` defines three functions annotated with `@CollectionWrapper`, one for each immutable collection type:
+`converters-immutable` defines three functions annotated with `@CollectionWrapper`, one for each immutable collection type:
 
 ```kotlin
 @CollectionWrapper(forType = PersistentList::class)
@@ -73,7 +73,7 @@ The same mechanism works for `ImmutableList` and `ImmutableSet`.
 
 ## @CollectionWrapper — How It Works
 
-The `@CollectionWrapper(forType = PersistentList::class)` annotation is placed on a function and compiled with `BINARY` retention. During its own KSP run, `converters-compose` sees these functions and generates **descriptor objects** into the `com.sahsenvar.kmapper.generated` package. The consuming module's processor run then discovers these descriptors via `resolver.getDeclarationsFromPackage(...)`.
+The `@CollectionWrapper(forType = PersistentList::class)` annotation is placed on a function and compiled with `BINARY` retention. During its own KSP run, `converters-immutable` sees these functions and generates **descriptor objects** into the `com.sahsenvar.kmapper.generated` package. The consuming module's processor run then discovers these descriptors via `resolver.getDeclarationsFromPackage(...)`.
 
 If more than one `@CollectionWrapper` for the same `forType` is found on the classpath, the processor reports a **compile error** — which wrapper is active should never be silent.
 

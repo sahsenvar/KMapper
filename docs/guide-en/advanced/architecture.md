@@ -19,7 +19,7 @@ com.sahsenvar.kmapper
 ├── processor         (JVM-only, KSP)
 │   └── MappingProcessor + FieldAnalyzer → TypeMatcher → MappingCodeGenerator pipeline
 │
-├── converters-compose (KMP, optional)
+├── converters-immutable (KMP, optional)
 │   └── List/Set → PersistentList/ImmutableList/ImmutableSet wrappers
 │       (kotlinx.collections.immutable dependency lives here only)
 │
@@ -30,7 +30,7 @@ com.sahsenvar.kmapper
 **Design decisions:**
 
 - Annotations and the runtime are kept together in a single `core` artifact (the MapStruct approach). Separating them later is mechanical; for now, YAGNI.
-- `kotlinx.collections.immutable` has been moved out of `core` — it lives only in `converters-compose`. Projects that use only `core` do not pull in this dependency.
+- `kotlinx.collections.immutable` has been moved out of `core` — it lives only in `converters-immutable`. Projects that use only `core` do not pull in this dependency.
 - `processor` is JVM-only: KSP runs only on the JVM. The generated code is KMP.
 
 ## KSP Pipeline — Compile Time

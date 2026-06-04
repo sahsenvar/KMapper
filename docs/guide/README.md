@@ -32,7 +32,7 @@ fun UserRemote.toUserDomain(): UserDomain = UserDomain(id = id, email = email)
 |----------|----------|-----------|
 | `com.sahsenvar.kmapper:core` | KMP | Anotasyonlar, `MapTypeConverter`, `TypeConverterRegistry`, built-in converter'lar, `MappableEnum`, `MappingException`, `KMapper`/`MappingListener` |
 | `com.sahsenvar.kmapper:processor` | JVM | KSP kod üreteci (`@MapTo`/`@MapFrom` → `toX()`) |
-| `com.sahsenvar.kmapper:converters-compose` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet` sarmalayıcıları |
+| `io.github.sahsenvar:kmapper-converters-immutable` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet` sarmalayıcıları |
 | `com.sahsenvar.kmapper:converters-arrow` | KMP | (yakında) Arrow `NonEmptyList` vb. |
 
 ## Sürüm Durumu

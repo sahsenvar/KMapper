@@ -156,7 +156,7 @@ See [@KMapperConfig and @UseMapTypeConverter](../type-conversion/kmapperconfig.m
 annotation class CollectionWrapper(val forType: KClass<*>)
 ```
 
-Used in the `converters-compose` artifact; you can also use it to define your own wrappers. See [Multi-Module Projects](../advanced/multi-module.md).
+Used in the `converters-immutable` artifact; you can also use it to define your own wrappers. See [Multi-Module Projects](../advanced/multi-module.md).
 
 ---
 

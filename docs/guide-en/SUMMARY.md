@@ -20,7 +20,7 @@
 * [Built-in Converters](type-conversion/built-in.md)
 * [Writing a Custom Converter](type-conversion/custom-converter.md)
 * [@KMapperConfig and @UseMapTypeConverter](type-conversion/kmapperconfig.md)
-* [Immutable Collections (converters-compose)](type-conversion/immutable.md)
+* [Immutable Collections (converters-immutable)](type-conversion/immutable.md)
 
 ## Enum Mapping
 

@@ -32,7 +32,7 @@ fun UserRemote.toUserDomain(): UserDomain = UserDomain(id = id, email = email)
 |----------|----------|----------------|
 | `com.sahsenvar.kmapper:core` | KMP | Annotations, `MapTypeConverter`, `TypeConverterRegistry`, built-in converters, `MappableEnum`, `MappingException`, `KMapper`/`MappingListener` |
 | `com.sahsenvar.kmapper:processor` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()`) |
-| `com.sahsenvar.kmapper:converters-compose` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet` wrappers |
+| `io.github.sahsenvar:kmapper-converters-immutable` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet` wrappers |
 | `com.sahsenvar.kmapper:converters-arrow` | KMP | (coming soon) Arrow `NonEmptyList`, etc. |
 
 ## Version Status

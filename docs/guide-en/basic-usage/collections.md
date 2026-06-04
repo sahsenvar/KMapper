@@ -128,6 +128,6 @@ public fun CategoryRemote.toCategoryDomain(): CategoryDomain = CategoryDomain(
 
 ## Immutable Collections
 
-If you want to use `kotlinx.collections.immutable` types such as `PersistentList`, `ImmutableList`, or `ImmutableSet` as target types, add the `converters-compose` module. That module provides wrapper functions annotated with `@CollectionWrapper`, which the processor discovers automatically.
+If you want to use `kotlinx.collections.immutable` types such as `PersistentList`, `ImmutableList`, or `ImmutableSet` as target types, add the `converters-immutable` module. That module provides wrapper functions annotated with `@CollectionWrapper`, which the processor discovers automatically.
 
-For details, see [Immutable Collections (converters-compose)](../type-conversion/immutable.md).
+For details, see [Immutable Collections (converters-immutable)](../type-conversion/immutable.md).

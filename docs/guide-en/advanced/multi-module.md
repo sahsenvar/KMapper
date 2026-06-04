@@ -27,10 +27,10 @@ Each module lists the converters it needs in its own config. Although this looks
 
 ## Cross-Module `@CollectionWrapper` Discovery
 
-A converter module such as `converters-compose` defines functions annotated with `@CollectionWrapper`:
+A converter module such as `converters-immutable` defines functions annotated with `@CollectionWrapper`:
 
 ```kotlin
-// converters-compose module
+// converters-immutable module
 @CollectionWrapper(forType = PersistentList::class)
 fun <T> List<T>.asPersistentList(): PersistentList<T> = toPersistentList()
 ```
@@ -39,13 +39,13 @@ KSP's `getSymbolsWithAnnotation` function cannot see annotations in **dependency
 
 ### The Descriptor Mechanism
 
-1. When `converters-compose` is built, its own KSP run sees the `@CollectionWrapper` functions (in-module).
+1. When `converters-immutable` is built, its own KSP run sees the `@CollectionWrapper` functions (in-module).
 2. The processor generates a descriptor object in the `com.sahsenvar.kmapper.generated` package for each wrapper. This object is annotated with `@CollectionWrapperDescriptor` and uses `BINARY` retention:
 
 ```kotlin
 @CollectionWrapperDescriptor(
     forType  = "kotlinx.collections.immutable.PersistentList",
-    wrapFunction = "com.sahsenvar.kmapper.compose.asPersistentList"
+    wrapFunction = "com.sahsenvar.kmapper.immutable.asPersistentList"
 )
 object PersistentListWrapperDescriptor
 ```
@@ -56,10 +56,10 @@ This infrastructure shares the same mechanism as the converter runtime registry;
 
 ### Why `kspJvm` Is Required
 
-For descriptor classes to be discoverable by consumer modules, the `converters-compose` module must include those descriptor classes in its published jar. This requires KSP to run for the JVM target as well:
+For descriptor classes to be discoverable by consumer modules, the `converters-immutable` module must include those descriptor classes in its published jar. This requires KSP to run for the JVM target as well:
 
 ```kotlin
-// converters-compose/build.gradle.kts
+// converters-immutable/build.gradle.kts
 dependencies {
     // For KMP targets:
     add("kspCommonMainMetadata", "com.sahsenvar.kmapper:processor:<v>")
@@ -84,18 +84,18 @@ e: [kmap] Multiple @CollectionWrapper found for 'PersistentList'. Remove one fro
 :core:mappers           → @KMapperConfig (shared converters)
 :feature:order:data     → @KMapperConfig (own converters) + @MapTo models
 :feature:product:data   → @KMapperConfig (own converters) + @MapTo models
-:converters-compose     → @CollectionWrapper functions + generated descriptors
+:converters-immutable   → @CollectionWrapper functions + generated descriptors
 ```
 
 In each `:feature:*:data` module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.sahsenvar.kmapper:core:<v>")
-    add("kspCommonMainMetadata", "com.sahsenvar.kmapper:processor:<v>")
+    implementation("io.github.sahsenvar:kmapper-core:<v>")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:<v>")
 
     // For immutable collection support:
-    implementation("com.sahsenvar.kmapper:converters-compose:<v>")
+    implementation("io.github.sahsenvar:kmapper-converters-immutable:<v>")
 }
 ```
 

@@ -1,25 +1,25 @@
-# Immutable Koleksiyonlar — converters-compose
+# Immutable Koleksiyonlar — converters-immutable
 
-kmap'in `core` modülü yalnızca stdlib `List`/`Set` eşleştirmesini bilir. `PersistentList`, `ImmutableList`, `ImmutableSet` gibi `kotlinx.collections.immutable` tiplerini hedef olarak kullanmak için **`converters-compose`** modülünü ekleyin.
+kmap'in `core` modülü yalnızca stdlib `List`/`Set` eşleştirmesini bilir. `PersistentList`, `ImmutableList`, `ImmutableSet` gibi `kotlinx.collections.immutable` tiplerini hedef olarak kullanmak için **`converters-immutable`** modülünü ekleyin.
 
 ---
 
 ## Kurulum
 
-`converters-compose` bağımlılığını ilgili modüle ekleyin:
+`converters-immutable` bağımlılığını ilgili modüle ekleyin:
 
 ```kotlin
 // build.gradle.kts
-commonMainImplementation("com.sahsenvar.kmapper:converters-compose:<versiyon>")
+commonMainImplementation("io.github.sahsenvar:kmapper-converters-immutable:<versiyon>")
 ```
 
-KSP bağımlılığı değişmez; processor `converters-compose`'daki wrapper'ları descriptor mekanizmasıyla otomatik keşfeder.
+KSP bağımlılığı değişmez; processor `converters-immutable`'daki wrapper'ları descriptor mekanizmasıyla otomatik keşfeder.
 
 ---
 
 ## Sağlanan Wrapper Fonksiyonlar
 
-`converters-compose`, her immutable koleksiyon tipi için `@CollectionWrapper` anotasyonlu üç fonksiyon tanımlar:
+`converters-immutable`, her immutable koleksiyon tipi için `@CollectionWrapper` anotasyonlu üç fonksiyon tanımlar:
 
 ```kotlin
 @CollectionWrapper(forType = PersistentList::class)
@@ -73,7 +73,7 @@ public fun ArticleRemote.toArticleDomain(): ArticleDomain = ArticleDomain(
 
 ## @CollectionWrapper — Nasıl Çalışır?
 
-`@CollectionWrapper(forType = PersistentList::class)` anotasyonu bir fonksiyon üzerine eklenir ve `BINARY` retention ile derlenir. `converters-compose` kendi KSP run'ında bu fonksiyonları görür ve `com.sahsenvar.kmapper.generated` paketine **descriptor nesneleri** üretir. Tüketici modülün processor run'ı bu descriptor'ları `resolver.getDeclarationsFromPackage(...)` ile keşfeder.
+`@CollectionWrapper(forType = PersistentList::class)` anotasyonu bir fonksiyon üzerine eklenir ve `BINARY` retention ile derlenir. `converters-immutable` kendi KSP run'ında bu fonksiyonları görür ve `com.sahsenvar.kmapper.generated` paketine **descriptor nesneleri** üretir. Tüketici modülün processor run'ı bu descriptor'ları `resolver.getDeclarationsFromPackage(...)` ile keşfeder.
 
 Aynı `forType` için birden fazla `@CollectionWrapper` classpath'te bulunursa processor **derleme hatası** verir — hangi wrapper'ın aktif olduğu sessiz kalmamalıdır.
 

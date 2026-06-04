@@ -20,7 +20,7 @@
 * [Built-in Converter'lar](tip-donusumu/builtin.md)
 * [Kendi Converter'ını Yazmak](tip-donusumu/ozel-converter.md)
 * [@KMapperConfig ve @UseMapTypeConverter](tip-donusumu/kmapperconfig.md)
-* [Immutable Koleksiyonlar (converters-compose)](tip-donusumu/immutable.md)
+* [Immutable Koleksiyonlar (converters-immutable)](tip-donusumu/immutable.md)
 
 ## Enum Mapping
 

@@ -128,6 +128,6 @@ public fun CategoryRemote.toCategoryDomain(): CategoryDomain = CategoryDomain(
 
 ## Immutable Koleksiyonlar
 
-`PersistentList`, `ImmutableList`, `ImmutableSet` gibi `kotlinx.collections.immutable` tiplerini hedef olarak kullanmak istiyorsanız `converters-compose` modülünü ekleyin. Bu modül `@CollectionWrapper` anotasyonunu taşıyan sarmalayıcı fonksiyonlar sağlar ve processor bunları otomatik keşfeder.
+`PersistentList`, `ImmutableList`, `ImmutableSet` gibi `kotlinx.collections.immutable` tiplerini hedef olarak kullanmak istiyorsanız `converters-immutable` modülünü ekleyin. Bu modül `@CollectionWrapper` anotasyonunu taşıyan sarmalayıcı fonksiyonlar sağlar ve processor bunları otomatik keşfeder.
 
-Ayrıntılar için bkz. [Immutable Koleksiyonlar (converters-compose)](../tip-donusumu/immutable.md).
+Ayrıntılar için bkz. [Immutable Koleksiyonlar (converters-immutable)](../tip-donusumu/immutable.md).

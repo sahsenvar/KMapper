@@ -19,7 +19,7 @@ com.sahsenvar.kmapper
 ├── processor         (JVM-only, KSP)
 │   └── MappingProcessor + FieldAnalyzer → TypeMatcher → MappingCodeGenerator pipeline'ı
 │
-├── converters-compose (KMP, opsiyonel)
+├── converters-immutable (KMP, opsiyonel)
 │   └── List/Set → PersistentList/ImmutableList/ImmutableSet wrapper'ları
 │       (kotlinx.collections.immutable bağımlılığı yalnızca burada)
 │
@@ -30,7 +30,7 @@ com.sahsenvar.kmapper
 **Tasarım kararları:**
 
 - Anotasyonlar ve runtime tek `core` artifact'ında bir arada tutulur (MapStruct yaklaşımı). İleride ayrıştırmak mekanik bir işlemdir; şimdilik YAGNI.
-- `kotlinx.collections.immutable` `core`'dan çıkarılmıştır — yalnızca `converters-compose`'dadır. `core`'u kullanan projeler bu bağımlılığı almak zorunda kalmaz.
+- `kotlinx.collections.immutable` `core`'dan çıkarılmıştır — yalnızca `converters-immutable`'dadır. `core`'u kullanan projeler bu bağımlılığı almak zorunda kalmaz.
 - `processor` JVM-only'dir: KSP sadece JVM'de çalışır. Üretilen kod KMP'dir.
 
 ## KSP Pipeline — Derleme Zamanı

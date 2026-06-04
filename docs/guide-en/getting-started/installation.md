@@ -41,7 +41,7 @@ kotlin {
         commonMain.dependencies {
             implementation("io.github.sahsenvar:kmapper-core:0.1.0")
             // Optional: immutable collection support
-            implementation("io.github.sahsenvar:kmapper-converters-compose:0.1.0")
+            implementation("io.github.sahsenvar:kmapper-converters-immutable:0.1.0")
         }
     }
 }

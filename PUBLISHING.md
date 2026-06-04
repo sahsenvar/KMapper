@@ -126,7 +126,7 @@ Check that artifacts appear under:
   kmapper-core-iosarm64/<version>/
   kmapper-core-iossimulatorarm64/<version>/
   kmapper-processor/<version>/
-  kmapper-converters-compose/<version>/
+  kmapper-converters-immutable/<version>/
   ...
 ```
 

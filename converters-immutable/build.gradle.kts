@@ -7,7 +7,7 @@ plugins {
 
 kotlin {
     android {
-        namespace = "com.sahsenvar.kmapper.compose"
+        namespace = "com.sahsenvar.kmapper.immutable"
         compileSdk = 36
         minSdk = 30
     }
@@ -41,10 +41,10 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
-    coordinates("io.github.sahsenvar", "kmapper-converters-compose", version.toString())
+    coordinates("io.github.sahsenvar", "kmapper-converters-immutable", version.toString())
     pom {
-        name.set("kmap converters-compose")
-        description.set("KMP-friendly compile-time object mapper (KSP). Converters-compose module: List → PersistentList/ImmutableList/ImmutableSet collection wrappers.")
+        name.set("kmap converters-immutable")
+        description.set("KMP-friendly compile-time object mapper (KSP). Converters-immutable module: List → PersistentList/ImmutableList/ImmutableSet collection wrappers.")
         inceptionYear.set("2026")
         url.set("https://github.com/sahsenvar/kmap")
         licenses {

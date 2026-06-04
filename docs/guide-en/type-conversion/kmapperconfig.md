@@ -128,4 +128,4 @@ This path is **not compile-time safe** — the processor cannot see this registr
 
 ---
 
-Next: [Immutable Collections (converters-compose)](immutable.md)
+Next: [Immutable Collections (converters-immutable)](immutable.md)

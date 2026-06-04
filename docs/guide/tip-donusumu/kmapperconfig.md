@@ -128,4 +128,4 @@ Bu yol **compile-time safe değildir** — processor bu kaydı göremez, eksik c
 
 ---
 
-Sonraki adım: [Immutable Koleksiyonlar (converters-compose)](immutable.md)
+Sonraki adım: [Immutable Koleksiyonlar (converters-immutable)](immutable.md)

@@ -5,7 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
-    implementation(project(":converters-compose"))
+    implementation(project(":converters-immutable"))
     ksp(project(":processor"))
     implementation(libs.kotlinx.collections.immutable)
 }

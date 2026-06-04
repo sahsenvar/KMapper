@@ -41,7 +41,7 @@ kotlin {
         commonMain.dependencies {
             implementation("io.github.sahsenvar:kmapper-core:0.1.0")
             // İsteğe bağlı: immutable koleksiyon desteği
-            implementation("io.github.sahsenvar:kmapper-converters-compose:0.1.0")
+            implementation("io.github.sahsenvar:kmapper-converters-immutable:0.1.0")
         }
     }
 }

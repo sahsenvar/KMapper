@@ -1,4 +1,4 @@
-package com.sahsenvar.kmapper.compose
+package com.sahsenvar.kmapper.immutable
 
 import com.sahsenvar.kmapper.annotations.CollectionWrapper
 import kotlinx.collections.immutable.ImmutableList

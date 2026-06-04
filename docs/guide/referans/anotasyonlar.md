@@ -156,7 +156,7 @@ Bkz. [@KMapperConfig ve @UseMapTypeConverter](../tip-donusumu/kmapperconfig.md) 
 annotation class CollectionWrapper(val forType: KClass<*>)
 ```
 
-`converters-compose` artifact'ında kullanılır; kendi wrapper'ınızı tanımlamak için de kullanabilirsiniz. Bkz. [Çok Modüllü Projeler](../ileri/cok-modullu.md).
+`converters-immutable` artifact'ında kullanılır; kendi wrapper'ınızı tanımlamak için de kullanabilirsiniz. Bkz. [Çok Modüllü Projeler](../ileri/cok-modullu.md).
 
 ---
 
