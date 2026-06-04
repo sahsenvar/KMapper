@@ -107,9 +107,11 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
             return baseMapping
         }
 
-        // Rule 5: @MapDefaultValue
-        if (targetField.defaultValue != null) {
-            return CodeBlock.of("%L ?: %L", baseMapping, targetField.defaultValue)
+        // Rule 5: @MapDefaultValue — annotation lives on the SOURCE field (the @MapTo-annotated class)
+        // so we read sourceField.defaultValue, not targetField.defaultValue.
+        val defaultValue = sourceField.defaultValue ?: targetField.defaultValue
+        if (defaultValue != null) {
+            return CodeBlock.of("%L ?: %L", baseMapping, defaultValue)
         }
 
         // Rule 2: Throw exception for required field
