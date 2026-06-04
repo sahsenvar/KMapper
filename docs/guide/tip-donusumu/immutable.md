@@ -2,7 +2,7 @@
 
 kmap'in `core` modülü yalnızca stdlib `List`/`Set` eşleştirmesini bilir. `PersistentList`, `ImmutableList`, `ImmutableSet`, `PersistentSet` gibi `kotlinx.collections.immutable` tiplerini hedef olarak kullanmak için **`converters-immutable`** modülünü ekleyin.
 
-> **Not:** `converters-immutable` sürüm **0.2.0** ile güncellendi (`asPersistentSet` eklendi); henüz Maven Central'da değildir.
+> **Not:** `converters-immutable` sürüm **0.2.0** ile güncellendi; henüz Maven Central'da değildir.
 > Yayınlanana kadar `publishToMavenLocal` + `mavenLocal()` ile kullanın.
 > `core` ve `processor` hâlâ Maven Central'dan `0.1.0` olarak çekilebilir.
 
@@ -27,40 +27,67 @@ dependencyResolutionManagement {
 commonMainImplementation("io.github.sahsenvar:kmapper-converters-immutable:0.2.0")
 ```
 
-KSP bağımlılığı değişmez; processor `converters-immutable`'daki wrapper'ları descriptor mekanizmasıyla otomatik keşfeder.
+KSP bağımlılığı değişmez. Ancak **wrapper'ları `@KMapperConfig`'in `wrappers` listesinde açıkça belirtmeniz gerekir** (bağımlılığı eklemek yeterli değildir):
+
+```kotlin
+import com.sahsenvar.kmapper.annotations.KMapperConfig
+import com.sahsenvar.kmapper.immutable.PersistentListWrapper
+import com.sahsenvar.kmapper.immutable.ImmutableListWrapper
+import com.sahsenvar.kmapper.immutable.ImmutableSetWrapper
+import com.sahsenvar.kmapper.immutable.PersistentSetWrapper
+
+@KMapperConfig(
+    wrappers = [
+        PersistentListWrapper::class,
+        ImmutableListWrapper::class,
+        ImmutableSetWrapper::class,
+        PersistentSetWrapper::class,
+    ]
+)
+object AppMapperConfig
+```
+
+Yalnızca gerçekten kullandığınız wrapper'ları eklemeniz yeterlidir.
 
 ---
 
-## Sağlanan Wrapper Fonksiyonlar
+## Sağlanan Wrapper Nesneler
 
-`converters-immutable`, her immutable koleksiyon tipi için `@CollectionWrapper` anotasyonlu dört fonksiyon tanımlar:
+`converters-immutable`, her immutable koleksiyon tipi için `@CollectionWrapper` anotasyonlu dört `object` tanımlar:
 
 ```kotlin
 @CollectionWrapper(forType = PersistentList::class)
-fun <T> List<T>.asPersistentList(): PersistentList<T> = toPersistentList()
+object PersistentListWrapper {
+    fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
+}
 
 @CollectionWrapper(forType = ImmutableList::class)
-fun <T> List<T>.asImmutableList(): ImmutableList<T> = toImmutableList()
+object ImmutableListWrapper {
+    fun <T> wrap(items: List<T>): ImmutableList<T> = items.toImmutableList()
+}
 
 @CollectionWrapper(forType = ImmutableSet::class)
-fun <T> List<T>.asImmutableSet(): ImmutableSet<T> = toImmutableSet()
+object ImmutableSetWrapper {
+    fun <T> wrap(items: List<T>): ImmutableSet<T> = items.toImmutableSet()
+}
 
 @CollectionWrapper(forType = PersistentSet::class)
-fun <T> List<T>.asPersistentSet(): PersistentSet<T> = toPersistentSet()
+object PersistentSetWrapper {
+    fun <T> wrap(items: List<T>): PersistentSet<T> = items.toPersistentSet()
+}
 ```
 
-Kullanıcı bu fonksiyonları doğrudan çağırmaz; processor hedef alan tipini görünce uygun wrapper'ı otomatik seçer.
+Bu nesneleri doğrudan çağırmazsınız; processor hedef alanın tipini görünce `@KMapperConfig.wrappers` listesinden uygun wrapper'ı seçer ve `wrap(...)` çağrısını üretir.
 
-**Çapraz tür dönüşümü:** Kaynak `List<T>`, `Set<T>` veya `PersistentList<T>` olsa bile, hedef `PersistentSet<T>` ise processor `asPersistentSet()` wrapper'ını otomatik seçer. Kaynak ile hedef koleksiyon türlerinin eşleşmesine gerek yoktur.
+**Çapraz tür dönüşümü:** Kaynak `List<T>`, `Set<T>` veya `PersistentList<T>` olsa bile, hedef `PersistentSet<T>` ise processor `PersistentSetWrapper.wrap(...)` çağrısını üretir. Kaynak ile hedef koleksiyon türlerinin eşleşmesine gerek yoktur.
 
 ---
 
 ## Kullanım
 
-Hedef sınıfta immutable koleksiyon tipi kullanmanız yeterlidir:
+Hedef sınıfta immutable koleksiyon tipi kullanın ve kullandığınız wrapper'ı `@KMapperConfig.wrappers`'a ekleyin:
 
 ```kotlin
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.PersistentList
 
 @MapTo(ArticleDomain::class)
@@ -75,40 +102,52 @@ data class ArticleDomain(
     val title: String,
     val tags: PersistentList<TagDomain>,    // hedef: PersistentList
 )
+
+@KMapperConfig(wrappers = [PersistentListWrapper::class])
+object AppMapperConfig
 ```
 
-Processor `tags` alanının hedef tipinin `PersistentList` olduğunu görür, classpath'te `asPersistentList` wrapper'ını bulur ve zincirler:
+Processor `tags` alanının hedef tipinin `PersistentList` olduğunu görür, `wrappers` listesindeki `PersistentListWrapper`'ı seçer ve şunu üretir:
 
 ```kotlin
 public fun ArticleRemote.toArticleDomain(): ArticleDomain = ArticleDomain(
     title = title,
-    tags  = tags.map { it.toTagDomain() }.asPersistentList(),
+    tags  = PersistentListWrapper.wrap(tags.map { it.toTagDomain() }),
 )
 ```
 
-`ImmutableList` ve `ImmutableSet` için de aynı mekanizma çalışır.
+`ImmutableList`, `ImmutableSet` ve `PersistentSet` için de aynı mekanizma çalışır.
 
 ---
 
 ## @CollectionWrapper — Nasıl Çalışır?
 
-`@CollectionWrapper(forType = PersistentList::class)` anotasyonu bir fonksiyon üzerine eklenir ve `BINARY` retention ile derlenir. `converters-immutable` kendi KSP run'ında bu fonksiyonları görür ve `com.sahsenvar.kmapper.generated` paketine **descriptor nesneleri** üretir. Tüketici modülün processor run'ı bu descriptor'ları `resolver.getDeclarationsFromPackage(...)` ile keşfeder.
+`@CollectionWrapper(forType = PersistentList::class)` anotasyonu bir `object` üzerine eklenir ve `BINARY` retention ile derlenir. Tüketici modülün KSP çalıştırmasında processor, `@KMapperConfig(wrappers = [...])` listesini okur ve her sınıfın `@CollectionWrapper.forType` değerini bağımlılık artifact'larından çözer — bu standart bir tür+anotasyon çözümlemesidir ve tüm platformlarda (JVM, Android, iOS/Native) çalışır.
 
-Aynı `forType` için birden fazla `@CollectionWrapper` classpath'te bulunursa processor **derleme hatası** verir — hangi wrapper'ın aktif olduğu sessiz kalmamalıdır.
+`getDeclarationsFromPackage` veya otomatik keşif kullanılmaz; wrapper'ların listede açıkça yer alması gerekir.
+
+Aynı `forType` için `wrappers` listesinde birden fazla wrapper bulunursa processor **derleme hatası** verir.
 
 ---
 
-## Kendi @CollectionWrapper Fonksiyonunuzu Yazmak
+## Kendi @CollectionWrapper Nesnenizi Yazmak
 
 Kütüphane tarafından sağlanmayan bir immutable koleksiyon tipi için kendi wrapper'ınızı yazabilirsiniz:
 
 ```kotlin
 // kendi modülünüzde:
 @CollectionWrapper(forType = MyImmutableList::class)
-fun <T> List<T>.asMyImmutableList(): MyImmutableList<T> = MyImmutableList.copyOf(this)
+object MyImmutableListWrapper {
+    fun <T> wrap(items: List<T>): MyImmutableList<T> = MyImmutableList.copyOf(items)
+}
 ```
 
-Bu fonksiyon `BINARY` retention'la derlendikten sonra processor onu otomatik keşfeder. Listesini `@KMapperConfig`'e eklemenize gerek yoktur.
+Ardından tüketen modülün `@KMapperConfig.wrappers` listesine ekleyin:
+
+```kotlin
+@KMapperConfig(wrappers = [MyImmutableListWrapper::class])
+object AppMapperConfig
+```
 
 ---
 

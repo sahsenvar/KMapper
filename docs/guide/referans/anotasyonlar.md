@@ -1,6 +1,6 @@
 # Anotasyon Referansı
 
-kmap'in tüm anotasyonları `com.sahsenvar.kmapper.annotations` paketindedir. Hepsi `SOURCE` retention'a sahiptir — yayınlanan binary'e dahil edilmezler; yalnızca KSP derleme adımında tüketilir. `@CollectionWrapper` ve `@CollectionWrapperDescriptor` istisnai olarak `BINARY` retention kullanır (modüller arası keşif için).
+kmap'in tüm anotasyonları `com.sahsenvar.kmapper.annotations` paketindedir. Hepsi `SOURCE` retention'a sahiptir — yayınlanan binary'e dahil edilmezler; yalnızca KSP derleme adımında tüketilir. `@CollectionWrapper` istisnai olarak `BINARY` retention kullanır (dependency artifact'larından tür+anotasyon çözümlemesi için).
 
 ## Özet Tablo
 
@@ -12,9 +12,8 @@ kmap'in tüm anotasyonları `com.sahsenvar.kmapper.annotations` paketindedir. He
 | `@MapDefaultValue` | Property | `expression: String` | Nullable kaynak alan `null` geldiğinde kullanılacak Kotlin expression. Üretilen koda literal olarak eklenir — geçerli Kotlin olması zorunludur. |
 | `@Ignore` | Property | — | Bu alanı mapping dışında bırakır. Hedef constructor'da karşılık gelen alan bulunmamalı ya da default değeri olmalıdır. |
 | `@UseMapTypeConverter` | Property | `converter: KClass<out MapTypeConverter<*, *>>` | Bu alan için global `@KMapperConfig` listesindeki converter'ı ezer. `@KMapperConfig`'e eklenmek zorunda değildir. |
-| `@KMapperConfig` | Nesne/Sınıf | `converters: Array<KClass<*>> = []` | Bu modülde kullanılacak global converter listesini tanımlar. Processor `@KMapperConfig`'i modül içinde `getSymbolsWithAnnotation` ile bulur. |
-| `@CollectionWrapper` | Fonksiyon | `forType: KClass<*>` | `BINARY` retention. Bir `List<T>` → `WrappedCollection<T>` dönüşüm fonksiyonunu wrapper olarak işaretler. Processor hedef alanda bu tip görünce wrapper çağrısını üretir. |
-| `@CollectionWrapperDescriptor` | Sınıf | `forType: String`, `wrapFunction: String` | `BINARY` retention. Processor'ın `@CollectionWrapper` fonksiyonları için ürettiği descriptor'lara konur. Doğrudan kullanılmaz. |
+| `@KMapperConfig` | Nesne/Sınıf | `converters: Array<KClass<*>> = []`, `wrappers: Array<KClass<*>> = []` | Bu modülde kullanılacak global converter ve wrapper listesini tanımlar. Processor `@KMapperConfig`'i modül içinde `getSymbolsWithAnnotation` ile bulur. |
+| `@CollectionWrapper` | Sınıf (object) | `forType: KClass<*>` | `BINARY` retention. Bir `object`'i koleksiyon wrapper'ı olarak işaretler; `fun <T> wrap(items: List<T>): WrappedCollection<T>` metodunu barındırır. Tüketici modül bu wrapper'ı `@KMapperConfig.wrappers` listesinde açıkça belirtir. |
 
 ## @MapTo
 
@@ -135,14 +134,17 @@ Bkz. [@KMapperConfig ve @UseMapTypeConverter](../tip-donusumu/kmapperconfig.md).
 ```kotlin
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
-annotation class KMapperConfig(val converters: Array<KClass<*>> = [])
+annotation class KMapperConfig(
+    val converters: Array<KClass<*>> = [],
+    val wrappers: Array<KClass<*>> = [],
+)
 ```
 
 ```kotlin
-@KMapperConfig(converters = [
-    IsoStringToInstantConverter::class,
-    PersistentListConverter::class,
-])
+@KMapperConfig(
+    converters = [IsoStringToInstantConverter::class],
+    wrappers   = [PersistentListWrapper::class, NonEmptyListWrapper::class],
+)
 object AppMapperConfig
 ```
 
@@ -151,12 +153,12 @@ Bkz. [@KMapperConfig ve @UseMapTypeConverter](../tip-donusumu/kmapperconfig.md) 
 ## @CollectionWrapper
 
 ```kotlin
-@Target(AnnotationTarget.FUNCTION)
+@Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.BINARY)
 annotation class CollectionWrapper(val forType: KClass<*>)
 ```
 
-`converters-immutable` artifact'ında kullanılır; kendi wrapper'ınızı tanımlamak için de kullanabilirsiniz. Bkz. [Çok Modüllü Projeler](../ileri/cok-modullu.md).
+`@CollectionWrapper` bir `object` üzerine konur ve o nesnenin hangi koleksiyon tipini sardığını (`forType`) belirtir. Nesne `fun <T> wrap(items: List<T>): WrappedCollection<T>` metodunu barındırmalıdır. `converters-immutable` ve `converters-arrow` artifact'larında kullanılır; kendi wrapper'ınızı tanımlamak için de kullanabilirsiniz. Tüketici modül bu wrapper'ı `@KMapperConfig.wrappers` listesinde açıkça belirtmelidir. Bkz. [Çok Modüllü Projeler](../ileri/cok-modullu.md).
 
 ---
 

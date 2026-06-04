@@ -1,6 +1,6 @@
 # NonEmptyList — converters-arrow
 
-Arrow'un `NonEmptyList<T>` tipini eşleme hedefi olarak kullanmak için **`converters-arrow`** modülünü ekleyin. Bu modül `@CollectionWrapper` mekanizmasını kullanır — scalar converter gibi `@KMapperConfig`'e eklemeniz **gerekmez**; bağımlılığı eklemek yeterlidir.
+Arrow'un `NonEmptyList<T>` tipini eşleme hedefi olarak kullanmak için **`converters-arrow`** modülünü ekleyin. Bu modül `@CollectionWrapper` mekanizmasını kullanır — **scalar converter'lardan farklı olarak `@KMapperConfig.wrappers` listesinde açıkça belirtmeniz gerekir**; yalnızca bağımlılığı eklemek yeterli değildir.
 
 > **Not:** `converters-arrow` sürüm **0.2.0** ile gelir; henüz Maven Central'da değildir.
 > Yayınlanana kadar `publishToMavenLocal` + `mavenLocal()` ile kullanın.
@@ -32,7 +32,17 @@ kotlin {
 }
 ```
 
-KSP bağımlılığı değişmez:
+KSP bağımlılığı değişmez; ancak wrapper'ı `@KMapperConfig.wrappers` listesine eklemeyi unutmayın:
+
+```kotlin
+import com.sahsenvar.kmapper.annotations.KMapperConfig
+import com.sahsenvar.kmapper.arrow.NonEmptyListWrapper
+
+@KMapperConfig(wrappers = [NonEmptyListWrapper::class])
+object AppMapperConfig
+```
+
+KSP yapılandırması:
 
 ```kotlin
 dependencies {
@@ -42,26 +52,33 @@ dependencies {
 
 ---
 
-## Sağlanan Wrapper Fonksiyon
+## Sağlanan Wrapper Nesne
 
 `converters-arrow` tek bir `@CollectionWrapper` wrapper tanımlar:
 
 ```kotlin
 @CollectionWrapper(forType = NonEmptyList::class)
-fun <T> List<T>.asNonEmptyList(): NonEmptyList<T> =
-    toNonEmptyListOrNull() ?: throw MappingException.EmptyCollection("NonEmptyList source was empty")
+object NonEmptyListWrapper {
+    fun <T> wrap(items: List<T>): NonEmptyList<T> =
+        items.toNonEmptyListOrNull()
+            ?: throw MappingException.EmptyCollection("NonEmptyList source was empty")
+}
 ```
 
-Processor bu wrapper'ı descriptor mekanizmasıyla otomatik keşfeder; siz yalnızca bağımlılığı eklersiniz.
+Bu nesneyi doğrudan çağırmazsınız; processor hedef alanın `NonEmptyList` olduğunu görünce `NonEmptyListWrapper.wrap(...)` çağrısını otomatik üretir.
 
 ---
 
 ## Kullanım
 
-Hedef sınıfta `NonEmptyList<T>` kullanmanız yeterlidir:
+Hedef sınıfta `NonEmptyList<T>` kullanın ve `@KMapperConfig.wrappers`'a `NonEmptyListWrapper::class` ekleyin:
 
 ```kotlin
 import arrow.core.NonEmptyList
+import com.sahsenvar.kmapper.arrow.NonEmptyListWrapper
+
+@KMapperConfig(wrappers = [NonEmptyListWrapper::class])
+object AppMapperConfig
 
 @MapTo(PostDomain::class)
 data class PostRemote(
@@ -77,12 +94,12 @@ data class PostDomain(
 )
 ```
 
-Processor, `tags` alanının hedef tipinin `NonEmptyList` olduğunu görür ve wrapper'ı zincirler:
+Processor, `tags` alanının hedef tipinin `NonEmptyList` olduğunu görür ve şunu üretir:
 
 ```kotlin
 public fun PostRemote.toPostDomain(): PostDomain = PostDomain(
     title = title,
-    tags  = tags.map { it.toTagDomain() }.asNonEmptyList(),
+    tags  = NonEmptyListWrapper.wrap(tags.map { it.toTagDomain() }),
 )
 ```
 
@@ -90,7 +107,7 @@ public fun PostRemote.toPostDomain(): PostDomain = PostDomain(
 
 ## Boş Liste — MappingException.EmptyCollection
 
-`source.tags` listesi boş ise `asNonEmptyList()` çalışma zamanında `MappingException.EmptyCollection` fırlatır. Bu Arrow'un **boş-olmayan** semantiğinin zorunlu bir sonucudur:
+`source.tags` listesi boş ise `NonEmptyListWrapper.wrap(...)` çalışma zamanında `MappingException.EmptyCollection` fırlatır. Bu Arrow'un **boş-olmayan** semantiğinin zorunlu bir sonucudur:
 
 ```kotlin
 // Kaynak tags = [] ise:
@@ -103,9 +120,9 @@ Boş olabilecek kaynaklarda eşlemeyi `try/catch` veya `runCatching` ile sararak
 
 ## @CollectionWrapper — Nasıl Çalışır?
 
-`@CollectionWrapper(forType = NonEmptyList::class)` anotasyonu `BINARY` retention ile derlenir. `converters-arrow` kendi KSP run'ında bu wrapper'ı görür ve `com.sahsenvar.kmapper.generated` paketine bir **descriptor nesnesi** üretir. Tüketici modülün processor run'ı bu descriptor'ı `resolver.getDeclarationsFromPackage(...)` ile keşfeder.
+`@CollectionWrapper(forType = NonEmptyList::class)` anotasyonu bir `object` üzerine eklenir ve `BINARY` retention ile derlenir. Tüketici modülün KSP çalıştırmasında processor, `@KMapperConfig(wrappers = [NonEmptyListWrapper::class])` listesini okur ve `NonEmptyListWrapper`'ın `@CollectionWrapper.forType = NonEmptyList::class` değerini bağımlılık artifact'larından çözer — bu standart bir tür+anotasyon çözümlemesidir ve KMP/iOS dahil tüm platformlarda çalışır.
 
-Aynı `forType` için birden fazla wrapper classpath'te bulunursa processor **derleme hatası** verir.
+`getDeclarationsFromPackage` veya otomatik keşif kullanılmaz.
 
 ---
 

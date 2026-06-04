@@ -2,7 +2,7 @@
 
 kmap's `core` module only understands stdlib `List`/`Set` mappings. To use `kotlinx.collections.immutable` types such as `PersistentList`, `ImmutableList`, `ImmutableSet`, or `PersistentSet` as target types, add the **`converters-immutable`** module.
 
-> **Note:** `converters-immutable` was updated in version **0.2.0** (adding `asPersistentSet`) and is not yet published to Maven Central.
+> **Note:** `converters-immutable` was updated in version **0.2.0** and is not yet published to Maven Central.
 > Until it is released, use `publishToMavenLocal` + `mavenLocal()`.
 > `core` and `processor` are still available from Maven Central at `0.1.0`.
 
@@ -27,40 +27,67 @@ Add the `converters-immutable` dependency to the relevant module:
 commonMainImplementation("io.github.sahsenvar:kmapper-converters-immutable:0.2.0")
 ```
 
-The KSP dependency does not change; the processor discovers wrappers from `converters-immutable` automatically via the descriptor mechanism.
+The KSP dependency does not change. However, you must **explicitly list the wrappers you need in `@KMapperConfig.wrappers`** — adding the dependency alone is not sufficient:
+
+```kotlin
+import com.sahsenvar.kmapper.annotations.KMapperConfig
+import com.sahsenvar.kmapper.immutable.PersistentListWrapper
+import com.sahsenvar.kmapper.immutable.ImmutableListWrapper
+import com.sahsenvar.kmapper.immutable.ImmutableSetWrapper
+import com.sahsenvar.kmapper.immutable.PersistentSetWrapper
+
+@KMapperConfig(
+    wrappers = [
+        PersistentListWrapper::class,
+        ImmutableListWrapper::class,
+        ImmutableSetWrapper::class,
+        PersistentSetWrapper::class,
+    ]
+)
+object AppMapperConfig
+```
+
+You only need to include the wrappers you actually use.
 
 ---
 
-## Provided Wrapper Functions
+## Provided Wrapper Objects
 
-`converters-immutable` defines four functions annotated with `@CollectionWrapper`, one for each immutable collection type:
+`converters-immutable` defines four `object`s annotated with `@CollectionWrapper`, one for each immutable collection type:
 
 ```kotlin
 @CollectionWrapper(forType = PersistentList::class)
-fun <T> List<T>.asPersistentList(): PersistentList<T> = toPersistentList()
+object PersistentListWrapper {
+    fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
+}
 
 @CollectionWrapper(forType = ImmutableList::class)
-fun <T> List<T>.asImmutableList(): ImmutableList<T> = toImmutableList()
+object ImmutableListWrapper {
+    fun <T> wrap(items: List<T>): ImmutableList<T> = items.toImmutableList()
+}
 
 @CollectionWrapper(forType = ImmutableSet::class)
-fun <T> List<T>.asImmutableSet(): ImmutableSet<T> = toImmutableSet()
+object ImmutableSetWrapper {
+    fun <T> wrap(items: List<T>): ImmutableSet<T> = items.toImmutableSet()
+}
 
 @CollectionWrapper(forType = PersistentSet::class)
-fun <T> List<T>.asPersistentSet(): PersistentSet<T> = toPersistentSet()
+object PersistentSetWrapper {
+    fun <T> wrap(items: List<T>): PersistentSet<T> = items.toPersistentSet()
+}
 ```
 
-You do not call these functions directly; when the processor sees the target field type, it selects the appropriate wrapper automatically.
+You do not call these objects directly; the processor selects the matching wrapper from `@KMapperConfig.wrappers` and emits a `wrap(...)` call when it sees the target field type.
 
-**Cross-kind conversion:** Even if the source field is a `List<T>`, `Set<T>`, or `PersistentList<T>`, if the target field is `PersistentSet<T>` the processor automatically selects `asPersistentSet()`. The source and target collection kinds do not need to match.
+**Cross-kind conversion:** Even if the source field is a `List<T>`, `Set<T>`, or `PersistentList<T>`, if the target field is `PersistentSet<T>` the processor emits `PersistentSetWrapper.wrap(...)`. The source and target collection kinds do not need to match.
 
 ---
 
 ## Usage
 
-All you need to do is use an immutable collection type in the target class:
+Use an immutable collection type in the target class and add the corresponding wrapper to `@KMapperConfig.wrappers`:
 
 ```kotlin
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.PersistentList
 
 @MapTo(ArticleDomain::class)
@@ -75,40 +102,52 @@ data class ArticleDomain(
     val title: String,
     val tags: PersistentList<TagDomain>,    // target: PersistentList
 )
+
+@KMapperConfig(wrappers = [PersistentListWrapper::class])
+object AppMapperConfig
 ```
 
-The processor sees that the target type of `tags` is `PersistentList`, finds the `asPersistentList` wrapper on the classpath, and chains it:
+The processor sees that the target type of `tags` is `PersistentList`, selects `PersistentListWrapper` from the `wrappers` list, and generates:
 
 ```kotlin
 public fun ArticleRemote.toArticleDomain(): ArticleDomain = ArticleDomain(
     title = title,
-    tags  = tags.map { it.toTagDomain() }.asPersistentList(),
+    tags  = PersistentListWrapper.wrap(tags.map { it.toTagDomain() }),
 )
 ```
 
-The same mechanism works for `ImmutableList` and `ImmutableSet`.
+The same mechanism works for `ImmutableList`, `ImmutableSet`, and `PersistentSet`.
 
 ---
 
 ## @CollectionWrapper — How It Works
 
-The `@CollectionWrapper(forType = PersistentList::class)` annotation is placed on a function and compiled with `BINARY` retention. During its own KSP run, `converters-immutable` sees these functions and generates **descriptor objects** into the `com.sahsenvar.kmapper.generated` package. The consuming module's processor run then discovers these descriptors via `resolver.getDeclarationsFromPackage(...)`.
+The `@CollectionWrapper(forType = PersistentList::class)` annotation is placed on an `object` and compiled with `BINARY` retention. During the consumer module's KSP run, the processor reads `@KMapperConfig(wrappers = [...])` and resolves each wrapper object's `@CollectionWrapper.forType` value from the compiled dependency artifact — this is standard type+annotation resolution and works on all platforms (JVM, Android, iOS/Native).
 
-If more than one `@CollectionWrapper` for the same `forType` is found on the classpath, the processor reports a **compile error** — which wrapper is active should never be silent.
+No `getDeclarationsFromPackage` or auto-discovery is used; wrappers must be listed explicitly.
+
+If more than one `@CollectionWrapper` for the same `forType` appears in the `wrappers` list, the processor reports a **compile error**.
 
 ---
 
-## Writing Your Own @CollectionWrapper Function
+## Writing Your Own @CollectionWrapper Object
 
 If you need to support an immutable collection type not provided by the library, you can write your own wrapper:
 
 ```kotlin
 // in your own module:
 @CollectionWrapper(forType = MyImmutableList::class)
-fun <T> List<T>.asMyImmutableList(): MyImmutableList<T> = MyImmutableList.copyOf(this)
+object MyImmutableListWrapper {
+    fun <T> wrap(items: List<T>): MyImmutableList<T> = MyImmutableList.copyOf(items)
+}
 ```
 
-Once this function is compiled with `BINARY` retention, the processor discovers it automatically. You do not need to add it to a `@KMapperConfig` list.
+Then add it to the consuming module's `@KMapperConfig.wrappers`:
+
+```kotlin
+@KMapperConfig(wrappers = [MyImmutableListWrapper::class])
+object AppMapperConfig
+```
 
 ---
 

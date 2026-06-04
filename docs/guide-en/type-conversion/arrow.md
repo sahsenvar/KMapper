@@ -1,6 +1,6 @@
 # NonEmptyList — converters-arrow
 
-To use Arrow's `NonEmptyList<T>` as a mapping target, add the **`converters-arrow`** module. This module uses the `@CollectionWrapper` mechanism — you do **not** need to list it in `@KMapperConfig`; adding the dependency is sufficient.
+To use Arrow's `NonEmptyList<T>` as a mapping target, add the **`converters-arrow`** module. This module uses the `@CollectionWrapper` mechanism — **unlike scalar converters, you must list it explicitly in `@KMapperConfig.wrappers`**; adding the dependency alone is not sufficient.
 
 > **Note:** `converters-arrow` is new in version **0.2.0** and is not yet published to Maven Central.
 > Until it is released, use `publishToMavenLocal` + `mavenLocal()`.
@@ -32,7 +32,17 @@ kotlin {
 }
 ```
 
-The KSP dependency does not change:
+The KSP dependency does not change, but you must add the wrapper to `@KMapperConfig.wrappers`:
+
+```kotlin
+import com.sahsenvar.kmapper.annotations.KMapperConfig
+import com.sahsenvar.kmapper.arrow.NonEmptyListWrapper
+
+@KMapperConfig(wrappers = [NonEmptyListWrapper::class])
+object AppMapperConfig
+```
+
+KSP configuration:
 
 ```kotlin
 dependencies {
@@ -42,26 +52,33 @@ dependencies {
 
 ---
 
-## Provided Wrapper Function
+## Provided Wrapper Object
 
 `converters-arrow` defines one `@CollectionWrapper` wrapper:
 
 ```kotlin
 @CollectionWrapper(forType = NonEmptyList::class)
-fun <T> List<T>.asNonEmptyList(): NonEmptyList<T> =
-    toNonEmptyListOrNull() ?: throw MappingException.EmptyCollection("NonEmptyList source was empty")
+object NonEmptyListWrapper {
+    fun <T> wrap(items: List<T>): NonEmptyList<T> =
+        items.toNonEmptyListOrNull()
+            ?: throw MappingException.EmptyCollection("NonEmptyList source was empty")
+}
 ```
 
-The processor discovers this wrapper automatically via the descriptor mechanism; you only add the dependency.
+You do not call this object directly; the processor emits a `NonEmptyListWrapper.wrap(...)` call whenever it sees a `NonEmptyList` target field.
 
 ---
 
 ## Usage
 
-All you need is to use `NonEmptyList<T>` in the target class:
+Use `NonEmptyList<T>` in the target class and add `NonEmptyListWrapper::class` to `@KMapperConfig.wrappers`:
 
 ```kotlin
 import arrow.core.NonEmptyList
+import com.sahsenvar.kmapper.arrow.NonEmptyListWrapper
+
+@KMapperConfig(wrappers = [NonEmptyListWrapper::class])
+object AppMapperConfig
 
 @MapTo(PostDomain::class)
 data class PostRemote(
@@ -77,12 +94,12 @@ data class PostDomain(
 )
 ```
 
-The processor sees that the target type of `tags` is `NonEmptyList` and chains the wrapper:
+The processor sees that the target type of `tags` is `NonEmptyList` and generates:
 
 ```kotlin
 public fun PostRemote.toPostDomain(): PostDomain = PostDomain(
     title = title,
-    tags  = tags.map { it.toTagDomain() }.asNonEmptyList(),
+    tags  = NonEmptyListWrapper.wrap(tags.map { it.toTagDomain() }),
 )
 ```
 
@@ -90,7 +107,7 @@ public fun PostRemote.toPostDomain(): PostDomain = PostDomain(
 
 ## Empty List — MappingException.EmptyCollection
 
-If `source.tags` is an empty list, `asNonEmptyList()` throws `MappingException.EmptyCollection` at runtime. This is a necessary consequence of Arrow's **non-empty** semantics:
+If `source.tags` is an empty list, `NonEmptyListWrapper.wrap(...)` throws `MappingException.EmptyCollection` at runtime. This is a necessary consequence of Arrow's **non-empty** semantics:
 
 ```kotlin
 // If source tags = []:
@@ -103,9 +120,9 @@ Guard against this by wrapping the mapping call in `try/catch` or `runCatching` 
 
 ## @CollectionWrapper — How It Works
 
-The `@CollectionWrapper(forType = NonEmptyList::class)` annotation is compiled with `BINARY` retention. During its own KSP run, `converters-arrow` sees this wrapper and generates a **descriptor object** into the `com.sahsenvar.kmapper.generated` package. The consuming module's processor run discovers this descriptor via `resolver.getDeclarationsFromPackage(...)`.
+The `@CollectionWrapper(forType = NonEmptyList::class)` annotation is placed on an `object` and compiled with `BINARY` retention. During the consumer module's KSP run, the processor reads `@KMapperConfig(wrappers = [NonEmptyListWrapper::class])` and resolves `NonEmptyListWrapper`'s `@CollectionWrapper.forType = NonEmptyList::class` from the compiled dependency artifact — this is standard type+annotation resolution and works on all platforms including KMP/iOS.
 
-If more than one `@CollectionWrapper` for the same `forType` is found on the classpath, the processor reports a **compile error**.
+No `getDeclarationsFromPackage` or auto-discovery is used.
 
 ---
 
