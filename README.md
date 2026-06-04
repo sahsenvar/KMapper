@@ -2,6 +2,12 @@
 
 KMP-friendly compile-time object mapping for Kotlin Multiplatform, powered by KSP.
 
+## 📖 Documentation
+
+**[Read the guide →](docs/guide/README.md)** — full documentation (Türkçe; English coming soon), also published on GitBook.
+
+Covers installation, `@MapTo`/`@MapFrom`, field mapping, null-safety, type converters, `MappableEnum`, error handling, observability, multi-module setup, and the full annotation reference.
+
 `com.sahsenvar.kmapper`:
 
 | Artifact | Platform | Purpose |
