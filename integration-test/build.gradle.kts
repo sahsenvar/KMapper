@@ -1,18 +1,14 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.ksp)
 }
 
 kotlin {
-    android {
-        namespace = "com.sahsenvar.kmapper.itest"
-        compileSdk = 36
-        minSdk = 30
-    }
     jvm()
-    iosArm64()
-    iosSimulatorArm64()
+    // NOTE: android + iOS targets are temporarily dropped. The @CollectionWrapper add-ons
+    // (immutable/arrow) don't auto-discover for KMP consumers (KSP2 per-module isolation),
+    // so the iOS/common mapper can't be generated yet. These targets return once wrappers
+    // move to explicit @KMapperConfig listing (the approved KMP-compat fix).
 
     sourceSets {
         commonMain.dependencies {
