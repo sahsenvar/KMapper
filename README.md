@@ -4,7 +4,10 @@ KMP-friendly compile-time object mapping for Kotlin Multiplatform, powered by KS
 
 ## 📖 Documentation
 
-**[Read the guide →](docs/guide/README.md)** — full documentation (Türkçe; English coming soon), also published on GitBook.
+Full guide — also published on GitBook:
+
+- **English:** [docs/guide-en](docs/guide-en/README.md)
+- **Türkçe:** [docs/guide](docs/guide/README.md)
 
 Covers installation, `@MapTo`/`@MapFrom`, field mapping, null-safety, type converters, `MappableEnum`, error handling, observability, multi-module setup, and the full annotation reference.
 

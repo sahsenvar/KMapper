@@ -64,11 +64,11 @@ Write a `Throwable.toX()` extension in your feature layer to translate `MappingE
 // feature/order/data/mapper/OrderMapper.kt
 fun Throwable.toOrderError(): OrderError = when (this) {
     is MappingException.RequiredFieldMissing ->
-        OrderError.DataCorruption("Zorunlu alan eksik: $field")
+        OrderError.DataCorruption("Required field missing: $field")
     is MappingException.TypeConversionFailed ->
-        OrderError.DataCorruption("Dönüştürme başarısız: $from → $to", cause)
+        OrderError.DataCorruption("Conversion failed: $from → $to", cause)
     is MappingException.UnknownEnumValue ->
-        OrderError.InvalidStatus("Bilinmeyen durum değeri: $value")
+        OrderError.InvalidStatus("Unknown status value: $value")
     is RemoteError.Timeout ->
         OrderError.NetworkTimeout
     else ->
@@ -81,7 +81,7 @@ Call it inside the `catch` block in your repository layer:
 ```kotlin
 override fun getOrder(id: String): Flow<Order> = flow {
     val dto = remoteDataSource.fetchOrder(id)
-    emit(dto.toOrder())           // toOrder() içinde üretilen mapper çalışır
+    emit(dto.toOrder())           // the generated mapper runs inside toOrder()
 }.catch { exception ->
     throw exception.toOrderError()
 }
