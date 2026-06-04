@@ -20,6 +20,10 @@ kotlin {
             api(project(":core"))
             implementation(libs.kotlinx.collections.immutable)
         }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotest.assertions)
+        }
     }
 }
 

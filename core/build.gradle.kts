@@ -18,6 +18,11 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.kotlinx.datetime)
         }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotest.assertions)
+            implementation(libs.kotest.property)
+        }
         jvmTest.dependencies {
             implementation(kotlin("test"))
         }
