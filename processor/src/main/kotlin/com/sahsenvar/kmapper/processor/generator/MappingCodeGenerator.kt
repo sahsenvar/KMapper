@@ -194,9 +194,20 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
             }
         }
 
+        // When the target collection type is a Set (kotlin.collections.Set / MutableSet),
+        // `.map { }` returns a List — we must append `.toSet()` (or `?.toSet()` for a nullable
+        // source chain) so the produced value matches the Set<T> target type.
+        // List targets need no suffix: `.map { }` already returns List<T>.
+        if (strategy.isSet && strategy.elementStrategy is MappingStrategy.Nested) {
+            if (sourceField.isNullable) {
+                builder.add("?.toSet()")
+            } else {
+                builder.add(".toSet()")
+            }
+        }
+
         // Non-stdlib collection targets (e.g. kotlinx.collections.immutable.*) go exclusively
         // through the @CollectionWrapper / MappingStrategy.WrappedCollection path.
-        // stdlib List→List / Set→Set needs no wrapper and no extra call here.
         return builder.build()
     }
 

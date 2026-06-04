@@ -75,7 +75,8 @@ class TypeMatcher(
                 } else {
                     MappingStrategy.Direct
                 }
-                return MappingStrategy.Collection(elementStrategy)
+                val isSet = isSetCollectionType(targetField.type)
+                return MappingStrategy.Collection(elementStrategy, isSet)
             }
         }
 
@@ -208,6 +209,16 @@ class TypeMatcher(
         return fqn.startsWith("kotlin.collections.List") ||
                 fqn.startsWith("kotlin.collections.Set") ||
                 fqn.startsWith("kotlinx.collections.immutable")
+    }
+
+    /**
+     * Returns true when the given type is a stdlib Set (kotlin.collections.Set or MutableSet).
+     * Used to determine whether the generator must append `.toSet()` after `.map { }`.
+     */
+    fun isSetCollectionType(type: KSType): Boolean {
+        val fqn = type.declaration.qualifiedName?.asString() ?: return false
+        return fqn.startsWith("kotlin.collections.Set") ||
+                fqn.startsWith("kotlin.collections.MutableSet")
     }
 
     fun extractCollectionElementType(type: KSType): KSType? {

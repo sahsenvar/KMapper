@@ -21,8 +21,15 @@ sealed class MappingStrategy {
 
     /**
      * Collection mapping (map each element).
+     * @param elementStrategy how to map each element
+     * @param isSet true when the TARGET field is a kotlin.collections.Set / MutableSet —
+     *   the generator will append `.toSet()` after `.map { }` to produce the correct type.
+     *   List targets keep isSet = false and emit plain `.map { }`.
      */
-    data class Collection(val elementStrategy: MappingStrategy) : MappingStrategy()
+    data class Collection(
+        val elementStrategy: MappingStrategy,
+        val isSet: Boolean = false
+    ) : MappingStrategy()
 
     /**
      * External field (comes from function parameter).
