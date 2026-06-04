@@ -17,9 +17,11 @@ class DateTimeRoundTripPropertyTest {
 
     @Test
     fun longInstant_Long_Instant_Long_round_trip() {
-        // fromEpochMilliseconds / toEpochMilliseconds are exact inverses for all Long values.
+        // fromEpochMilliseconds / toEpochMilliseconds round-trip exactly ONLY within Instant's
+        // representable range — which is NARROWER on Kotlin/Native than on the JVM, so out-of-range
+        // millis clamp differently per platform. Bound to a realistic timestamp range (year 0001..9999).
         runBlocking {
-            checkAll(Arb.long()) { millis ->
+            checkAll(Arb.long(-62_135_596_800_000L..253_402_300_799_000L)) { millis ->
                 LongInstantConverter.convertFromNonNull(
                     LongInstantConverter.convertToNonNull(millis)
                 ) shouldBe millis
