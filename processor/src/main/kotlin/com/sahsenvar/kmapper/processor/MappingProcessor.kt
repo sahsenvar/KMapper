@@ -1,5 +1,6 @@
 package com.sahsenvar.kmapper.processor
 
+import com.sahsenvar.kmapper.processor.analyzer.CycleDetector
 import com.sahsenvar.kmapper.processor.analyzer.FieldAnalyzer
 import com.sahsenvar.kmapper.processor.analyzer.TypeMatcher
 import com.sahsenvar.kmapper.processor.generator.FunctionNameGenerator
@@ -63,6 +64,9 @@ class MappingProcessor(
             .filterIsInstance<KSClassDeclaration>()
             .filter { it.validate() }
             .toList()
+
+        // STEP 2: Compile-time cycle detection (unconditional edges only)
+        CycleDetector(logger).check(mapToClasses)
 
         mapToClasses.forEach { sourceClass ->
             processMapToAnnotation(resolver, sourceClass)
