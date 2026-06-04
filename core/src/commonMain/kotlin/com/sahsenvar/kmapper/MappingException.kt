@@ -11,4 +11,7 @@ sealed class MappingException(message: String, cause: Throwable? = null)
 
     class UnknownEnumValue(val enum: String, val value: Any)
         : MappingException("Unknown wire value '$value' for enum $enum")
+
+    class EmptyCollection(val detail: String)
+        : MappingException("Collection cannot be empty: $detail")
 }
