@@ -3,7 +3,9 @@ package com.sahsenvar.kmapper.itest
 import com.sahsenvar.kmapper.MappableEnum
 import com.sahsenvar.kmapper.annotations.KMapperConfig
 import com.sahsenvar.kmapper.annotations.MapTo
+import com.sahsenvar.kmapper.arrow.NonEmptyListWrapper
 import com.sahsenvar.kmapper.datetime.StringLocalDateConverter
+import com.sahsenvar.kmapper.immutable.PersistentListWrapper
 import arrow.core.NonEmptyList
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.datetime.LocalDate
@@ -23,7 +25,7 @@ data class UserD(
     val roles: NonEmptyList<String>,
 )
 
-@KMapperConfig(converters = [StringLocalDateConverter::class])
+@KMapperConfig(converters = [StringLocalDateConverter::class], wrappers = [PersistentListWrapper::class, NonEmptyListWrapper::class])
 object ItestMapperConfig
 
 @MapTo(TagD::class)

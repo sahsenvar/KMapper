@@ -1,7 +1,14 @@
 import arrow.core.NonEmptyList
+import com.sahsenvar.kmapper.annotations.KMapperConfig
 import com.sahsenvar.kmapper.annotations.MapTo
+import com.sahsenvar.kmapper.arrow.NonEmptyListWrapper
+import com.sahsenvar.kmapper.immutable.PersistentListWrapper
+import com.sahsenvar.kmapper.immutable.PersistentSetWrapper
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.PersistentSet
+
+@KMapperConfig(wrappers = [PersistentListWrapper::class, PersistentSetWrapper::class, NonEmptyListWrapper::class])
+object SampleConfig
 
 data class TagD(val name: String)
 data class ProductD(val tags: PersistentList<TagD>)
