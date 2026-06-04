@@ -20,6 +20,7 @@ import com.google.devtools.ksp.validate
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.buildCodeBlock
 import com.squareup.kotlinpoet.ksp.toTypeName
@@ -290,6 +291,9 @@ class MappingProcessor(
             targetClass.simpleName.asString()
         )
 
+        val kMapperClass = ClassName("com.sahsenvar.kmapper", "KMapper")
+        val dispatchMember = MemberName("com.sahsenvar.kmapper", "dispatch")
+
         val funSpec = FunSpec.builder(functionName)
             .receiver(sourceClassName)
             .returns(targetClassName)
@@ -310,7 +314,14 @@ class MappingProcessor(
             }
             .addCode(
                 buildCodeBlock {
-                    add("return·%T(\n", targetClassName)
+                    // Guarded listener dispatch: onMapStart
+                    addStatement(
+                        "if·(%T.hasListeners)·%T.dispatch·{·onMapStart(this@%N,·%T::class)·}",
+                        kMapperClass, kMapperClass, functionName, targetClassName
+                    )
+
+                    // Build the Target(...) constructor call into a local variable
+                    add("val·result·=·%T(\n", targetClassName)
                     indent()
 
                     // Pre-collect fields that will actually be emitted (skip computed + defaulted)
@@ -342,7 +353,14 @@ class MappingProcessor(
                     }
 
                     unindent()
-                    add(")")
+                    addStatement(")")
+
+                    // Guarded listener dispatch: onMapComplete
+                    addStatement(
+                        "if·(%T.hasListeners)·%T.dispatch·{·onMapComplete(this@%N,·result)·}",
+                        kMapperClass, kMapperClass, functionName
+                    )
+                    addStatement("return·result")
                 }
             )
             .build()
@@ -413,6 +431,8 @@ class MappingProcessor(
             targetClass.simpleName.asString()
         )
 
+        val kMapperClass = ClassName("com.sahsenvar.kmapper", "KMapper")
+
         val funSpec = FunSpec.builder(functionName)
             .receiver(sourceClassName)
             .returns(targetClassName)
@@ -433,7 +453,13 @@ class MappingProcessor(
             }
             .addCode(
                 buildCodeBlock {
-                    add("return·%T(\n", targetClassName)
+                    // Guarded listener dispatch: onMapStart
+                    addStatement(
+                        "if·(%T.hasListeners)·%T.dispatch·{·onMapStart(this@%N,·%T::class)·}",
+                        kMapperClass, kMapperClass, functionName, targetClassName
+                    )
+
+                    add("val·result·=·%T(\n", targetClassName)
                     indent()
 
                     data class ReverseFieldEntry(
@@ -477,7 +503,14 @@ class MappingProcessor(
                     }
 
                     unindent()
-                    add(")")
+                    addStatement(")")
+
+                    // Guarded listener dispatch: onMapComplete
+                    addStatement(
+                        "if·(%T.hasListeners)·%T.dispatch·{·onMapComplete(this@%N,·result)·}",
+                        kMapperClass, kMapperClass, functionName
+                    )
+                    addStatement("return·result")
                 }
             )
             .build()
