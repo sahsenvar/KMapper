@@ -31,12 +31,9 @@ class TypeMatcher(
             return MappingStrategy.Convert(sourceField.useConverter)
         }
 
-        // 2. Check same type
-        if (isSameType(sourceField.type, targetField.type)) {
-            return MappingStrategy.Direct
-        }
-
-        // 3. Check collection types
+        // 2. Check collection types — must come before same-type check because isSameType only
+        //    compares the outer type FQN (ignoring generic arguments). Two List<X>/List<Y> types
+        //    with different element types would be incorrectly treated as Direct if same-type ran first.
         if (isCollectionType(sourceField.type) && isCollectionType(targetField.type)) {
             val sourceElementType = extractCollectionElementType(sourceField.type)
             val targetElementType = extractCollectionElementType(targetField.type)
@@ -52,6 +49,11 @@ class TypeMatcher(
                 }
                 return MappingStrategy.Collection(elementStrategy)
             }
+        }
+
+        // 3b. Check same type (non-collection)
+        if (isSameType(sourceField.type, targetField.type)) {
+            return MappingStrategy.Direct
         }
 
         // 4. Check nested object mapping

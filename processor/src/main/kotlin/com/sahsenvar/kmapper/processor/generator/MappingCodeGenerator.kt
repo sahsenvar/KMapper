@@ -164,14 +164,24 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
     ): CodeBlock {
         val builder = CodeBlock.builder()
 
-        // Base mapping
+        // Base mapping — use safe-call map (?. ) only when the source field is nullable.
+        // A non-null List source must use plain .map { } so the result type stays non-null.
         when (strategy.elementStrategy) {
             is MappingStrategy.Nested -> {
-                builder.add(
-                    "%N?.map·{ it.%N() }",
-                    sourceField.name,
-                    (strategy.elementStrategy as MappingStrategy.Nested).mapperFunctionName
-                )
+                val mapperFn = (strategy.elementStrategy as MappingStrategy.Nested).mapperFunctionName
+                if (sourceField.isNullable) {
+                    builder.add(
+                        "%N?.map·{·it.%N()·}",
+                        sourceField.name,
+                        mapperFn
+                    )
+                } else {
+                    builder.add(
+                        "%N.map·{·it.%N()·}",
+                        sourceField.name,
+                        mapperFn
+                    )
+                }
             }
 
             else -> {
