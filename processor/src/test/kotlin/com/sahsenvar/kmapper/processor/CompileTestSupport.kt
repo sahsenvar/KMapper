@@ -22,6 +22,8 @@ fun compile(vararg sources: SourceFile): Pair<JvmCompilationResult, KotlinCompil
         this.sources = sources.toList()
         inheritClassPath = true   // :core (annotations, MappingException, converters) on classpath
         messageOutputStream = System.out
+        // Match the JVM target of :core's jvm() target so inline funs from core can be inlined.
+        jvmTarget = "21"
     }
     // configureKsp {} must be called BEFORE compile() to register KSP with the compilation.
     // symbolProcessorProviders is a mutable list retrieved from the KspTool.

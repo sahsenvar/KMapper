@@ -3,8 +3,10 @@ package com.sahsenvar.kmapper.processor.generator
 import com.sahsenvar.kmapper.processor.model.FieldInfo
 import com.sahsenvar.kmapper.processor.model.MappingStrategy
 import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.symbol.KSType
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.MemberName
 
 /**
  * Generates mapping code using KotlinPoet.
@@ -75,23 +77,38 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
         isReverse: Boolean = false
     ): CodeBlock {
         val converterClassName = ClassName.bestGuess(strategy.converterFqn)
+        val convertOrFail = MemberName("com.sahsenvar.kmapper", "convertOrFail")
 
         // Choose conversion method based on direction
         val convertMethod = if (isReverse) "convertFrom" else "convertTo"
         val convertNonNullMethod = if (isReverse) "convertFromNonNull" else "convertToNonNull"
 
+        val fromFqn = sourceField.type.fqn()
+        val toFqn = targetField.type.fqn()
+
         // If source is non-nullable and target is non-nullable, use convertToNonNull/convertFromNonNull
         if (!sourceField.isNullable && !targetField.isNullable) {
             return CodeBlock.of(
-                "%T.%N(%N)",
+                "%M(%S,·%S)·{·%T.%N(%N)·}",
+                convertOrFail,
+                fromFqn,
+                toFqn,
                 converterClassName,
                 convertNonNullMethod,
                 sourceField.name
             )
         }
 
-        // Otherwise use convertTo/convertFrom (handles nullable)
-        return CodeBlock.of("%T.%N(%N)", converterClassName, convertMethod, sourceField.name)
+        // Otherwise use convertTo/convertFrom (handles nullable) — still wrap for consistency
+        return CodeBlock.of(
+            "%M(%S,·%S)·{·%T.%N(%N)·}",
+            convertOrFail,
+            fromFqn,
+            toFqn,
+            converterClassName,
+            convertMethod,
+            sourceField.name
+        )
     }
 
     private fun generateCollectionMapping(
@@ -131,3 +148,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
         return builder.build()
     }
 }
+
+/** Returns the fully-qualified name of this KSType for use in error messages. */
+private fun KSType.fqn(): String =
+    declaration.qualifiedName?.asString() ?: declaration.simpleName.asString()
