@@ -10,12 +10,14 @@ data class UserRemote(val id: String, val email: String) : RemoteModel
 fun UserRemote.toUserDomain(): UserDomain = UserDomain(id = id, email = email)
 ```
 
+> **Not:** Örneklerde sadeleştirilmiş gövde gösterilir. Üretilen gerçek kod ayrıca `KMapper.hasListeners` korumalı gözlemleme guard'ları içerir ve gövdesi `val result = …; return result` biçimindedir — bkz. [MappingListener](gozlemleme/listener.md).
+
 ## Neden kmap?
 
 - **Reflection yok.** Tüm eşleme kodu derleme zamanında üretilir. Bu, çalışma-zamanı maliyetini sıfırlar ve **Kotlin/Native (iOS) dostu** kılar — reflection'ın kısıtlı olduğu platformlarda sorunsuz çalışır.
-- **Tip ve null güvenli.** Tip uyuşmazlıkları, eksik converter'lar ve eşlenemeyen alanlar **derleme hatası** olur; runtime'da sürpriz yaşamazsın.
-- **Sıfır boilerplate.** Elle mapper fonksiyonu yazmazsın; bakım yükü kalkar.
-- **KMP-yerli.** `commonMain`'de tanımlarsın; Android ve iOS aynı üretilen kodu paylaşır.
+- **Tip ve null güvenli.** Tip uyuşmazlıkları, eksik converter'lar ve eşlenemeyen alanlar **derleme hatası** olur; runtime'da sürpriz yaşamazsınız.
+- **Sıfır boilerplate.** Elle mapper fonksiyonu yazmazsınız; bakım yükü kalkar.
+- **KMP-yerli.** `commonMain`'de tanımlarsınız; Android ve iOS aynı üretilen kodu paylaşır.
 
 ## Tasarım İlkeleri
 

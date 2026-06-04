@@ -108,8 +108,8 @@ Processor `@MapTo`/`@MapFrom` tip grafiğini analiz eder. Halkadaki tüm kenarla
 // HATA — garantili sonsuz döngü
 @MapTo(BDomain::class) data class A(val b: B)
 @MapTo(ADomain::class) data class B(val a: A)
-// e: [kmap] Mapping cycle A -> B -> A (guaranteed infinite).
-//    Break it with @Ignore or @UseMapTypeConverter.
+// e: Mapping cycle detected: A -> B -> A. This would cause infinite construction at runtime.
+//    Break the cycle with a nullable field, a collection, or @Ignore.
 ```
 
 Döngü en az bir nullable ya da collection alandan geçiyorsa (ağaç, opsiyonel geri-referans) izin verilir:

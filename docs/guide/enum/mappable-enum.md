@@ -38,19 +38,16 @@ enum class Priority(override val wireValue: Int) : MappableEnum<Int> {
 
 ## Üretilen Kod
 
-Processor, `MappableEnum<W>` implement eden bir enum gördüğünde iki extension üretir:
+Processor, `MappableEnum<W>` implement eden bir enum gördüğünde forward extension üretir:
 
 ```kotlin
 // Forward: wire değeri → enum sabiti
 fun String.toOrderStatus(): OrderStatus =
     OrderStatus.entries.firstOrNull { it.wireValue == this }
         ?: throw MappingException.UnknownEnumValue("OrderStatus", this)
-
-// Reverse: enum sabiti → wire değeri (her zaman total, exception imkânsız)
-fun OrderStatus.toWire(): String = wireValue
 ```
 
-Reverse yön her zaman totaldir: her sabitin bir `wireValue` değeri vardır, `when` dalı düşemez.
+**Ters yön (enum → wire):** Processor ayrı bir `toWire()` fonksiyonu üretmez. Enum'dan wire değerine dönüşüm, çağrı noktasında doğrudan `status.wireValue` (nullable alan için `status?.wireValue`) olarak satır içi yayılır.
 
 ## Bilinmeyen Wire Değeri
 
@@ -71,18 +68,18 @@ Ayrıntılar için bkz. [Hata Yönetimi](../hata-yonetimi/mapping-exception.md).
 Bir alan enum türündeyse ve o enum `MappableEnum` implement etmiyorsa, `@UseMapTypeConverter` ile de override edilmiyorsa processor **derleme hatası** verir:
 
 ```
-e: [kmap] enum 'PaymentStatus' must implement MappableEnum<...> or annotate the field with @UseMapTypeConverter
+enum 'PaymentStatus' must implement MappableEnum<...> or use @UseMapTypeConverter
 ```
 
 Bu garanti, enum'ları haritasız bırakmayı imkânsız kılar.
 
-## 3. Taraf / Değiştiremeye Enum — Escape Hatch
+## Üçüncü Taraf / Değiştiremeyeceğiniz Enum'lar — Escape Hatch
 
 Kendi kontrolünüzde olmayan bir enum (bağımlılıktan gelen) için `MappableEnum` ekleyemezsiniz. Bu durumda `@UseMapTypeConverter` ile alan bazlı bir converter tanımlayın:
 
 ```kotlin
 // Converter: dış kütüphanedeki ThirdPartyStatus → kendi StatusDomain'iniz
-object ThirdPartyStatusConverter : MapTypeConverter<ThirdPartyStatus, StatusDomain>() {
+object ThirdPartyStatusConverter : MapTypeConverter<ThirdPartyStatus, StatusDomain>(ThirdPartyStatus::class, StatusDomain::class) {
     override fun convertToNonNull(value: ThirdPartyStatus): StatusDomain = when (value) {
         ThirdPartyStatus.ACTIVE   -> StatusDomain.ACTIVE
         ThirdPartyStatus.INACTIVE -> StatusDomain.INACTIVE

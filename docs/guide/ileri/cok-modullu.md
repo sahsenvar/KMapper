@@ -45,7 +45,7 @@ KSP'nin `getSymbolsWithAnnotation` fonksiyonu **bağımlılık artifact'larında
 ```kotlin
 @CollectionWrapperDescriptor(
     forType  = "kotlinx.collections.immutable.PersistentList",
-    wrapFunction = "com.sahsenvar.kmapper.converters.compose.asPersistentList"
+    wrapFunction = "com.sahsenvar.kmapper.compose.asPersistentList"
 )
 object PersistentListWrapperDescriptor
 ```

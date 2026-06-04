@@ -61,13 +61,14 @@ Null geldiğinde istisna yerine belirli bir değer kullanmak istiyorsanız `@Map
 
 ```kotlin
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 
 @MapTo(EventDomain::class)
 data class EventRemote(
     val title: String?,
 
     @MapDefaultValue("Clock.System.now()")
-    val createdAt: kotlinx.datetime.Instant?,
+    val createdAt: Instant?,
 
     @MapDefaultValue("0")
     val viewCount: Int?,
@@ -75,7 +76,7 @@ data class EventRemote(
 
 data class EventDomain(
     val title: String,
-    val createdAt: kotlinx.datetime.Instant,
+    val createdAt: Instant,
     val viewCount: Int,
 )
 ```

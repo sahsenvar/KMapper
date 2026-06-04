@@ -81,7 +81,7 @@ KSP, eşleme uzantılarını standart KSP çıktısı altına yazar:
 build/generated/ksp/.../<KaynakSınıf>Mappers.kt
 ```
 
-Bu dosyalar otomatik olarak derleme yoluna eklenir; commit etmene veya elle düzenlemene gerek yoktur.
+Bu dosyalar otomatik olarak derleme yoluna eklenir; commit etmenize veya elle düzenlemenize gerek yoktur.
 
 ## Doğrulama
 
@@ -96,6 +96,6 @@ data class PingDomain(val message: String)
 data class PingRemote(val message: String)
 ```
 
-Derlemeden sonra `PingRemote.toPingDomain()` çağrılabilir olmalı. Olmuyorsa, KSP eklentisinin uygulandığını ve (KMP'de) yukarıdaki `kspCommonMainMetadata` bağlamasının yapıldığını kontrol et.
+Derlemeden sonra `PingRemote.toPingDomain()` çağrılabilir olmalıdır. Olmuyorsa, KSP eklentisinin uygulandığını ve (KMP'de) yukarıdaki `kspCommonMainMetadata` bağlamasının yapıldığını kontrol edin.
 
 > Sonraki adım: **[5 Dakikada İlk Mapper →](ilk-mapper.md)**

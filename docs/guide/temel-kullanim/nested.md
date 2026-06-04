@@ -83,7 +83,8 @@ kmap, **koşulsuz döngüleri** derleme zamanında yakalar ve hata verir:
 // DERLEME HATASI — koşulsuz döngü:
 @MapTo(BDomain::class) data class A(val b: B)   // non-null
 @MapTo(ADomain::class) data class B(val a: A)   // non-null
-// e: Mapping cycle A -> B -> A (guaranteed infinite).
+// e: Mapping cycle detected: A -> B -> A. This would cause infinite construction at runtime.
+//    Break the cycle with a nullable field, a collection, or @Ignore.
 ```
 
 Ancak döngü **koşullu** ise (nullable alan veya koleksiyon üzerinden) geçerlidir:

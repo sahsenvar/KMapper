@@ -47,6 +47,8 @@ Built-in converter'lar dahil tüm converter çağrıları üretilen kodda `conve
 count = convertOrFail("String", "Int") { StringIntConverter.convertToNonNull(count) }
 ```
 
+> **Not:** `convertOrFail`'e geçilen tip adları üretilen kodda tam niteliktedir (fully-qualified) — örn. `"kotlin.String"`, `"kotlin.Int"`, `"kotlinx.datetime.Instant"`. Örneklerde kısa form kullanılmıştır.
+
 Dönüşüm başarısız olursa `MappingException.TypeConversionFailed` fırlatılır; `cause` alanında orijinal istisna yer alır.
 
 ---
@@ -85,8 +87,7 @@ public fun ProductRemote.toProductDomain(): ProductDomain = ProductDomain(
 Built-in tabloda olmayan ve `@KMapperConfig`'e de eklenmeyen bir tip çifti kullanılırsa processor **derleme hatası** üretir:
 
 ```
-e: [kmap] No converter for MyCustomType -> MyTargetType.
-   Add it to @KMapperConfig or annotate the field with @UseMapTypeConverter.
+no converter for MyCustomType -> MyTargetType; add it to @KMapperConfig(converters=[...]) or annotate the field with @UseMapTypeConverter
 ```
 
 Kendi converter'ınızı yazmak için bkz. [Kendi Converter'ını Yazmak](ozel-converter.md).

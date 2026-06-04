@@ -6,7 +6,7 @@ Hayır. kmap tamamen derleme zamanında çalışır. KSP processor anotasyonlar�
 
 ## iOS ve Kotlin/Native'de çalışıyor mu?
 
-Evet. `core` artifact KMP'dir; üretilen extension fonksiyonlar standart Kotlin'dir ve tüm hedeflerde (Android, iOS/Native, JVM, JS) derlenir. `processor` JVM-only'dir ama yalnızca build araçları tarafından çalıştırılır; dağıtılan koda dahil değildir.
+Evet. `core` artifact KMP'dir; üretilen extension fonksiyonlar standart Kotlin'dir ve tüm hedeflerde (Android, iOS/Native, JVM) derlenir. `processor` JVM-only'dir ama yalnızca build araçları tarafından çalıştırılır; dağıtılan koda dahil değildir.
 
 ## Neden ordinal veya name kullanılmıyor?
 
@@ -39,7 +39,7 @@ Bkz. [Alan Eşleştirme](../temel-kullanim/alan-eslestirme.md).
 `MapTypeConverter<S, T>` sınıfından türetin ve `@KMapperConfig`'e ekleyin:
 
 ```kotlin
-object IsoStringToInstantConverter : MapTypeConverter<String, Instant>() {
+object IsoStringToInstantConverter : MapTypeConverter<String, Instant>(String::class, Instant::class) {
     override fun convertToNonNull(value: String): Instant =
         Instant.parse(value)
     override fun convertFromNonNull(value: Instant): String =

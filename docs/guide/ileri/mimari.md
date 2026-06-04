@@ -77,7 +77,7 @@ KSP yaklaşımının temel avantajı tam derleme zamanı güvencesidir:
 
 ## Platform Uyumluluğu
 
-`core` KMP olduğundan üretilen extension fonksiyonlar Android, iOS (Kotlin/Native), JVM ve JS hedeflerinde derlenir. `processor` JVM-only'dir ama yalnızca build araçları tarafından çalıştırılır; dağıtılan koda dahil değildir.
+`core` KMP olduğundan üretilen extension fonksiyonlar Android, iOS (Kotlin/Native) ve JVM hedeflerinde derlenir. `processor` JVM-only'dir ama yalnızca build araçları tarafından çalıştırılır; dağıtılan koda dahil değildir.
 
 `TypeConverterRegistry` `expect/actual` mekanizmasıyla platform başına ayrı implementasyon alır; dışarıya açık API aynıdır.
 

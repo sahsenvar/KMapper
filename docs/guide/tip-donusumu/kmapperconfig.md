@@ -69,7 +69,7 @@ public fun EventRemote.toEventDomain(): EventDomain = EventDomain(
 )
 ```
 
-`@UseMapTypeConverter` ile belirtilen converter `@KMapperConfig` listesinde bulunmak zorunda değildir; yalnızca o alan için aktif olduğundan processor tek bir alanda kullanılacağını doğrulayabilir.
+`@UseMapTypeConverter` ile belirtilen converter `@KMapperConfig` listesinde bulunmak zorunda değildir; yalnızca işaretlendiği alan için geçerlidir ve global listeyi ezer.
 
 ---
 
@@ -78,8 +78,7 @@ public fun EventRemote.toEventDomain(): EventDomain = EventDomain(
 Bir alan için gereken `(S,T)` çifti ne built-in tabloda ne global listede ne de alan bazlı override'da bulunamazsa processor **derleme hatası** verir:
 
 ```
-e: [kmap] No converter for UUID -> String.
-   Add it to @KMapperConfig or annotate the field with @UseMapTypeConverter.
+no converter for UUID -> String; add it to @KMapperConfig(converters=[...]) or annotate the field with @UseMapTypeConverter
 ```
 
 ---
@@ -94,9 +93,22 @@ e: [kmap] No converter for UUID -> String.
     EpochStringInstantConverter::class,  // String → Instant  ← aynı çift!
 ])
 object AppMapperConfig
-// e: [kmap] Ambiguous global converters for (String, Instant):
-//    StringInstantConverter, EpochStringInstantConverter.
-//    Remove one from @KMapperConfig and use @UseMapTypeConverter on the field that needs the other.
+```
+
+Processor aşağıdakine benzer bir hata verir:
+
+```
+❌ DUPLICATE CONVERTER IN @KMapperConfig DETECTED
+
+Type pair: kotlin.String → kotlinx.datetime.Instant
+
+First converter:  ...StringInstantConverter
+Second converter: ...EpochStringInstantConverter
+
+@KMapperConfig lists two converters for the same (S,T) pair — this is ambiguous.
+→ Keep exactly one converter for this pair in @KMapperConfig(converters=[...]).
+  If you need a different converter for a specific field, use @UseMapTypeConverter
+  on that field instead of adding a second entry to @KMapperConfig.
 ```
 
 **Çözüm:** Genel kullanılan converter'ı `@KMapperConfig`'te bırakın, istisnai olanı yalnızca ihtiyaç duyulan alana `@UseMapTypeConverter` ile uygulayın.

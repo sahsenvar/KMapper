@@ -13,7 +13,7 @@ data class UserDomain(
 )
 ```
 
-Kaynak (remote) modele `@MapTo` ekleyerek "bunu `UserDomain`'e eşleyebilmek istiyorum" dersin:
+Kaynak (remote) modele `@MapTo` ekleyerek "bunu `UserDomain`'e eşleyebilmek istiyorum" dersiniz:
 
 ```kotlin
 import com.sahsenvar.kmapper.annotations.MapTo
@@ -25,11 +25,11 @@ data class UserRemote(
 )
 ```
 
-> kmap, modellerinin belirli bir arayüzü (`RemoteModel`, `DomainModel` vb.) uygulamasını **zorunlu tutmaz**. Bu arayüzler yalnızca kendi mimarinde bir konvansiyondur; istersen kullanırsın.
+> kmap, modellerinizin belirli bir arayüzü (`RemoteModel`, `DomainModel` vb.) uygulamasını **zorunlu tutmaz**. Bu arayüzler yalnızca kendi mimarinizde bir konvansiyondur; isterseniz kullanabilirsiniz.
 
 ## 2. Derle
 
-Projeyi derle. kmap, kaynakla aynı pakette `UserRemoteMappers.kt` üretir:
+Projeyi derleyin. kmap, kaynakla aynı pakette `UserRemoteMappers.kt` üretir:
 
 ```kotlin
 public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
@@ -37,6 +37,8 @@ public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
     email = email,
 )
 ```
+
+> **Not:** Örneklerde sadeleştirilmiş gövde gösterilir. Üretilen gerçek kod ayrıca `KMapper.hasListeners` korumalı gözlemleme guard'ları içerir ve gövdesi `val result = …; return result` biçimindedir — bkz. [MappingListener](../gozlemleme/listener.md).
 
 ## 3. Kullan
 
@@ -90,7 +92,7 @@ public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
 )
 ```
 
-Varsayılan vermek istersen `@MapDefaultValue` kullanırsın (bkz. [Null-Safety](../temel-kullanim/null-safety.md)).
+Varsayılan vermek isterseniz `@MapDefaultValue` kullanabilirsiniz (bkz. [Null-Safety](../temel-kullanim/null-safety.md)).
 
 ## Sırada ne var?
 
