@@ -1,16 +1,30 @@
 # Immutable Koleksiyonlar — converters-immutable
 
-kmap'in `core` modülü yalnızca stdlib `List`/`Set` eşleştirmesini bilir. `PersistentList`, `ImmutableList`, `ImmutableSet` gibi `kotlinx.collections.immutable` tiplerini hedef olarak kullanmak için **`converters-immutable`** modülünü ekleyin.
+kmap'in `core` modülü yalnızca stdlib `List`/`Set` eşleştirmesini bilir. `PersistentList`, `ImmutableList`, `ImmutableSet`, `PersistentSet` gibi `kotlinx.collections.immutable` tiplerini hedef olarak kullanmak için **`converters-immutable`** modülünü ekleyin.
+
+> **Not:** `converters-immutable` sürüm **0.2.0** ile güncellendi (`asPersistentSet` eklendi); henüz Maven Central'da değildir.
+> Yayınlanana kadar `publishToMavenLocal` + `mavenLocal()` ile kullanın.
+> `core` ve `processor` hâlâ Maven Central'dan `0.1.0` olarak çekilebilir.
 
 ---
 
 ## Kurulum
 
+```kotlin
+// settings.gradle.kts — pre-release için mavenLocal ekle
+dependencyResolutionManagement {
+    repositories {
+        mavenLocal()        // 0.2.0 add-on'lar için
+        mavenCentral()
+    }
+}
+```
+
 `converters-immutable` bağımlılığını ilgili modüle ekleyin:
 
 ```kotlin
 // build.gradle.kts
-commonMainImplementation("io.github.sahsenvar:kmapper-converters-immutable:<versiyon>")
+commonMainImplementation("io.github.sahsenvar:kmapper-converters-immutable:0.2.0")
 ```
 
 KSP bağımlılığı değişmez; processor `converters-immutable`'daki wrapper'ları descriptor mekanizmasıyla otomatik keşfeder.
@@ -19,7 +33,7 @@ KSP bağımlılığı değişmez; processor `converters-immutable`'daki wrapper'
 
 ## Sağlanan Wrapper Fonksiyonlar
 
-`converters-immutable`, her immutable koleksiyon tipi için `@CollectionWrapper` anotasyonlu üç fonksiyon tanımlar:
+`converters-immutable`, her immutable koleksiyon tipi için `@CollectionWrapper` anotasyonlu dört fonksiyon tanımlar:
 
 ```kotlin
 @CollectionWrapper(forType = PersistentList::class)
@@ -30,9 +44,14 @@ fun <T> List<T>.asImmutableList(): ImmutableList<T> = toImmutableList()
 
 @CollectionWrapper(forType = ImmutableSet::class)
 fun <T> List<T>.asImmutableSet(): ImmutableSet<T> = toImmutableSet()
+
+@CollectionWrapper(forType = PersistentSet::class)
+fun <T> List<T>.asPersistentSet(): PersistentSet<T> = toPersistentSet()
 ```
 
 Kullanıcı bu fonksiyonları doğrudan çağırmaz; processor hedef alan tipini görünce uygun wrapper'ı otomatik seçer.
+
+**Çapraz tür dönüşümü:** Kaynak `List<T>`, `Set<T>` veya `PersistentList<T>` olsa bile, hedef `PersistentSet<T>` ise processor `asPersistentSet()` wrapper'ını otomatik seçer. Kaynak ile hedef koleksiyon türlerinin eşleşmesine gerek yoktur.
 
 ---
 

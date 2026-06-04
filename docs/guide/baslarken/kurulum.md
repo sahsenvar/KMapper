@@ -40,8 +40,9 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation("io.github.sahsenvar:kmapper-core:0.1.0")
-            // İsteğe bağlı: immutable koleksiyon desteği
-            implementation("io.github.sahsenvar:kmapper-converters-immutable:0.1.0")
+            // İsteğe bağlı: immutable koleksiyon desteği (0.2.0 — henüz Maven Central'da değil)
+            // Önce: publishToMavenLocal + settings.gradle.kts'e mavenLocal() ekle
+            implementation("io.github.sahsenvar:kmapper-converters-immutable:0.2.0")
         }
     }
 }

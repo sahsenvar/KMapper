@@ -1,16 +1,30 @@
 # Immutable Collections — converters-immutable
 
-kmap's `core` module only understands stdlib `List`/`Set` mappings. To use `kotlinx.collections.immutable` types such as `PersistentList`, `ImmutableList`, or `ImmutableSet` as target types, add the **`converters-immutable`** module.
+kmap's `core` module only understands stdlib `List`/`Set` mappings. To use `kotlinx.collections.immutable` types such as `PersistentList`, `ImmutableList`, `ImmutableSet`, or `PersistentSet` as target types, add the **`converters-immutable`** module.
+
+> **Note:** `converters-immutable` was updated in version **0.2.0** (adding `asPersistentSet`) and is not yet published to Maven Central.
+> Until it is released, use `publishToMavenLocal` + `mavenLocal()`.
+> `core` and `processor` are still available from Maven Central at `0.1.0`.
 
 ---
 
 ## Setup
 
+```kotlin
+// settings.gradle.kts — add mavenLocal for the pre-release add-on
+dependencyResolutionManagement {
+    repositories {
+        mavenLocal()        // for 0.2.0 add-ons
+        mavenCentral()
+    }
+}
+```
+
 Add the `converters-immutable` dependency to the relevant module:
 
 ```kotlin
 // build.gradle.kts
-commonMainImplementation("io.github.sahsenvar:kmapper-converters-immutable:<version>")
+commonMainImplementation("io.github.sahsenvar:kmapper-converters-immutable:0.2.0")
 ```
 
 The KSP dependency does not change; the processor discovers wrappers from `converters-immutable` automatically via the descriptor mechanism.
@@ -19,7 +33,7 @@ The KSP dependency does not change; the processor discovers wrappers from `conve
 
 ## Provided Wrapper Functions
 
-`converters-immutable` defines three functions annotated with `@CollectionWrapper`, one for each immutable collection type:
+`converters-immutable` defines four functions annotated with `@CollectionWrapper`, one for each immutable collection type:
 
 ```kotlin
 @CollectionWrapper(forType = PersistentList::class)
@@ -30,9 +44,14 @@ fun <T> List<T>.asImmutableList(): ImmutableList<T> = toImmutableList()
 
 @CollectionWrapper(forType = ImmutableSet::class)
 fun <T> List<T>.asImmutableSet(): ImmutableSet<T> = toImmutableSet()
+
+@CollectionWrapper(forType = PersistentSet::class)
+fun <T> List<T>.asPersistentSet(): PersistentSet<T> = toPersistentSet()
 ```
 
 You do not call these functions directly; when the processor sees the target field type, it selects the appropriate wrapper automatically.
+
+**Cross-kind conversion:** Even if the source field is a `List<T>`, `Set<T>`, or `PersistentList<T>`, if the target field is `PersistentSet<T>` the processor automatically selects `asPersistentSet()`. The source and target collection kinds do not need to match.
 
 ---
 

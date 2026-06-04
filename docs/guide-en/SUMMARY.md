@@ -21,6 +21,9 @@
 * [Writing a Custom Converter](type-conversion/custom-converter.md)
 * [@KMapperConfig and @UseMapTypeConverter](type-conversion/kmapperconfig.md)
 * [Immutable Collections (converters-immutable)](type-conversion/immutable.md)
+* [NonEmptyList — Arrow (converters-arrow)](type-conversion/arrow.md)
+* [Date and Time Converters (converters-datetime)](type-conversion/datetime.md)
+* [Big Number Converters (converters-bignumber)](type-conversion/bignumber.md)
 
 ## Enum Mapping
 
