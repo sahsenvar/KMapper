@@ -32,7 +32,7 @@ class TypeConverterRegistryTest {
     }
 
     @Test
-    fun `second register of same pair does not overwrite (first-write-wins)`() {
+    fun `second register of same pair does not overwrite -- first-write-wins`() {
         TypeConverterRegistry.register(StringToInt)
         TypeConverterRegistry.register(StringToIntDuplicate)
         TypeConverterRegistry.get(String::class, Int::class) shouldBe StringToInt

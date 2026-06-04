@@ -42,7 +42,7 @@ class ConvertOrFailTest {
     }
 
     @Test
-    fun `MappingException RequiredFieldMissing is re-thrown unchanged (not double-wrapped)`() {
+    fun `MappingException RequiredFieldMissing is re-thrown unchanged not double-wrapped`() {
         val original = MappingException.RequiredFieldMissing("id")
         val thrown = shouldThrow<MappingException.RequiredFieldMissing> {
             convertOrFail("A", "B") { throw original }

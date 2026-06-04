@@ -29,7 +29,7 @@ class PrimitiveConvertersTest {
         StringIntConverter.convertFrom(null).shouldBeNull()
     }
 
-    @Test fun `StringInt malformed input throws NumberFormatException (not wrapped by converter)`() {
+    @Test fun `StringInt malformed input throws NumberFormatException not wrapped by converter`() {
         shouldThrow<NumberFormatException> { StringIntConverter.convertToNonNull("abc") }
     }
 
@@ -89,7 +89,7 @@ class PrimitiveConvertersTest {
         StringBooleanConverter.convertToNonNull("TRUE") shouldBe true
     }
 
-    @Test fun `StringBoolean non-true string converts to false (kotlin toBoolean semantics)`() {
+    @Test fun `StringBoolean non-true string converts to false per kotlin toBoolean semantics`() {
         StringBooleanConverter.convertToNonNull("false") shouldBe false
         StringBooleanConverter.convertToNonNull("abc") shouldBe false
         StringBooleanConverter.convertToNonNull("1") shouldBe false
