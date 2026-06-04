@@ -10,12 +10,15 @@ kmap iki zorunlu parçadan oluşur: çalışma-zamanı kütüphanesi (`core`) ve
 
 ## 1. Depoları ekle
 
+> **Ön-sürüm notu:** kmap henüz Maven Central'da **yayınlanmadı** (namespace doğrulaması + ilk `0.1.0` release bekleniyor). Şu an tüketmek için: repoyu klonlayıp `./gradlew publishToMavenLocal` çalıştırın ve `mavenLocal()` ekleyin. Aşağıdaki koordinatlar, ilk release ile Maven Central'dan da çözülecektir.
+
 `settings.gradle.kts`:
 
 ```kotlin
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
+        mavenLocal() // ön-sürüm aşamasında: publishToMavenLocal sonrası
     }
 }
 ```

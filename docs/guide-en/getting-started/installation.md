@@ -10,12 +10,15 @@ kmap consists of two required pieces: the runtime library (`core`) and the KSP p
 
 ## 1. Add Repositories
 
+> **Pre-release note:** kmap is **not on Maven Central yet** (namespace verification + the first `0.1.0` release are pending). To consume it today: clone the repo, run `./gradlew publishToMavenLocal`, and add `mavenLocal()`. The coordinates below will also resolve from Maven Central once `0.1.0` ships.
+
 `settings.gradle.kts`:
 
 ```kotlin
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
+        mavenLocal() // during pre-release: after publishToMavenLocal
     }
 }
 ```
