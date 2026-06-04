@@ -20,7 +20,7 @@ kotlin {
             api(project(":core"))
             implementation(libs.arrow.core)
         }
-        jvmTest.dependencies {
+        commonTest.dependencies {
             implementation(kotlin("test"))
         }
     }
