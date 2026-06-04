@@ -214,54 +214,52 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
     }
 
     /**
-     * Generates code for a @CollectionWrapper field: source.map { elementMapping }.wrapFn().
-     * The wrapper function is an extension on List<T> returning the wrapped collection type.
+     * Generates code for a @CollectionWrapper field using the wrapper object's wrap() method.
      *
-     * Examples:
-     *   tags.map { it.toTagDomain() }.asPersistentList()    (non-null source)
-     *   tags?.map { it.toTagDomain() }?.asPersistentList()  (nullable source)
+     * Non-null source:
+     *   WrapperObject.wrap(source.map { it.toX() })     (Nested element)
+     *   WrapperObject.wrap(source)                       (Direct element)
+     *
+     * Nullable source:
+     *   source?.map { it.toX() }?.let { WrapperObject.wrap(it) }   (Nested element)
+     *   source?.let { WrapperObject.wrap(it) }                       (Direct element)
      */
     private fun generateWrappedCollectionMapping(
         sourceField: FieldInfo,
         strategy: MappingStrategy.WrappedCollection
     ): CodeBlock {
         val builder = CodeBlock.builder()
-
-        val wrapPkg = strategy.wrapFunctionFqn.substringBeforeLast(".", missingDelimiterValue = "")
-        val wrapSimple = strategy.wrapFunctionFqn.substringAfterLast(".")
-        val wrapMember = if (wrapPkg.isNotBlank()) {
-            MemberName(wrapPkg, wrapSimple)
-        } else {
-            MemberName("", wrapSimple)
-        }
+        val wrapperClass = ClassName.bestGuess(strategy.wrapperObjectFqn)
 
         when (strategy.elementStrategy) {
             is MappingStrategy.Nested -> {
                 val mapperFn = (strategy.elementStrategy as MappingStrategy.Nested).mapperFunctionName
                 if (sourceField.isNullable) {
-                    // tags?.map { it.toTagDomain() }?.asPersistentList()
+                    // source?.map { it.toX() }?.let { WrapperObject.wrap(it) }
                     builder.add(
-                        "%N?.map·{·it.%N()·}?.%M()",
+                        "%N?.map·{·it.%N()·}?.let·{·%T.wrap(it)·}",
                         sourceField.name,
                         mapperFn,
-                        wrapMember
+                        wrapperClass
                     )
                 } else {
-                    // tags.map { it.toTagDomain() }.asPersistentList()
+                    // WrapperObject.wrap(source.map { it.toX() })
                     builder.add(
-                        "%N.map·{·it.%N()·}.%M()",
+                        "%T.wrap(%N.map·{·it.%N()·})",
+                        wrapperClass,
                         sourceField.name,
-                        mapperFn,
-                        wrapMember
+                        mapperFn
                     )
                 }
             }
 
             is MappingStrategy.Direct -> {
                 if (sourceField.isNullable) {
-                    builder.add("%N?.%M()", sourceField.name, wrapMember)
+                    // source?.let { WrapperObject.wrap(it) }
+                    builder.add("%N?.let·{·%T.wrap(it)·}", sourceField.name, wrapperClass)
                 } else {
-                    builder.add("%N.%M()", sourceField.name, wrapMember)
+                    // WrapperObject.wrap(source)
+                    builder.add("%T.wrap(%N)", wrapperClass, sourceField.name)
                 }
             }
 

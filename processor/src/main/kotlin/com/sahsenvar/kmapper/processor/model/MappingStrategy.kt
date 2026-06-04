@@ -53,13 +53,14 @@ sealed class MappingStrategy {
     data object EnumToWire : MappingStrategy()
 
     /**
-     * Collection mapping that terminates with a @CollectionWrapper call.
-     * Emits: source.map { <elementMapping> }.<wrapSimpleName>()
+     * Collection mapping that terminates with a @CollectionWrapper object's wrap() call.
+     * Emits: WrapperObject.wrap(source.map { elementMapping }) (non-null source)
+     *      or source?.map { ... }?.let { WrapperObject.wrap(it) } (nullable source)
      * @param elementStrategy how to map each element
-     * @param wrapFunctionFqn fully-qualified name of the wrapper extension function
+     * @param wrapperObjectFqn fully-qualified name of the wrapper object (e.g. com.example.PersistentListWrapper)
      */
     data class WrappedCollection(
         val elementStrategy: MappingStrategy,
-        val wrapFunctionFqn: String
+        val wrapperObjectFqn: String
     ) : MappingStrategy()
 }

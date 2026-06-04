@@ -1,6 +1,6 @@
 package com.sahsenvar.kmapper.processor
 
-import com.sahsenvar.kmapper.processor.analyzer.CollectionWrapperSupport
+import com.sahsenvar.kmapper.processor.analyzer.discoverWrappersFromConfig
 import com.sahsenvar.kmapper.processor.analyzer.CycleDetector
 import com.sahsenvar.kmapper.processor.analyzer.FieldAnalyzer
 import com.sahsenvar.kmapper.processor.analyzer.TypeMatcher
@@ -16,7 +16,7 @@ import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.KSFunctionDeclaration // used in generateReverseMappingFunction
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
 import com.squareup.kotlinpoet.ClassName
@@ -44,9 +44,6 @@ class MappingProcessor(
     private val functionNameGenerator by lazy { FunctionNameGenerator(logger) }
     private val codeGen by lazy { MappingCodeGenerator(logger) }
 
-    // CollectionWrapperSupport tracks emitted descriptors across rounds.
-    private val collectionWrapperSupport by lazy { CollectionWrapperSupport(codeGenerator, logger) }
-
     // TypeMatcher is created fresh each round with the current custom converters and wrappers.
     private var typeMatcher: TypeMatcher = TypeMatcher(logger)
 
@@ -59,18 +56,13 @@ class MappingProcessor(
         // Clear previous round
         mappingFunctions.clear()
 
-        // STEP 0: @CollectionWrapper descriptor generation + discovery.
+        // STEP 0: Discover collection wrappers from @KMapperConfig.wrappers (in-module).
         //
-        // generateDescriptors reads @CollectionWrapper functions (including from binary dependencies
-        // via BINARY-retention annotation) and:
-        //   a) emits @CollectionWrapperDescriptor objects into com.sahsenvar.kmapper.generated
-        //   b) caches forTypeFqn→wrapFqn in-memory so discoverWrappers can return them immediately.
-        //
-        // discoverWrappers merges the in-memory cache with getDeclarationsFromPackage results.
-        // The in-memory cache means wrappers are available in the SAME round they are first seen,
-        // without any deferral — even when KSP2 restarts the processor between rounds.
-        collectionWrapperSupport.generateDescriptors(resolver)
-        val collectionWrappers = collectionWrapperSupport.discoverWrappers(resolver)
+        // discoverWrappersFromConfig reads the consumer's own @KMapperConfig annotation (in-module,
+        // works on KMP/iOS) and resolves each listed wrapper object's @CollectionWrapper.forType
+        // via standard dependency annotation resolution (also works cross-module in KSP2).
+        // Returns Map<forTypeFqn, wrapperObjectFqn>.
+        val collectionWrappers = discoverWrappersFromConfig(resolver, logger)
 
         // STEP 1: Discover custom converters from @KMapperConfig annotations.
         // Returns (typePair → converterFqn) map plus the raw entries list for duplicate-checking.
