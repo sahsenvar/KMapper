@@ -16,12 +16,9 @@ kmap iki zorunlu parçadan oluşur: çalışma-zamanı kütüphanesi (`core`) ve
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
-        mavenLocal() // ön-sürüm aşamasında: kmap'i lokal Maven'dan tüketmek için
     }
 }
 ```
-
-> **Ön-sürüm notu:** kmap henüz Maven Central'da yayınlanmadığı için şimdilik `./gradlew publishToMavenLocal` ile kendi makinende yayınlanır ve `mavenLocal()` üzerinden çekilir. Central yayını sonrası `mavenLocal()` gereksiz olacak.
 
 ## 2. KSP eklentisini uygula
 
@@ -42,16 +39,16 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.sahsenvar.kmapper:core:0.1.0-SNAPSHOT")
+            implementation("io.github.sahsenvar:kmapper-core:0.1.0-SNAPSHOT")
             // İsteğe bağlı: immutable koleksiyon desteği
-            implementation("com.sahsenvar.kmapper:converters-compose:0.1.0-SNAPSHOT")
+            implementation("io.github.sahsenvar:kmapper-converters-compose:0.1.0-SNAPSHOT")
         }
     }
 }
 
 dependencies {
     // Eşleme kodunu commonMain için üret
-    add("kspCommonMainMetadata", "com.sahsenvar.kmapper:processor:0.1.0-SNAPSHOT")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:0.1.0-SNAPSHOT")
 }
 
 // KMP + KSP bağlama: commonMain metadata'sı derlemeden ÖNCE işlensin
@@ -68,8 +65,8 @@ KMP değilsen kurulum daha basittir:
 
 ```kotlin
 dependencies {
-    implementation("com.sahsenvar.kmapper:core:0.1.0-SNAPSHOT")
-    ksp("com.sahsenvar.kmapper:processor:0.1.0-SNAPSHOT")
+    implementation("io.github.sahsenvar:kmapper-core:0.1.0-SNAPSHOT")
+    ksp("io.github.sahsenvar:kmapper-processor:0.1.0-SNAPSHOT")
 }
 ```
 

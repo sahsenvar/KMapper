@@ -11,14 +11,13 @@ Full guide — also published on GitBook:
 
 Covers installation, `@MapTo`/`@MapFrom`, field mapping, null-safety, type converters, `MappableEnum`, error handling, observability, multi-module setup, and the full annotation reference.
 
-`com.sahsenvar.kmapper`:
+Group `io.github.sahsenvar`:
 
 | Artifact | Platform | Purpose |
 |----------|----------|---------|
-| `core` | KMP | Annotations, `MappingException`, `MapTypeConverter` + registry, built-in primitive converters, `MappableEnum`, `KMapper`/`MappingListener` |
-| `processor` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()` extensions) |
-| `converters-compose` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet` wrappers |
-| `converters-arrow` | KMP | (reserved) Arrow `NonEmptyList` etc. |
+| `kmapper-core` | KMP | Annotations, `MappingException`, `MapTypeConverter` + registry, built-in primitive converters, `MappableEnum`, `KMapper`/`MappingListener` |
+| `kmapper-processor` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()` extensions) |
+| `kmapper-converters-compose` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet` wrappers |
 
 **Status:** pre-release (`0.1.0-SNAPSHOT`).
 
