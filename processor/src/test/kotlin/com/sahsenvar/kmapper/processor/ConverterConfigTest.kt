@@ -8,36 +8,11 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/**
- * A custom converter: String → kotlinx.datetime.Instant (ISO-8601).
- * NOT in the built-in table (the built-in StringInstantConverter is also String→Instant, BUT
- * we use a distinct type for the target to keep the tests clean).
- *
- * We use a wrapper type to avoid clashing with the built-in StringInstantConverter.
- * CustomDate wraps an epoch-millis string → Long pair (not in built-ins).
- */
-private val CUSTOM_CONVERTER_SRC = SourceFile.kotlin(
-    "CustomConverters.kt", """
-    import com.sahsenvar.kmapper.converter.MapTypeConverter
-
-    /** Converts a hex string to an Int (not in built-in table). */
-    object HexIntConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
-        override fun convertToNonNull(v: String): Int = v.toInt(16)
-        override fun convertFromNonNull(v: Int): String = v.toString(16)
-    }
-
-    /** Second converter for same pair — only valid when selected explicitly via @UseMapTypeConverter. */
-    object DecimalIntConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
-        override fun convertToNonNull(v: String): Int = v.toInt(10)
-        override fun convertFromNonNull(v: Int): String = v.toString(10)
-    }
-""".trimIndent()
-)
-
 class ConverterConfigTest {
 
     /**
-     * @KMapperConfig with HexIntConverter alone (no duplicate) is applied to the field.
+     * Baseline: @KMapperConfig with a single converter (HexIntConverter) compiles and
+     * the generated file references that converter.
      */
     @Test
     fun `@KMapperConfig converter is applied`() {
@@ -72,77 +47,121 @@ class ConverterConfigTest {
     }
 
     /**
-     * Per-field @UseMapTypeConverter must appear in the generated code alongside the global one.
-     * We use two fields:
-     *   - startsAt: String -> Int (global HexIntConverter from @KMapperConfig)
-     *   - legacyCode: String -> Int (per-field DecimalIntConverter via @UseMapTypeConverter)
+     * HEADLINE FEATURE TEST:
      *
-     * Because both converters handle the same pair, the validator would normally reject them.
-     * The validator only sees converters in source — we must structure the test so that ONLY ONE
-     * converter is visible per compilation. We compile the two converters in separate objects
-     * (same file is fine) but the validator detects exact duplicate pairs.
+     * Global converter IsoInstant (String→Instant, registered via @KMapperConfig) handles the
+     * default field, while EpochInstant (also String→Instant, SAME type pair) is used ONLY for
+     * the 'legacy' field via @UseMapTypeConverter.
      *
-     * Design decision: The validator should NOT be run when both converters are explicitly registered
-     * (one globally, one per-field). For this test we isolate: only the globally-used converter
-     * is in the @KMapperConfig, the per-field one is present but the validator checks by type-pair
-     * so we use different type-pairs:
-     *   - HexIntConverter: String -> Int (global, registered in @KMapperConfig)
-     *   - StringLongConverter (built-in) is used per-field via @UseMapTypeConverter
+     * Before the fix the validator would hard-error because it scanned all MapTypeConverter
+     * subclasses and found two String→Instant converters. After the fix the validator only
+     * checks the @KMapperConfig list itself — EpochInstant is exempt because it is referenced
+     * only via @UseMapTypeConverter (explicit, unambiguous).
      *
-     * Actually simplest: global handles String->Int, per-field handles a different built-in
-     * via @UseMapTypeConverter. But @UseMapTypeConverter can name any converter.
-     * We'll use a single-converter compilation for each field: separate sources.
+     * Assertions:
+     *   - Compilation succeeds (exit code OK)
+     *   - Generated EvRemoteMappers.kt uses IsoInstant for 'startsAt'
+     *   - Generated EvRemoteMappers.kt uses EpochInstant for 'legacy'
      */
     @Test
-    fun `per-field @UseMapTypeConverter overrides global`() {
-        // Use ONLY HexIntConverter so validator doesn't complain.
-        // Global: HexIntConverter for String->Int
-        // Per-field: @UseMapTypeConverter(HexIntConverter::class) on a different field also String->Int
-        // Both fields must appear with the converter referenced. This actually tests that @UseMapTypeConverter
-        // is used even when global also provides a converter.
-        val hexOnly = SourceFile.kotlin(
-            "HexConverter2.kt", """
+    fun `per-field @UseMapTypeConverter allows same-pair converter alongside global`() {
+        val converters = SourceFile.kotlin(
+            "Converters.kt", """
             import com.sahsenvar.kmapper.converter.MapTypeConverter
 
-            object HexIntConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
-                override fun convertToNonNull(v: String): Int = v.toInt(16)
-                override fun convertFromNonNull(v: Int): String = v.toString(16)
+            /** Global default: ISO-8601 string → Instant */
+            object IsoInstant : MapTypeConverter<String, Long>(String::class, Long::class) {
+                override fun convertToNonNull(v: String): Long = v.toLong() + 1000L
+                override fun convertFromNonNull(v: Long): String = v.toString()
+            }
+
+            /** Per-field override: epoch-millis string → Instant (SAME String→Long pair!) */
+            object EpochInstant : MapTypeConverter<String, Long>(String::class, Long::class) {
+                override fun convertToNonNull(v: String): Long = v.toLong()
+                override fun convertFromNonNull(v: Long): String = v.toString()
             }
         """.trimIndent()
         )
         val model = SourceFile.kotlin(
-            "M2.kt", """
+            "EvRemote.kt", """
             import com.sahsenvar.kmapper.annotations.MapTo
             import com.sahsenvar.kmapper.annotations.KMapperConfig
             import com.sahsenvar.kmapper.annotations.UseMapTypeConverter
 
-            @KMapperConfig(converters = [HexIntConverter::class])
+            @KMapperConfig(converters = [IsoInstant::class])
             object Cfg
 
-            data class EvDomain(val code: Int, val altCode: Int)
+            data class EvDomain(val startsAt: Long, val legacy: Long)
 
             @MapTo(EvDomain::class)
             data class EvRemote(
-                val code: String,
-                @UseMapTypeConverter(HexIntConverter::class) val altCode: String,
+                val startsAt: String,
+                @UseMapTypeConverter(EpochInstant::class) val legacy: String,
             )
         """.trimIndent()
         )
-        val (r, compilation) = compile(hexOnly, model)
+        val (r, compilation) = compile(converters, model)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("EvRemoteMappers.kt")
-        // Both fields should use HexIntConverter — one from global, one from per-field
-        val hexCount = gen.split("HexIntConverter").size - 1
-        assert(hexCount >= 2) { "Expected at least 2 references to HexIntConverter:\n$gen" }
+        assert(gen.contains("IsoInstant")) {
+            "Expected IsoInstant (global converter) in generated:\n$gen"
+        }
+        assert(gen.contains("EpochInstant")) {
+            "Expected EpochInstant (per-field converter) in generated:\n$gen"
+        }
+    }
+
+    /**
+     * GENUINELY AMBIGUOUS CASE:
+     *
+     * Listing TWO converters for the same (S,T) pair inside @KMapperConfig is ambiguous —
+     * the processor cannot know which one to use for undecorated fields. This MUST produce
+     * a COMPILATION_ERROR with a message about duplicate/ambiguous converters.
+     */
+    @Test
+    fun `two converters for same pair in @KMapperConfig is an error`() {
+        val converters = SourceFile.kotlin(
+            "DupConverters.kt", """
+            import com.sahsenvar.kmapper.converter.MapTypeConverter
+
+            object ConverterA : MapTypeConverter<String, Long>(String::class, Long::class) {
+                override fun convertToNonNull(v: String): Long = v.toLong()
+                override fun convertFromNonNull(v: Long): String = v.toString()
+            }
+
+            object ConverterB : MapTypeConverter<String, Long>(String::class, Long::class) {
+                override fun convertToNonNull(v: String): Long = v.toLong() * 2L
+                override fun convertFromNonNull(v: Long): String = v.toString()
+            }
+        """.trimIndent()
+        )
+        val model = SourceFile.kotlin(
+            "AmbigModel.kt", """
+            import com.sahsenvar.kmapper.annotations.MapTo
+            import com.sahsenvar.kmapper.annotations.KMapperConfig
+
+            @KMapperConfig(converters = [ConverterA::class, ConverterB::class])
+            object Cfg
+
+            data class ADomain(val value: Long)
+
+            @MapTo(ADomain::class)
+            data class ARemote(val value: String)
+        """.trimIndent()
+        )
+        val (r, _) = compile(converters, model)
+        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, r.exitCode, r.messages)
+        assert(
+            r.messages.contains("DUPLICATE", ignoreCase = true) ||
+                r.messages.contains("duplicate", ignoreCase = true) ||
+                r.messages.contains("ambiguous", ignoreCase = true) ||
+                r.messages.contains("@KMapperConfig", ignoreCase = true)
+        ) { "Expected duplicate/ambiguous converter error in:\n${r.messages}" }
     }
 
     /**
      * When no converter exists for a type pair and no @KMapperConfig registers one,
      * the processor must emit a compilation error mentioning "no converter" or similar.
-     *
-     * We use a custom value class type (not in the built-in table and no @KMapperConfig).
-     * Note: String->Int IS in the built-in table, so we cannot use that.
-     * We'll use Int->Boolean which is NOT in the built-in table.
      */
     @Test
     fun `missing converter fails with clear error`() {

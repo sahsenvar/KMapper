@@ -55,17 +55,19 @@ class MappingProcessor(
         // Clear previous round
         mappingFunctions.clear()
 
-        // STEP 1: Validate built-in converters (compile-time bilateral check)
+        // STEP 1: Discover custom converters from @KMapperConfig annotations.
+        // Returns (typePair → converterFqn) map plus the raw entries list for duplicate-checking.
+        val (customConverters, globalConverterEntries) = discoverCustomConverters(resolver)
+        typeMatcher = TypeMatcher(logger, customConverters)
+
+        // STEP 1b: Validate the global @KMapperConfig list for duplicate (S,T) pairs.
+        // Per-field @UseMapTypeConverter converters are exempt — they are never checked here.
         val converterValidator = BuiltInConverterValidator(logger)
-        val convertersValid = converterValidator.validate(resolver)
+        val convertersValid = converterValidator.validate(globalConverterEntries)
         if (!convertersValid) {
-            logger.error("Converter validation failed. Fix bilateral conflicts before proceeding.")
+            logger.error("Converter validation failed. Fix duplicate converters in @KMapperConfig.")
             return emptyList()
         }
-
-        // STEP 1b: Discover custom converters from @KMapperConfig annotations
-        val customConverters = discoverCustomConverters(resolver)
-        typeMatcher = TypeMatcher(logger, customConverters)
 
         // Process @MapTo annotations (Source → Target)
         val mapToClasses = resolver.getSymbolsWithAnnotation(MAP_TO_ANNOTATION)
@@ -99,13 +101,18 @@ class MappingProcessor(
     /**
      * Discovers custom converters declared via @KMapperConfig(converters = [...]).
      *
-     * For each KSType in the converters array, resolves its MapTypeConverter<S,T> supertype
-     * and builds a (sourceFqn to targetFqn) → converterFqn entry.
+     * Returns a pair of:
+     *   - Map<Pair<String,String>, String>: (sourceFqn to targetFqn) → converterFqn
+     *     (first-wins when the same pair appears twice; the validator will catch the duplicate)
+     *   - List<Pair<Pair<String,String>, String>>: ordered raw entries for duplicate detection
+     *     (preserves all entries including duplicates so the validator can report them)
      *
      * Priority: per-field @UseMapTypeConverter > this custom registry > built-in table.
      */
-    private fun discoverCustomConverters(resolver: Resolver): Map<Pair<String, String>, String> {
-        val result = mutableMapOf<Pair<String, String>, String>()
+    private fun discoverCustomConverters(
+        resolver: Resolver
+    ): Pair<Map<Pair<String, String>, String>, List<Pair<Pair<String, String>, String>>> {
+        val entries = mutableListOf<Pair<Pair<String, String>, String>>()
 
         resolver.getSymbolsWithAnnotation("com.sahsenvar.kmapper.annotations.KMapperConfig")
             .filterIsInstance<KSClassDeclaration>()
@@ -123,11 +130,17 @@ class MappingProcessor(
 
                 for (converterType in converterTypes) {
                     val pair = converterType.toConverterPair() ?: continue
-                    result[pair.first] = pair.second
+                    entries.add(pair)
                 }
             }
 
-        return result
+        // Build map (first-wins; duplicates are reported by BuiltInConverterValidator)
+        val result = mutableMapOf<Pair<String, String>, String>()
+        for ((typePair, converterFqn) in entries) {
+            result.putIfAbsent(typePair, converterFqn)
+        }
+
+        return result to entries
     }
 
     /**
