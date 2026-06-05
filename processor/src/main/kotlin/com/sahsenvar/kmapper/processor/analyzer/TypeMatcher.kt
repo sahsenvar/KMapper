@@ -62,6 +62,36 @@ class TypeMatcher(
             return MappingStrategy.WrappedCollection(elementStrategy, wrapperFqn)
         }
 
+        // 2b. Map<K,V> detection — must come before data-class nested check and before
+        //     the plain isCollectionType check (Map is not in the collection FQN list).
+        //     IMPORTANT: when BOTH sides are maps we must handle ALL cases here so we never
+        //     fall through to the isSameType check (which compares only outer FQNs and would
+        //     incorrectly return Direct for Map<Int,X> → Map<String,Y>).
+        if (isMapType(sourceField.type) && isMapType(targetField.type)) {
+            val srcKey = extractMapKeyType(sourceField.type)
+            val tgtKey = extractMapKeyType(targetField.type)
+            val srcVal = extractMapValueType(sourceField.type)
+            val tgtVal = extractMapValueType(targetField.type)
+            if (srcKey != null && tgtKey != null && isSameType(srcKey, tgtKey)
+                && srcVal != null && tgtVal != null) {
+                val valueStrategy = if (isSameType(srcVal, tgtVal)) {
+                    MappingStrategy.Direct
+                } else if (isDataClass(srcVal) && isDataClass(tgtVal)) {
+                    MappingStrategy.Nested("to${tgtVal.declaration.simpleName.asString()}")
+                } else {
+                    MappingStrategy.Direct // fallback; may emit a type error at Kotlin compile time
+                }
+                return MappingStrategy.MapValues(valueStrategy)
+            }
+            // Key type mismatch (or missing type args) → Unmappable; do NOT fall through
+            // to isSameType which only compares outer FQNs and would give a wrong Direct.
+            logger.error(
+                "no converter for ${sourceField.type.fqn()} -> ${targetField.type.fqn()}; " +
+                    "Map key types must match; add @UseMapTypeConverter to convert the field manually"
+            )
+            return MappingStrategy.Unmappable
+        }
+
         if (isCollectionType(sourceField.type) && isCollectionType(targetField.type)) {
             val sourceElementType = extractCollectionElementType(sourceField.type)
             val targetElementType = extractCollectionElementType(targetField.type)
@@ -224,6 +254,15 @@ class TypeMatcher(
     fun extractCollectionElementType(type: KSType): KSType? {
         return type.arguments.firstOrNull()?.type?.resolve()
     }
+
+    fun isMapType(type: KSType): Boolean {
+        val fqn = type.declaration.qualifiedName?.asString() ?: return false
+        return fqn == "kotlin.collections.Map" || fqn == "kotlin.collections.MutableMap"
+    }
+
+    fun extractMapKeyType(type: KSType): KSType? = type.arguments.getOrNull(0)?.type?.resolve()
+
+    fun extractMapValueType(type: KSType): KSType? = type.arguments.getOrNull(1)?.type?.resolve()
 
     private fun isDataClass(type: KSType): Boolean {
         val decl = type.declaration as? KSClassDeclaration ?: return false

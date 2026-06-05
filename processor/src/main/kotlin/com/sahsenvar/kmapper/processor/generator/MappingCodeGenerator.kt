@@ -50,6 +50,8 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                 strategy
             )
 
+            is MappingStrategy.MapValues -> generateMapValuesMapping(sourceField, strategy)
+
             is MappingStrategy.External -> CodeBlock.of("%N", targetField.name)
 
             is MappingStrategy.EnumFromWire -> generateEnumFromWireMapping(sourceField, strategy)
@@ -345,6 +347,44 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
         }
 
         return builder.build()
+    }
+
+    /**
+     * Generates code for a Map<K,V1> → Map<K,V2> field using mapValues.
+     *
+     * Non-null source + Nested values:
+     *   source.mapValues { (_, v) -> v.toV2() }
+     *
+     * Nullable source + Nested values:
+     *   source?.mapValues { (_, v) -> v.toV2() }
+     *
+     * Direct values (same type): passthrough → source
+     *
+     * applyNullableHandling runs after this method returns, so nullable source→required target
+     * wraps correctly with ?: throw RequiredFieldMissing without extra logic here.
+     */
+    private fun generateMapValuesMapping(
+        sourceField: FieldInfo,
+        strategy: MappingStrategy.MapValues
+    ): CodeBlock = when (strategy.valueStrategy) {
+        is MappingStrategy.Nested -> {
+            val mapperFn = (strategy.valueStrategy as MappingStrategy.Nested).mapperFunctionName
+            if (sourceField.isNullable) {
+                CodeBlock.of(
+                    "%N?.mapValues·{·(_,·v)·->·v.%N()·}",
+                    sourceField.name,
+                    mapperFn
+                )
+            } else {
+                CodeBlock.of(
+                    "%N.mapValues·{·(_,·v)·->·v.%N()·}",
+                    sourceField.name,
+                    mapperFn
+                )
+            }
+        }
+        else -> // Direct (same value type) — passthrough
+            CodeBlock.of("%N", sourceField.name)
     }
 }
 

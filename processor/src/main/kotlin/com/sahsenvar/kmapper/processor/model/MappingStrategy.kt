@@ -63,4 +63,16 @@ sealed class MappingStrategy {
         val elementStrategy: MappingStrategy,
         val wrapperObjectFqn: String
     ) : MappingStrategy()
+
+    /**
+     * Map<K,V1> → Map<K,V2> mapping by transforming values.
+     * Keys are directly assigned (same type K on both sides).
+     * Emits: source.mapValues { (_, v) -> v.toV2() }    (non-null source, nested values)
+     *        source?.mapValues { (_, v) -> v.toV2() }   (nullable source, nested values)
+     *        source                                      (direct value — same type K, same type V)
+     * Keys must be the same type on both sides. Different key types → Unmappable.
+     * Plain kotlin.collections.Map only; PersistentMap/ImmutableMap wrappers are deferred.
+     * @param valueStrategy how to map each value: Direct (same type) or Nested (toV2() call)
+     */
+    data class MapValues(val valueStrategy: MappingStrategy) : MappingStrategy()
 }
