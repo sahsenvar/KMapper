@@ -10,6 +10,21 @@ import arrow.core.NonEmptyList
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.datetime.LocalDate
 
+// ─── Arrow Option<T> models (Group D, spec §6.8) ───────────────────────────
+
+data class OptionTarget(
+    val maybeId: arrow.core.Option<String>,    // String? → Option<String>
+    val maybeTag: arrow.core.Option<TagD>,     // TagR?   → Option<TagD> (nested)
+)
+
+@MapTo(OptionTarget::class)
+data class OptionSource(
+    val maybeId: String?,
+    val maybeTag: TagR?,
+)
+
+// ─── Existing models ────────────────────────────────────────────────────────
+
 enum class Status(override val wireValue: String) : MappableEnum<String> {
     ACTIVE("active"),
     BANNED("banned"),

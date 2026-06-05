@@ -1,5 +1,7 @@
 package com.sahsenvar.kmapper.itest
 
+import arrow.core.None
+import arrow.core.Some
 import com.sahsenvar.kmapper.MappingException
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -53,5 +55,18 @@ class EndToEndMappingTest {
         assertFailsWith<MappingException.TypeConversionFailed> {
             valid().copy(joined = "not-a-date").toUserD()
         }
+    }
+
+    // ─── Arrow Option<T> wrap tests (spec §6.8) ─────────────────────────────
+
+    @Test
+    fun `Option wrap — Some and None`() {
+        val some = OptionSource("abc", TagR("tag1")).toOptionTarget()
+        some.maybeId shouldBe Some("abc")
+        some.maybeTag shouldBe Some(TagD("tag1"))
+
+        val none = OptionSource(null, null).toOptionTarget()
+        none.maybeId shouldBe None
+        none.maybeTag shouldBe None
     }
 }

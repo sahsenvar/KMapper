@@ -75,4 +75,22 @@ sealed class MappingStrategy {
      * @param valueStrategy how to map each value: Direct (same type) or Nested (toV2() call)
      */
     data class MapValues(val valueStrategy: MappingStrategy) : MappingStrategy()
+
+    /**
+     * Target field type is `arrow.core.Option<Inner>`.
+     * Source field is `Inner` (non-null) or `Inner?` (nullable).
+     * Detection: matched by target-type FQN string "arrow.core.Option" — no arrow Gradle dep needed.
+     *
+     * @param innerMapperFn non-null when the inner type requires a nested mapper call (data class).
+     */
+    data class OptionWrap(val innerMapperFn: String? = null) : MappingStrategy()
+
+    /**
+     * Source field type is `arrow.core.Option<Inner>`.
+     * Target field is `Inner?` or `Inner` (non-null guarded by existing RequiredFieldMissing path).
+     * Detection: matched by source-type FQN string "arrow.core.Option".
+     *
+     * @param innerMapperFn non-null when the inner type requires a nested mapper call (data class).
+     */
+    data class OptionUnwrap(val innerMapperFn: String? = null) : MappingStrategy()
 }

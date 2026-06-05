@@ -110,6 +110,29 @@ class TypeMatcher(
             }
         }
 
+        // 3c. Check Option<T> wrap/unwrap — placed after collection/Map checks and before same-type.
+        //     Detection uses FQN string comparison only; no arrow-core Gradle dep in :processor.
+        //     Guard: OptionWrap only when target is Option AND source is NOT Option.
+        //            OptionUnwrap only when source is Option AND target is NOT Option.
+        //            (Option→Option is out of scope — must not produce Option<Option<T>>.)
+        val targetOptionFqn = targetField.type.declaration.qualifiedName?.asString()
+        val sourceOptionFqn = sourceField.type.declaration.qualifiedName?.asString()
+
+        if (targetOptionFqn == "arrow.core.Option" && sourceOptionFqn != "arrow.core.Option") {
+            val innerType = targetField.type.arguments.firstOrNull()?.type?.resolve()
+            val innerMapperFn = if (innerType != null && isDataClass(innerType)) {
+                "to${innerType.declaration.simpleName.asString()}"
+            } else null
+            return MappingStrategy.OptionWrap(innerMapperFn)
+        }
+        if (sourceOptionFqn == "arrow.core.Option" && targetOptionFqn != "arrow.core.Option") {
+            val innerType = sourceField.type.arguments.firstOrNull()?.type?.resolve()
+            val innerMapperFn = if (innerType != null && isDataClass(innerType)) {
+                "to${innerType.declaration.simpleName.asString()}"
+            } else null
+            return MappingStrategy.OptionUnwrap(innerMapperFn)
+        }
+
         // 3b. Check same type (non-collection)
         if (isSameType(sourceField.type, targetField.type)) {
             return MappingStrategy.Direct

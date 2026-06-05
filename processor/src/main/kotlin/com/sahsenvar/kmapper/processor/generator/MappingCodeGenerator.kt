@@ -52,6 +52,10 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
 
             is MappingStrategy.MapValues -> generateMapValuesMapping(sourceField, strategy)
 
+            is MappingStrategy.OptionWrap -> generateOptionWrapMapping(sourceField, strategy)
+
+            is MappingStrategy.OptionUnwrap -> generateOptionUnwrapMapping(sourceField, strategy)
+
             is MappingStrategy.External -> CodeBlock.of("%N", targetField.name)
 
             is MappingStrategy.EnumFromWire -> generateEnumFromWireMapping(sourceField, strategy)
@@ -66,8 +70,23 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
             is MappingStrategy.Unmappable -> CodeBlock.of("")
         }
 
-        val nullableHandled = applyNullableHandling(sourceField, targetField, baseMapping)
-        return wrapWithValidation(sourceField, targetField, nullableHandled)
+        // OptionWrap: Option.fromNullable() NEVER returns null — it always yields Option.Some or
+        // Option.None. The target field is Option<T> which is non-null by definition. Skip
+        // applyNullableHandling entirely so no spurious ?: throw RequiredFieldMissing is emitted.
+        if (strategy is MappingStrategy.OptionWrap) {
+            return wrapWithValidation(sourceField, targetField, baseMapping)
+        }
+
+        // OptionUnwrap: getOrNull() always returns a nullable result, even when the source Option
+        // field itself is non-null. Force sourceField.isNullable=true so applyNullableHandling
+        // correctly emits the ?: throw RequiredFieldMissing guard when the target is non-null.
+        val effectiveSourceField = if (strategy is MappingStrategy.OptionUnwrap) {
+            sourceField.copy(isNullable = true)
+        } else {
+            sourceField
+        }
+        val nullableHandled = applyNullableHandling(effectiveSourceField, targetField, baseMapping)
+        return wrapWithValidation(effectiveSourceField, targetField, nullableHandled)
     }
 
     /**
@@ -385,6 +404,51 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
         }
         else -> // Direct (same value type) — passthrough
             CodeBlock.of("%N", sourceField.name)
+    }
+
+    /**
+     * Generates: arrow.core.Option.fromNullable(<innerExpr>)
+     *
+     * innerExpr variants:
+     *   no nested mapper, any nullability: source                   (fromNullable accepts null)
+     *   nested mapper, non-null source:    source.toInner()
+     *   nested mapper, nullable source:    source?.toInner()
+     *
+     * fromNullable(null) == Option.None, fromNullable(x) == Option.Some(x).
+     * The FQN is emitted as a literal string — no arrow-core Gradle dep needed in :processor.
+     */
+    private fun generateOptionWrapMapping(
+        sourceField: FieldInfo,
+        strategy: MappingStrategy.OptionWrap
+    ): CodeBlock {
+        val innerExpr = when {
+            strategy.innerMapperFn == null -> CodeBlock.of("%N", sourceField.name)
+            sourceField.isNullable -> CodeBlock.of("%N?.%N()", sourceField.name, strategy.innerMapperFn)
+            else -> CodeBlock.of("%N.%N()", sourceField.name, strategy.innerMapperFn)
+        }
+        // Emit FQN via ClassName — KotlinPoet renders it as "arrow.core.Option.fromNullable(…)".
+        // ClassName construction requires only String args — no arrow classpath needed.
+        val optionClass = ClassName("arrow.core", "Option")
+        return CodeBlock.of("%T.fromNullable(%L)", optionClass, innerExpr)
+    }
+
+    /**
+     * Generates: source.getOrNull() [?.toInner()]
+     *
+     * The result is nullable (Inner?). The standard nullable→non-null null-guard
+     * (RequiredFieldMissing) is applied by applyNullableHandling after this returns,
+     * so no special handling is needed here for non-null targets.
+     */
+    private fun generateOptionUnwrapMapping(
+        sourceField: FieldInfo,
+        strategy: MappingStrategy.OptionUnwrap
+    ): CodeBlock {
+        val getOrNull = CodeBlock.of("%N.getOrNull()", sourceField.name)
+        return if (strategy.innerMapperFn != null) {
+            CodeBlock.of("%L?.%N()", getOrNull, strategy.innerMapperFn)
+        } else {
+            getOrNull
+        }
     }
 }
 
