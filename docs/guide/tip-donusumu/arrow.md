@@ -126,6 +126,76 @@ Boş olabilecek kaynaklarda eşlemeyi `try/catch` veya `runCatching` ile sararak
 
 ---
 
+## Option\<T\> Eşleştirme
+
+`NonEmptyList`'e ek olarak, classpath'te `converters-arrow` bulunması `Option<T>` eşleştirmesini
+de etkinleştirir. Bu bir **processor kuralıdır** — converter nesnesi veya `@KMapperConfig` girişi
+gerekmez.
+
+### T? / T → Option\<T\>
+
+Hedef alan tipi `Option<T>` ise processor `Option.fromNullable(...)` üretir:
+
+```kotlin
+@MapTo(UserDomain::class)
+data class UserRemote(
+    val name: String?,      // nullable kaynak
+    val role: String,       // null olmayan kaynak
+)
+
+data class UserDomain(
+    val name: Option<String>,
+    val role: Option<String>,
+)
+```
+
+Üretilen:
+
+```kotlin
+public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
+    name = Option.fromNullable(name),
+    role = Option.fromNullable(role),
+)
+```
+
+### Option\<T\> → T?
+
+Kaynak alan tipi `Option<T>` ise processor `getOrNull()` üretir:
+
+```kotlin
+@MapTo(UserRemote::class)
+data class UserDomain(
+    val name: Option<String>,
+)
+
+data class UserRemote(
+    val name: String?,
+)
+```
+
+Üretilen:
+
+```kotlin
+public fun UserDomain.toUserRemote(): UserRemote = UserRemote(
+    name = name.getOrNull(),
+)
+```
+
+Hedef alan null olamaz ise (ör. `val name: String`) `getOrNull()` sonrasında standart null güvenlik
+kuralları devreye girer: `name.getOrNull() ?: throw MappingException.RequiredFieldMissing("name")`.
+
+### Option İçinde İç İçe Modeller
+
+İç tip `T` kendi başına eşlenebilir bir tipse (üretilen `toT()` uzantısı varsa), processor
+sarmalama/açma işleminin içine mapper çağrısını ekler:
+
+```kotlin
+// kaynak alan: role: RoleRemote?  →  hedef: Option<RoleDomain>
+// Üretilen: Option.fromNullable(role?.toRoleDomain())
+```
+
+---
+
 ## Yol Haritası
 
 `Option<NonEmptyList<T>>` desteği (boş kaynak → `None`, dolu kaynak → `Some(nel)`) bir sonraki sürümde planlanmaktadır.

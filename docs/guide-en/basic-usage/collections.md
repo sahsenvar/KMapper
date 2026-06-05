@@ -131,3 +131,40 @@ public fun CategoryRemote.toCategoryDomain(): CategoryDomain = CategoryDomain(
 If you want to use `kotlinx.collections.immutable` types such as `PersistentList`, `ImmutableList`, or `ImmutableSet` as target types, add the `converters-immutable` module. That module provides wrapper functions annotated with `@CollectionWrapper`, which the processor discovers automatically.
 
 For details, see [Immutable Collections (converters-immutable)](../type-conversion/immutable.md).
+
+---
+
+## Map\<K, V\> Mapping
+
+`Map<K, V1>` → `Map<K, V2>` is supported out of the box, with no extra dependency. The processor
+maps each **value** using the same rules as other fields — direct assignment when the value types
+are the same, or a nested `toV2()` call when `V1` is a mapped model. Keys must be the same type
+on both sides.
+
+```kotlin
+@MapTo(ConfigDomain::class)
+data class ConfigRemote(
+    val id: String,
+    val settings: Map<String, SettingRemote>,
+)
+
+data class ConfigDomain(
+    val id: String,
+    val settings: Map<String, SettingDomain>,
+)
+```
+
+Generated:
+
+```kotlin
+public fun ConfigRemote.toConfigDomain(): ConfigDomain = ConfigDomain(
+    id       = id,
+    settings = settings.mapValues { (_, v) -> v.toSettingDomain() },
+)
+```
+
+When value types are the same (`Map<String, String>` → `Map<String, String>`), values are assigned
+directly without a mapper call.
+
+> **Note:** `PersistentMap`, `ImmutableMap`, and other non-stdlib map types are not yet supported
+> and are deferred to a future release.

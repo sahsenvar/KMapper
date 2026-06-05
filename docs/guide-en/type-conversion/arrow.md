@@ -126,6 +126,75 @@ No `getDeclarationsFromPackage` or auto-discovery is used.
 
 ---
 
+## Option\<T\> Mapping
+
+In addition to `NonEmptyList`, `converters-arrow` on the classpath also enables `Option<T>` mapping.
+This is a **processor rule** — no converter object or `@KMapperConfig` entry is needed.
+
+### T? / T → Option\<T\>
+
+When the target field type is `Option<T>`, the processor emits `Option.fromNullable(...)`:
+
+```kotlin
+@MapTo(UserDomain::class)
+data class UserRemote(
+    val name: String?,      // nullable source
+    val role: String,       // non-null source
+)
+
+data class UserDomain(
+    val name: Option<String>,
+    val role: Option<String>,
+)
+```
+
+Generated:
+
+```kotlin
+public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
+    name = Option.fromNullable(name),
+    role = Option.fromNullable(role),
+)
+```
+
+### Option\<T\> → T?
+
+When the source field type is `Option<T>`, the processor emits `getOrNull()`:
+
+```kotlin
+@MapTo(UserRemote::class)
+data class UserDomain(
+    val name: Option<String>,
+)
+
+data class UserRemote(
+    val name: String?,
+)
+```
+
+Generated:
+
+```kotlin
+public fun UserDomain.toUserRemote(): UserRemote = UserRemote(
+    name = name.getOrNull(),
+)
+```
+
+If the target field is non-null (e.g. `val name: String`), a null-guard fires after `getOrNull()`,
+following the standard null-safety rules: `name.getOrNull() ?: throw MappingException.RequiredFieldMissing("name")`.
+
+### Nested models inside Option
+
+If the inner type `T` is itself a mappable type (with a generated `toT()` extension), the processor
+emits the mapper call inside the wrap/unwrap:
+
+```kotlin
+// source field: role: RoleRemote?  →  target: Option<RoleDomain>
+// Generated: Option.fromNullable(role?.toRoleDomain())
+```
+
+---
+
 ## Roadmap
 
 `Option<NonEmptyList<T>>` support (empty source → `None`, non-empty source → `Some(nel)`) is planned for a future release.

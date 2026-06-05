@@ -24,6 +24,9 @@
 * [NonEmptyList — Arrow (converters-arrow)](tip-donusumu/arrow.md)
 * [Tarih ve Saat Converter'ları (converters-datetime)](tip-donusumu/datetime.md)
 * [Büyük Sayı Converter'ları (converters-bignumber)](tip-donusumu/bignumber.md)
+* [UUID Converter'ları (converters-uuid)](tip-donusumu/uuid.md)
+* [Okio Converter'ları (converters-okio)](tip-donusumu/okio.md)
+* [URI Converter'ları (converters-uri)](tip-donusumu/uri.md)
 
 ## Enum Mapping
 
@@ -41,6 +44,7 @@
 
 * [Çok-Modüllü Projeler](ileri/cok-modullu.md)
 * [Mimari: Nasıl Çalışır?](ileri/mimari.md)
+* [Doğrulama — @ValidateFrom / @ValidateTo](ileri/dogrulama.md)
 
 ## Referans
 

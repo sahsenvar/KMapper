@@ -24,6 +24,9 @@
 * [NonEmptyList — Arrow (converters-arrow)](type-conversion/arrow.md)
 * [Date and Time Converters (converters-datetime)](type-conversion/datetime.md)
 * [Big Number Converters (converters-bignumber)](type-conversion/bignumber.md)
+* [UUID Converters (converters-uuid)](type-conversion/uuid.md)
+* [Okio Converters (converters-okio)](type-conversion/okio.md)
+* [URI Converters (converters-uri)](type-conversion/uri.md)
 
 ## Enum Mapping
 
@@ -41,6 +44,7 @@
 
 * [Multi-Module Projects](advanced/multi-module.md)
 * [Architecture: How It Works](advanced/architecture.md)
+* [Validation — @ValidateFrom / @ValidateTo](advanced/validation.md)
 
 ## Reference
 

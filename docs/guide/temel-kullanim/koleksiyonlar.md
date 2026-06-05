@@ -131,3 +131,40 @@ public fun CategoryRemote.toCategoryDomain(): CategoryDomain = CategoryDomain(
 `PersistentList`, `ImmutableList`, `ImmutableSet` gibi `kotlinx.collections.immutable` tiplerini hedef olarak kullanmak istiyorsanız `converters-immutable` modülünü ekleyin. Bu modül `@CollectionWrapper` anotasyonunu taşıyan sarmalayıcı fonksiyonlar sağlar ve processor bunları otomatik keşfeder.
 
 Ayrıntılar için bkz. [Immutable Koleksiyonlar (converters-immutable)](../tip-donusumu/immutable.md).
+
+---
+
+## Map\<K, V\> Eşleştirme
+
+`Map<K, V1>` → `Map<K, V2>` ekstra bağımlılık gerektirmeden desteklenir. Processor her
+**değeri** diğer alanlardaki kurallarla aynı şekilde eşler — değer tipleri aynıysa doğrudan
+atama, `V1` eşlenebilir bir modeliyle `toV2()` çağrısı yapılır. Anahtarlar her iki tarafta da
+aynı tip olmalıdır.
+
+```kotlin
+@MapTo(ConfigDomain::class)
+data class ConfigRemote(
+    val id: String,
+    val settings: Map<String, SettingRemote>,
+)
+
+data class ConfigDomain(
+    val id: String,
+    val settings: Map<String, SettingDomain>,
+)
+```
+
+Üretilen:
+
+```kotlin
+public fun ConfigRemote.toConfigDomain(): ConfigDomain = ConfigDomain(
+    id       = id,
+    settings = settings.mapValues { (_, v) -> v.toSettingDomain() },
+)
+```
+
+Değer tipleri aynı olduğunda (`Map<String, String>` → `Map<String, String>`), değerler mapper
+çağrısı olmadan doğrudan atanır.
+
+> **Not:** `PersistentMap`, `ImmutableMap` ve stdlib dışı diğer map tipleri henüz desteklenmez;
+> bu destek ilerleyen bir sürüme ertelenmiştir.
