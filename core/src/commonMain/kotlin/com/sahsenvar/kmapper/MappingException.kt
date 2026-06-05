@@ -14,4 +14,7 @@ sealed class MappingException(message: String, cause: Throwable? = null)
 
     class EmptyCollection(val detail: String)
         : MappingException("Collection cannot be empty: $detail")
+
+    class ValidationFailed(val field: String, val reason: String)
+        : MappingException("Validation failed for '$field': $reason")
 }
