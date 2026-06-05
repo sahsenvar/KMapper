@@ -64,7 +64,82 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
             is MappingStrategy.Unmappable -> CodeBlock.of("")
         }
 
-        return applyNullableHandling(sourceField, targetField, baseMapping)
+        val nullableHandled = applyNullableHandling(sourceField, targetField, baseMapping)
+        return wrapWithValidation(sourceField, targetField, nullableHandled)
+    }
+
+    /**
+     * Wraps [expr] in a `run { }` block that fires ValidateFrom checks on the source value
+     * and ValidateTo checks on the result value. Returns [expr] unchanged when both lists are empty.
+     *
+     * Emission per spec §2.7:
+     * - ValidateFrom checks fire FIRST on the SOURCE field value (before the expr is evaluated).
+     * - `val __result = <expr>` captures the already null-handled expression.
+     * - ValidateTo checks fire on `__result`.
+     * - The block yields `__result`.
+     */
+    private fun wrapWithValidation(
+        sourceField: FieldInfo,
+        targetField: FieldInfo,
+        expr: CodeBlock
+    ): CodeBlock {
+        val fromValidators = sourceField.validateFrom
+        val toValidators = sourceField.validateTo
+        if (fromValidators.isEmpty() && toValidators.isEmpty()) return expr
+
+        val validationFailed = ClassName("com.sahsenvar.kmapper", "MappingException", "ValidationFailed")
+        val srcName = sourceField.name
+        val tgtName = targetField.name
+
+        val builder = CodeBlock.builder()
+        builder.beginControlFlow("run")
+
+        // ValidateFrom checks — fire on the source value BEFORE the mapping expr
+        for (fqn in fromValidators) {
+            val validator = ClassName.bestGuess(fqn)
+            if (sourceField.isNullable) {
+                // nullable source: skip validation when null
+                builder.beginControlFlow("%N?.let { __s ->", srcName)
+                builder.addStatement(
+                    "%T.validate(__s)?.let { m -> throw %T(%S, m) }",
+                    validator, validationFailed, tgtName
+                )
+                builder.endControlFlow()
+            } else {
+                // non-null source: direct validate call
+                builder.addStatement(
+                    "%T.validate(%N)?.let { throw %T(%S, it) }",
+                    validator, srcName, validationFailed, tgtName
+                )
+            }
+        }
+
+        // Capture the (already null-handled) mapping expression
+        builder.addStatement("val __result = %L", expr)
+
+        // ValidateTo checks — fire on __result AFTER the mapping expr
+        for (fqn in toValidators) {
+            val validator = ClassName.bestGuess(fqn)
+            if (targetField.isNullable) {
+                // nullable result: skip validation when null
+                builder.beginControlFlow("__result?.let { __r ->")
+                builder.addStatement(
+                    "%T.validate(__r)?.let { m -> throw %T(%S, m) }",
+                    validator, validationFailed, tgtName
+                )
+                builder.endControlFlow()
+            } else {
+                // non-null result: direct validate call
+                builder.addStatement(
+                    "%T.validate(__result)?.let { throw %T(%S, it) }",
+                    validator, validationFailed, tgtName
+                )
+            }
+        }
+
+        builder.addStatement("__result")
+        builder.endControlFlow()
+        return builder.build()
     }
 
     private fun generateEnumFromWireMapping(
