@@ -32,13 +32,15 @@ kotlin {
 }
 ```
 
-The KSP dependency does not change, but you must add the wrapper to `@KMapperConfig.wrappers`:
+The KSP dependency does not change, but you must add the wrapper(s) you need to `@KMapperConfig.wrappers`:
 
 ```kotlin
 import com.sahsenvar.kmapper.annotations.KMapperConfig
 import com.sahsenvar.kmapper.arrow.NonEmptyListWrapper
+import com.sahsenvar.kmapper.arrow.NonEmptySetWrapper
 
-@KMapperConfig(wrappers = [NonEmptyListWrapper::class])
+// To use both:
+@KMapperConfig(wrappers = [NonEmptyListWrapper::class, NonEmptySetWrapper::class])
 object AppMapperConfig
 ```
 
@@ -52,9 +54,9 @@ dependencies {
 
 ---
 
-## Provided Wrapper Object
+## Provided Wrapper Objects
 
-`converters-arrow` defines one `@CollectionWrapper` wrapper:
+`converters-arrow` defines two `@CollectionWrapper` wrappers:
 
 ```kotlin
 @CollectionWrapper(forType = NonEmptyList::class)
@@ -63,13 +65,22 @@ object NonEmptyListWrapper {
         items.toNonEmptyListOrNull()
             ?: throw MappingException.EmptyCollection("NonEmptyList source was empty")
 }
+
+@CollectionWrapper(forType = NonEmptySet::class)
+object NonEmptySetWrapper {
+    fun <T> wrap(items: List<T>): NonEmptySet<T> =
+        items.toNonEmptySetOrNull()
+            ?: throw MappingException.EmptyCollection("NonEmptySet source was empty")
+}
 ```
 
-You do not call this object directly; the processor emits a `NonEmptyListWrapper.wrap(...)` call whenever it sees a `NonEmptyList` target field.
+You do not call these objects directly; the processor emits the appropriate `wrap(...)` call based on the target field type.
 
 ---
 
 ## Usage
+
+### NonEmptyList
 
 Use `NonEmptyList<T>` in the target class and add `NonEmptyListWrapper::class` to `@KMapperConfig.wrappers`:
 
@@ -102,6 +113,39 @@ public fun PostRemote.toPostDomain(): PostDomain = PostDomain(
     tags  = NonEmptyListWrapper.wrap(tags.map { it.toTagDomain() }),
 )
 ```
+
+### NonEmptySet
+
+`NonEmptySet<T>` is supported by the same mechanism. Add `NonEmptySetWrapper::class` to `@KMapperConfig.wrappers`:
+
+```kotlin
+import arrow.core.NonEmptySet
+import com.sahsenvar.kmapper.arrow.NonEmptySetWrapper
+
+@KMapperConfig(wrappers = [NonEmptySetWrapper::class])
+object AppMapperConfig
+
+@MapTo(RoleDomain::class)
+data class RoleRemote(
+    val permissions: List<PermissionRemote>,
+)
+
+data class PermissionDomain(val name: String)
+
+data class RoleDomain(
+    val permissions: NonEmptySet<PermissionDomain>,   // target: NonEmptySet
+)
+```
+
+Generated:
+
+```kotlin
+public fun RoleRemote.toRoleDomain(): RoleDomain = RoleDomain(
+    permissions = NonEmptySetWrapper.wrap(permissions.map { it.toPermissionDomain() }),
+)
+```
+
+> **Note:** `NonEmptySet` has set semantics — duplicate elements from the source list are deduplicated. If the source list is empty, `MappingException.EmptyCollection("NonEmptySet source was empty")` is thrown.
 
 ---
 

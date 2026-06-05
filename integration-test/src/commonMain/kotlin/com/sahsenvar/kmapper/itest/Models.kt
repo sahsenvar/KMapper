@@ -6,10 +6,12 @@ import com.sahsenvar.kmapper.annotations.MapTo
 import com.sahsenvar.kmapper.annotations.ValidateFrom
 import com.sahsenvar.kmapper.annotations.ValidateTo
 import com.sahsenvar.kmapper.arrow.NonEmptyListWrapper
+import com.sahsenvar.kmapper.arrow.NonEmptySetWrapper
 import com.sahsenvar.kmapper.datetime.StringLocalDateConverter
 import com.sahsenvar.kmapper.immutable.PersistentListWrapper
 import com.sahsenvar.kmapper.validation.builtin.NotBlankValidator
 import arrow.core.NonEmptyList
+import arrow.core.NonEmptySet
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.datetime.LocalDate
 
@@ -43,7 +45,7 @@ data class UserD(
     val roles: NonEmptyList<String>,
 )
 
-@KMapperConfig(converters = [StringLocalDateConverter::class], wrappers = [PersistentListWrapper::class, NonEmptyListWrapper::class])
+@KMapperConfig(converters = [StringLocalDateConverter::class], wrappers = [PersistentListWrapper::class, NonEmptyListWrapper::class, NonEmptySetWrapper::class])
 object ItestMapperConfig
 
 @MapTo(TagD::class)
@@ -81,4 +83,18 @@ data class CatalogD(val attrs: Map<String, AttrD>, val meta: Map<String, String>
 data class CatalogR(
     val attrs: Map<String, AttrR>,    // Map<String,AttrR> → Map<String,AttrD>
     val meta: Map<String, String>,    // passthrough
+)
+
+// ─── NonEmptySet E2E models (Group G) ──────────────────────────────────────
+
+data class PermissionD(val name: String)
+
+@MapTo(PermissionD::class)
+data class PermissionR(val name: String)
+
+data class RoleD(val permissions: NonEmptySet<PermissionD>)
+
+@MapTo(RoleD::class)
+data class RoleR(
+    val permissions: List<PermissionR>,   // List<PermissionR> → NonEmptySet<PermissionD>
 )
