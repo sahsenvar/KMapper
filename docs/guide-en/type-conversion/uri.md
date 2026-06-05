@@ -12,37 +12,23 @@ there is no KMP-common URI type, each platform gets its own converter:
 There are no converters in `commonMain` for this module. Like other scalar add-ons, converters must
 be listed in `@KMapperConfig(converters = [...])` — they are not auto-discovered.
 
-> **Note:** `converters-uri` is new in version **0.2.0** and is not yet published to Maven Central.
-> Until it is released, use `publishToMavenLocal` + `mavenLocal()`.
-> `core` and `processor` are still available from Maven Central at `0.1.0`.
-
 ---
 
 ## Setup
-
-```kotlin
-// settings.gradle.kts — add mavenLocal for the pre-release add-on
-dependencyResolutionManagement {
-    repositories {
-        mavenLocal()        // for 0.2.0 add-ons
-        mavenCentral()
-    }
-}
-```
 
 ```kotlin
 // build.gradle.kts (consuming module)
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:0.1.0")
+            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
         }
         // converters-uri is consumed in the platform source set where you need it:
         jvmMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-converters-uri:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-converters-uri:1.0.0")
         }
         androidMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-converters-uri:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-converters-uri:1.0.0")
         }
         // for iOS: add to iosMain or each iOS target source set
     }

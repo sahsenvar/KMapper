@@ -2,31 +2,17 @@
 
 To use Arrow's `NonEmptyList<T>` as a mapping target, add the **`converters-arrow`** module. This module uses the `@CollectionWrapper` mechanism — **unlike scalar converters, you must list it explicitly in `@KMapperConfig.wrappers`**; adding the dependency alone is not sufficient.
 
-> **Note:** `converters-arrow` is new in version **0.2.0** and is not yet published to Maven Central.
-> Until it is released, use `publishToMavenLocal` + `mavenLocal()`.
-> `core` and `processor` are still available from Maven Central at `0.1.0`.
-
 ---
 
 ## Setup
-
-```kotlin
-// settings.gradle.kts — add mavenLocal for the pre-release add-on
-dependencyResolutionManagement {
-    repositories {
-        mavenLocal()        // for 0.2.0 add-ons
-        mavenCentral()
-    }
-}
-```
 
 ```kotlin
 // build.gradle.kts (consuming module)
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:0.1.0")
-            implementation("io.github.sahsenvar:kmapper-converters-arrow:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
+            implementation("io.github.sahsenvar:kmapper-converters-arrow:1.0.0")
         }
     }
 }
@@ -48,7 +34,7 @@ KSP configuration:
 
 ```kotlin
 dependencies {
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:0.1.0")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:1.0.0")
 }
 ```
 

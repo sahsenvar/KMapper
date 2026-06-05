@@ -30,13 +30,19 @@ fun UserRemote.toUserDomain(): UserDomain = UserDomain(id = id, email = email)
 
 | Artifact | Platform | Sorumluluk |
 |----------|----------|-----------|
-| `com.sahsenvar.kmapper:core` | KMP | Anotasyonlar, `MapTypeConverter`, `TypeConverterRegistry`, built-in converter'lar, `MappableEnum`, `MappingException`, `KMapper`/`MappingListener` |
-| `com.sahsenvar.kmapper:processor` | JVM | KSP kod üreteci (`@MapTo`/`@MapFrom` → `toX()`) |
-| `io.github.sahsenvar:kmapper-converters-immutable` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet` sarmalayıcıları |
-| `com.sahsenvar.kmapper:converters-arrow` | KMP | (yakında) Arrow `NonEmptyList` vb. |
+| `io.github.sahsenvar:kmapper-core` | KMP | Anotasyonlar, `MapTypeConverter`, `TypeConverterRegistry`, built-in converter'lar, `MappableEnum`, `MappingException`, `KMapper`/`MappingListener` |
+| `io.github.sahsenvar:kmapper-processor` | JVM | KSP kod üreteci (`@MapTo`/`@MapFrom` → `toX()`) |
+| `io.github.sahsenvar:kmapper-converters-immutable` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet`/`PersistentSet` sarmalayıcıları |
+| `io.github.sahsenvar:kmapper-converters-arrow` | KMP | Arrow `NonEmptyList`, `NonEmptySet`, `Option<T>` eşleştirme |
+| `io.github.sahsenvar:kmapper-converters-datetime` | KMP (kotlinx) / JVM+Android | `String`/`Long` ↔ `LocalDate`, `LocalDateTime`, `Instant` vb. |
+| `io.github.sahsenvar:kmapper-converters-bignumber` | KMP (ionspin) / JVM+Android | `String`/`Double`/`Long`/`Int` ↔ `BigDecimal`, `BigInteger` |
+| `io.github.sahsenvar:kmapper-converters-uuid` | KMP / JVM+Android | `String` ↔ `kotlin.uuid.Uuid`; `String`/`Uuid` ↔ `java.util.UUID` |
+| `io.github.sahsenvar:kmapper-converters-okio` | KMP | `String`/`ByteArray` ↔ `okio.ByteString`; `String` ↔ `okio.Path` |
+| `io.github.sahsenvar:kmapper-converters-uri` | JVM / Android / iOS | `String` ↔ `java.net.URI` / `android.net.Uri` / `NSURL` |
+| `io.github.sahsenvar:kmapper-validators` | KMP | `EmailValidator`, `UrlValidator` — `@ValidateFrom`/`@ValidateTo` için |
 
 ## Sürüm Durumu
 
-kmap şu an **ön-sürüm** aşamasındadır (`0.1.0-SNAPSHOT`). Maven Central yayını hazırlık aşamasındadır; o zamana kadar yerel Maven (`mavenLocal`) üzerinden tüketilebilir. Bkz. [Kurulum](baslarken/kurulum.md).
+kmap **1.0.0**, [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core)'da yayınlanmıştır — tüm 10 modül dahil. Bkz. [Kurulum](baslarken/kurulum.md).
 
 > Sonraki adım: **[Kurulum →](baslarken/kurulum.md)**

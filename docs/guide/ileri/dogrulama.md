@@ -4,10 +4,6 @@ kmap mapper'ı yalnızca dönüştürme ve null kontrolü yapmakla kalmaz: `@Val
 `@ValidateTo` anotasyonları sayesinde eşleştirme anında doğrulama kuralları da uygulayabilir; bu
 sayede eşleştirilmiş nesne çağrıya dönmeden önce geçerliliği garanti altına alınır.
 
-> **Not:** `@ValidateFrom`, `@ValidateTo`, `Validator<T>` taban sınıfı ve yerleşik validator'lar
-> sürüm **0.2.0** ile gelir; henüz Maven Central'da değildir.
-> Yayınlanana kadar `publishToMavenLocal` + `mavenLocal()` ile kullanın.
-> `core` ve `processor` hâlâ Maven Central'dan `0.1.0` olarak çekilebilir.
 
 ---
 
@@ -101,16 +97,13 @@ Ekstra bağımlılık gerekmez.
 
 `:validators` modülü, yaygın formatlar için alan odaklı validator'lar ekler.
 
-> **Not:** `kmapper-validators` sürüm **0.2.0** ile gelir; henüz Maven Central'da değildir.
-> Yayınlanana kadar `publishToMavenLocal` + `mavenLocal()` ile kullanın.
-
 ```kotlin
 // build.gradle.kts (tüketen modül)
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:0.1.0")
-            implementation("io.github.sahsenvar:kmapper-validators:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
+            implementation("io.github.sahsenvar:kmapper-validators:1.0.0")
         }
     }
 }

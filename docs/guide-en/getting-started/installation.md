@@ -39,17 +39,16 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:0.1.0")
-            // Optional: immutable collection support (0.2.0 — not yet on Maven Central)
-            // First: publishToMavenLocal + add mavenLocal() to settings.gradle.kts
-            implementation("io.github.sahsenvar:kmapper-converters-immutable:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
+            // Optional: add any converter add-ons you need, e.g.:
+            // implementation("io.github.sahsenvar:kmapper-converters-immutable:1.0.0")
         }
     }
 }
 
 dependencies {
     // Generate mapping code for commonMain
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:0.1.0")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:1.0.0")
 }
 
 // KMP + KSP wiring: process commonMain metadata BEFORE compilation
@@ -66,8 +65,8 @@ If you are not using KMP, the setup is simpler:
 
 ```kotlin
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:0.1.0")
-    ksp("io.github.sahsenvar:kmapper-processor:0.1.0")
+    implementation("io.github.sahsenvar:kmapper-core:1.0.0")
+    ksp("io.github.sahsenvar:kmapper-processor:1.0.0")
 }
 ```
 

@@ -30,13 +30,19 @@ fun UserRemote.toUserDomain(): UserDomain = UserDomain(id = id, email = email)
 
 | Artifact | Platform | Responsibility |
 |----------|----------|----------------|
-| `com.sahsenvar.kmapper:core` | KMP | Annotations, `MapTypeConverter`, `TypeConverterRegistry`, built-in converters, `MappableEnum`, `MappingException`, `KMapper`/`MappingListener` |
-| `com.sahsenvar.kmapper:processor` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()`) |
-| `io.github.sahsenvar:kmapper-converters-immutable` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet` wrappers |
-| `com.sahsenvar.kmapper:converters-arrow` | KMP | (coming soon) Arrow `NonEmptyList`, etc. |
+| `io.github.sahsenvar:kmapper-core` | KMP | Annotations, `MapTypeConverter`, `TypeConverterRegistry`, built-in converters, `MappableEnum`, `MappingException`, `KMapper`/`MappingListener` |
+| `io.github.sahsenvar:kmapper-processor` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()`) |
+| `io.github.sahsenvar:kmapper-converters-immutable` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet`/`PersistentSet` wrappers |
+| `io.github.sahsenvar:kmapper-converters-arrow` | KMP | Arrow `NonEmptyList`, `NonEmptySet`, `Option<T>` mapping |
+| `io.github.sahsenvar:kmapper-converters-datetime` | KMP (kotlinx) / JVM+Android | `String`/`Long` ↔ `LocalDate`, `LocalDateTime`, `Instant`, etc. |
+| `io.github.sahsenvar:kmapper-converters-bignumber` | KMP (ionspin) / JVM+Android | `String`/`Double`/`Long`/`Int` ↔ `BigDecimal`, `BigInteger` |
+| `io.github.sahsenvar:kmapper-converters-uuid` | KMP / JVM+Android | `String` ↔ `kotlin.uuid.Uuid`; `String`/`Uuid` ↔ `java.util.UUID` |
+| `io.github.sahsenvar:kmapper-converters-okio` | KMP | `String`/`ByteArray` ↔ `okio.ByteString`; `String` ↔ `okio.Path` |
+| `io.github.sahsenvar:kmapper-converters-uri` | JVM / Android / iOS | `String` ↔ `java.net.URI` / `android.net.Uri` / `NSURL` |
+| `io.github.sahsenvar:kmapper-validators` | KMP | `EmailValidator`, `UrlValidator` for `@ValidateFrom`/`@ValidateTo` |
 
 ## Version Status
 
-kmap is currently in **pre-release** (`0.1.0-SNAPSHOT`). Maven Central publication is being prepared; until then it can be consumed via local Maven (`mavenLocal`). See [Installation](getting-started/installation.md).
+kmap **1.0.0** is published on [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core) — all 10 modules. See [Installation](getting-started/installation.md).
 
 > Next: **[Installation →](getting-started/installation.md)**

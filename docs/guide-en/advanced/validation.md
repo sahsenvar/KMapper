@@ -4,10 +4,6 @@ kmap's mapper can do more than convert and null-check fields: with `@ValidateFro
 `@ValidateTo` it can also enforce validation rules at mapping time, before the mapped object is
 ever returned to the caller.
 
-> **Note:** `@ValidateFrom`, `@ValidateTo`, the `Validator<T>` base class, and the built-in
-> validators are all new in version **0.2.0** and are not yet published to Maven Central.
-> Until released, use `publishToMavenLocal` + `mavenLocal()`.
-> `core` and `processor` are still available from Maven Central at `0.1.0`.
 
 ---
 
@@ -99,16 +95,13 @@ No extra dependency is needed.
 
 The `:validators` module adds domain-oriented validators for common formats.
 
-> **Note:** `kmapper-validators` is new in version **0.2.0** and is not yet published to Maven Central.
-> Until released, use `publishToMavenLocal` + `mavenLocal()`.
-
 ```kotlin
 // build.gradle.kts (consuming module)
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:0.1.0")
-            implementation("io.github.sahsenvar:kmapper-validators:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
+            implementation("io.github.sahsenvar:kmapper-validators:1.0.0")
         }
     }
 }

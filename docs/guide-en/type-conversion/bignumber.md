@@ -2,31 +2,17 @@
 
 The `converters-bignumber` module provides **scalar converters** for mapping between `BigDecimal`/`BigInteger` types and `String`, `Double`, `Long`, or `Int`. You must list the converters you need in `@KMapperConfig(converters = [...])` — they are not auto-discovered.
 
-> **Note:** `converters-bignumber` is new in version **0.2.0** and is not yet published to Maven Central.
-> Until it is released, use `publishToMavenLocal` + `mavenLocal()`.
-> `core` and `processor` are still available from Maven Central at `0.1.0`.
-
 ---
 
 ## Setup
-
-```kotlin
-// settings.gradle.kts — add mavenLocal for the pre-release add-on
-dependencyResolutionManagement {
-    repositories {
-        mavenLocal()        // for 0.2.0 add-ons
-        mavenCentral()
-    }
-}
-```
 
 ```kotlin
 // build.gradle.kts (consuming module)
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:0.1.0")
-            implementation("io.github.sahsenvar:kmapper-converters-bignumber:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
+            implementation("io.github.sahsenvar:kmapper-converters-bignumber:1.0.0")
         }
     }
 }

@@ -26,8 +26,6 @@ Group `io.github.sahsenvar`:
 | `kmapper-converters-uri` | JVM / Android / iOS (platform-split) | Scalar converters: `String` ↔ `java.net.URI` (JVM), `android.net.Uri` (Android), `platform.Foundation.NSURL` (iOS) |
 | `kmapper-validators` | KMP | `EmailValidator`, `UrlValidator` for use with `@ValidateFrom`/`@ValidateTo` field validation |
 
-**Latest release:** `0.1.0` — on [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core) (`kmapper-core`, `kmapper-processor` only). See the [installation guide](docs/guide-en/getting-started/installation.md).
-
-**0.2.0 (in development):** adds `kmapper-converters-immutable` (with `PersistentSet`), `kmapper-converters-arrow`, `kmapper-converters-datetime`, `kmapper-converters-bignumber`, `kmapper-converters-uuid`, `kmapper-converters-okio`, `kmapper-converters-uri`, `kmapper-validators`, plus `@ValidateFrom`/`@ValidateTo` validation seam, `Option<T>` mapping, and `Map<K,V>` value mapping. Available via `publishToMavenLocal` until the Maven Central release.
+**Latest release:** `1.0.0` — on [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core) (all 10 modules). See the [installation guide](docs/guide-en/getting-started/installation.md).
 
 Design & implementation plan live in [`docs/superpowers/`](docs/superpowers/).

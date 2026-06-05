@@ -4,31 +4,17 @@ The `converters-uuid` module provides **scalar converters** for `kotlin.uuid.Uui
 `java.util.UUID` (JVM/Android). Like other scalar add-ons, they must be listed in
 `@KMapperConfig(converters = [...])` — they are not auto-discovered.
 
-> **Note:** `converters-uuid` is new in version **0.2.0** and is not yet published to Maven Central.
-> Until it is released, use `publishToMavenLocal` + `mavenLocal()`.
-> `core` and `processor` are still available from Maven Central at `0.1.0`.
-
 ---
 
 ## Setup
-
-```kotlin
-// settings.gradle.kts — add mavenLocal for the pre-release add-on
-dependencyResolutionManagement {
-    repositories {
-        mavenLocal()        // for 0.2.0 add-ons
-        mavenCentral()
-    }
-}
-```
 
 ```kotlin
 // build.gradle.kts (consuming module)
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:0.1.0")
-            implementation("io.github.sahsenvar:kmapper-converters-uuid:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
+            implementation("io.github.sahsenvar:kmapper-converters-uuid:1.0.0")
         }
     }
 }

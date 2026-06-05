@@ -2,31 +2,18 @@
 
 Arrow'un `NonEmptyList<T>` tipini eşleme hedefi olarak kullanmak için **`converters-arrow`** modülünü ekleyin. Bu modül `@CollectionWrapper` mekanizmasını kullanır — **scalar converter'lardan farklı olarak `@KMapperConfig.wrappers` listesinde açıkça belirtmeniz gerekir**; yalnızca bağımlılığı eklemek yeterli değildir.
 
-> **Not:** `converters-arrow` sürüm **0.2.0** ile gelir; henüz Maven Central'da değildir.
-> Yayınlanana kadar `publishToMavenLocal` + `mavenLocal()` ile kullanın.
-> `core` ve `processor` hâlâ Maven Central'dan `0.1.0` olarak çekilebilir.
-
 ---
 
 ## Kurulum
 
-```kotlin
-// settings.gradle.kts — pre-release için mavenLocal ekle
-dependencyResolutionManagement {
-    repositories {
-        mavenLocal()        // 0.2.0 add-on'lar için
-        mavenCentral()
-    }
-}
-```
 
 ```kotlin
 // build.gradle.kts (tüketen modül)
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:0.1.0")
-            implementation("io.github.sahsenvar:kmapper-converters-arrow:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
+            implementation("io.github.sahsenvar:kmapper-converters-arrow:1.0.0")
         }
     }
 }
@@ -48,7 +35,7 @@ KSP yapılandırması:
 
 ```kotlin
 dependencies {
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:0.1.0")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:1.0.0")
 }
 ```
 

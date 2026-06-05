@@ -39,17 +39,16 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:0.1.0")
-            // İsteğe bağlı: immutable koleksiyon desteği (0.2.0 — henüz Maven Central'da değil)
-            // Önce: publishToMavenLocal + settings.gradle.kts'e mavenLocal() ekle
-            implementation("io.github.sahsenvar:kmapper-converters-immutable:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
+            // İsteğe bağlı: ihtiyaç duyduğunuz converter ek modüllerini ekleyin, ör.:
+            // implementation("io.github.sahsenvar:kmapper-converters-immutable:1.0.0")
         }
     }
 }
 
 dependencies {
     // Eşleme kodunu commonMain için üret
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:0.1.0")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:1.0.0")
 }
 
 // KMP + KSP bağlama: commonMain metadata'sı derlemeden ÖNCE işlensin
@@ -66,8 +65,8 @@ KMP değilsen kurulum daha basittir:
 
 ```kotlin
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:0.1.0")
-    ksp("io.github.sahsenvar:kmapper-processor:0.1.0")
+    implementation("io.github.sahsenvar:kmapper-core:1.0.0")
+    ksp("io.github.sahsenvar:kmapper-processor:1.0.0")
 }
 ```
 

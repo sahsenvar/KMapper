@@ -2,29 +2,15 @@
 
 kmap'in `core` modülü yalnızca stdlib `List`/`Set` eşleştirmesini bilir. `PersistentList`, `ImmutableList`, `ImmutableSet`, `PersistentSet` gibi `kotlinx.collections.immutable` tiplerini hedef olarak kullanmak için **`converters-immutable`** modülünü ekleyin.
 
-> **Not:** `converters-immutable` sürüm **0.2.0** ile güncellendi; henüz Maven Central'da değildir.
-> Yayınlanana kadar `publishToMavenLocal` + `mavenLocal()` ile kullanın.
-> `core` ve `processor` hâlâ Maven Central'dan `0.1.0` olarak çekilebilir.
-
 ---
 
 ## Kurulum
-
-```kotlin
-// settings.gradle.kts — pre-release için mavenLocal ekle
-dependencyResolutionManagement {
-    repositories {
-        mavenLocal()        // 0.2.0 add-on'lar için
-        mavenCentral()
-    }
-}
-```
 
 `converters-immutable` bağımlılığını ilgili modüle ekleyin:
 
 ```kotlin
 // build.gradle.kts
-commonMainImplementation("io.github.sahsenvar:kmapper-converters-immutable:0.2.0")
+commonMainImplementation("io.github.sahsenvar:kmapper-converters-immutable:1.0.0")
 ```
 
 KSP bağımlılığı değişmez. Ancak **wrapper'ları `@KMapperConfig`'in `wrappers` listesinde açıkça belirtmeniz gerekir** (bağımlılığı eklemek yeterli değildir):

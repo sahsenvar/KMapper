@@ -12,37 +12,23 @@ ortak bir URI tipi bulunmadığından, her platform kendi converter'ını alır:
 Bu modülün `commonMain`'inde converter bulunmaz. Diğer scalar add-on'lar gibi, converter'lar
 `@KMapperConfig(converters = [...])` listesine eklenmelidir — otomatik keşfedilmezler.
 
-> **Not:** `converters-uri` sürüm **0.2.0** ile gelir; henüz Maven Central'da değildir.
-> Yayınlanana kadar `publishToMavenLocal` + `mavenLocal()` ile kullanın.
-> `core` ve `processor` hâlâ Maven Central'dan `0.1.0` olarak çekilebilir.
-
 ---
 
 ## Kurulum
-
-```kotlin
-// settings.gradle.kts — pre-release için mavenLocal ekle
-dependencyResolutionManagement {
-    repositories {
-        mavenLocal()        // 0.2.0 add-on'lar için
-        mavenCentral()
-    }
-}
-```
 
 ```kotlin
 // build.gradle.kts (tüketen modül)
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:0.1.0")
+            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
         }
         // converters-uri platforma özgü kaynak kümelerde kullanılır:
         jvmMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-converters-uri:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-converters-uri:1.0.0")
         }
         androidMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-converters-uri:0.2.0")
+            implementation("io.github.sahsenvar:kmapper-converters-uri:1.0.0")
         }
         // iOS için: iosMain veya her iOS hedef kaynak kümesine ekleyin
     }
