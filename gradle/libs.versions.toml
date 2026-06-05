@@ -11,6 +11,7 @@ ionspin-bignum = "0.3.10"
 compile-testing = "0.12.1"
 vanniktech-publish = "0.33.0"
 kotest = "6.1.11"
+okio = "3.9.1"
 
 [libraries]
 ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
@@ -24,6 +25,7 @@ arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 ionspin-bignum = { module = "com.ionspin.kotlin:bignum", version.ref = "ionspin-bignum" }
 kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotest-property   = { module = "io.kotest:kotest-property", version.ref = "kotest" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
