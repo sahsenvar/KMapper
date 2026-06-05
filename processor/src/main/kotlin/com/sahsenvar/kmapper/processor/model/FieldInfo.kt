@@ -16,7 +16,11 @@ data class FieldInfo(
     val fieldMapTargets: Map<String, List<String>>,
     val useConverter: String?,
     /** If true, this field will be ignored in automatic mapping (requires external parameter) */
-    val isIgnored: Boolean
+    val isIgnored: Boolean,
+    /** FQNs of Validator<T> object singletons applied to the SOURCE value before mapping */
+    val validateFrom: List<String> = emptyList(),
+    /** FQNs of Validator<T> object singletons applied to the RESULT value after mapping */
+    val validateTo: List<String> = emptyList(),
 ) {
     /** Legacy: Returns first FieldMap target name (for single @MapTo scenarios) */
     val fieldMapTarget: String? get() = fieldMapTargets.values.firstOrNull()?.firstOrNull()

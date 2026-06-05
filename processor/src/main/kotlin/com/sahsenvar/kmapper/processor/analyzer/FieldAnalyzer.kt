@@ -69,6 +69,10 @@ class FieldAnalyzer(private val logger: KSPLogger) {
             val useConverter =
                 extractUseConverter(param) ?: property?.let { extractUseConverter(it) }
             val isIgnored = extractIgnore(param) || (property?.let { extractIgnore(it) } == true)
+            val validateFrom =
+                extractValidateFrom(param).ifEmpty { property?.let { extractValidateFrom(it) } ?: emptyList() }
+            val validateTo =
+                extractValidateTo(param).ifEmpty { property?.let { extractValidateTo(it) } ?: emptyList() }
 
             result.add(
                 FieldInfo(
@@ -80,7 +84,9 @@ class FieldAnalyzer(private val logger: KSPLogger) {
                     isComputed = false,
                     fieldMapTargets = fieldMapTargets,
                     useConverter = useConverter,
-                    isIgnored = isIgnored
+                    isIgnored = isIgnored,
+                    validateFrom = validateFrom,
+                    validateTo = validateTo,
                 )
             )
         }
@@ -95,6 +101,8 @@ class FieldAnalyzer(private val logger: KSPLogger) {
                     val mapDefaultValue = extractMapDefaultValue(property)
                     val useConverter = extractUseConverter(property)
                     val isIgnored = extractIgnore(property)
+                    val validateFrom = extractValidateFrom(property)
+                    val validateTo = extractValidateTo(property)
 
                     result.add(
                         FieldInfo(
@@ -106,7 +114,9 @@ class FieldAnalyzer(private val logger: KSPLogger) {
                             isComputed = true,
                             fieldMapTargets = fieldMapTargets,
                             useConverter = useConverter,
-                            isIgnored = isIgnored
+                            isIgnored = isIgnored,
+                            validateFrom = validateFrom,
+                            validateTo = validateTo,
                         )
                     )
                 }
@@ -184,5 +194,22 @@ class FieldAnalyzer(private val logger: KSPLogger) {
             val qualifiedName = it.annotationType.resolve().declaration.qualifiedName?.asString()
             shortName == "Ignore" || qualifiedName == "com.sahsenvar.kmapper.annotations.Ignore"
         }
+    }
+
+    private fun extractValidateFrom(annotated: KSAnnotated): List<String> =
+        extractValidatorFqns(annotated, "ValidateFrom", "com.sahsenvar.kmapper.annotations.ValidateFrom")
+
+    private fun extractValidateTo(annotated: KSAnnotated): List<String> =
+        extractValidatorFqns(annotated, "ValidateTo", "com.sahsenvar.kmapper.annotations.ValidateTo")
+
+    private fun extractValidatorFqns(annotated: KSAnnotated, shortName: String, fqn: String): List<String> {
+        val annotation = annotated.annotations.firstOrNull {
+            it.shortName.asString() == shortName ||
+                it.annotationType.resolve().declaration.qualifiedName?.asString() == fqn
+        } ?: return emptyList()
+        // vararg validators: KClass<*> vararg — annotation.arguments[0].value is List<KSType>
+        @Suppress("UNCHECKED_CAST")
+        val validators = annotation.arguments.firstOrNull()?.value as? List<KSType> ?: return emptyList()
+        return validators.mapNotNull { it.declaration.qualifiedName?.asString() }
     }
 }
