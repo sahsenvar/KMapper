@@ -2,6 +2,8 @@
 
 KMP-friendly compile-time object mapping for Kotlin Multiplatform, powered by KSP.
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.sahsenvar/kmapper-core?label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.10-blue.svg?logo=kotlin)](https://kotlinlang.org) [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20JVM%20%7C%20iOS-lightgrey)](https://kotlinlang.org/docs/multiplatform.html) [![CI](https://img.shields.io/github/actions/workflow/status/sahsenvar/KMapper/ci.yml?branch=main&label=CI)](https://github.com/sahsenvar/KMapper/actions)
+
 ## 📖 Documentation
 
 Full guide on **GitBook**: **https://kmapper.gitbook.io/docs** (Türkçe)
