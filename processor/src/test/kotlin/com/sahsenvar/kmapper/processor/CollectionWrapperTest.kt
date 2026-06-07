@@ -12,7 +12,6 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCompilerApi::class)
 class CollectionWrapperTest {
-
     /**
      * A @CollectionWrapper object in the same compilation, listed in @KMapperConfig.wrappers.
      * A @MapTo model with a PersistentList<TagDomain> target field should generate
@@ -20,33 +19,34 @@ class CollectionWrapperTest {
      */
     @Test
     fun `List maps to PersistentList via CollectionWrapper object`() {
-        val src = SourceFile.kotlin(
-            "W.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.annotations.CollectionWrapper
-            import com.sahsenvar.kmapper.annotations.KMapperConfig
-            import kotlinx.collections.immutable.PersistentList
-            import kotlinx.collections.immutable.toPersistentList
+        val src =
+            SourceFile.kotlin(
+                "W.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.annotations.CollectionWrapper
+                import com.sahsenvar.kmapper.annotations.KMapperConfig
+                import kotlinx.collections.immutable.PersistentList
+                import kotlinx.collections.immutable.toPersistentList
 
-            @CollectionWrapper(forType = PersistentList::class)
-            object W {
-                fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
-            }
+                @CollectionWrapper(forType = PersistentList::class)
+                object W {
+                    fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
+                }
 
-            @KMapperConfig(wrappers = [W::class])
-            object Cfg
+                @KMapperConfig(wrappers = [W::class])
+                object Cfg
 
-            data class TagDomain(val name: String)
-            data class ProductDomain(val tags: PersistentList<TagDomain>)
+                data class TagDomain(val name: String)
+                data class ProductDomain(val tags: PersistentList<TagDomain>)
 
-            @MapTo(TagDomain::class)
-            data class TagRemote(val name: String)
+                @MapTo(TagDomain::class)
+                data class TagRemote(val name: String)
 
-            @MapTo(ProductDomain::class)
-            data class ProductRemote(val tags: List<TagRemote>)
-            """.trimIndent()
-        )
+                @MapTo(ProductDomain::class)
+                data class ProductRemote(val tags: List<TagRemote>)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
@@ -61,34 +61,35 @@ class CollectionWrapperTest {
      */
     @Test
     fun `runtime exec — wrapped collection has correct elements`() {
-        val src = SourceFile.kotlin(
-            "RT.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.annotations.CollectionWrapper
-            import com.sahsenvar.kmapper.annotations.KMapperConfig
-            import kotlinx.collections.immutable.PersistentList
-            import kotlinx.collections.immutable.toPersistentList
+        val src =
+            SourceFile.kotlin(
+                "RT.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.annotations.CollectionWrapper
+                import com.sahsenvar.kmapper.annotations.KMapperConfig
+                import kotlinx.collections.immutable.PersistentList
+                import kotlinx.collections.immutable.toPersistentList
 
-            @CollectionWrapper(forType = PersistentList::class)
-            object RTWrapper {
-                fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
-            }
+                @CollectionWrapper(forType = PersistentList::class)
+                object RTWrapper {
+                    fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
+                }
 
-            @KMapperConfig(wrappers = [RTWrapper::class])
-            object RTCfg
+                @KMapperConfig(wrappers = [RTWrapper::class])
+                object RTCfg
 
-            data class ItemDomain(val value: Int)
+                data class ItemDomain(val value: Int)
 
-            data class ContainerDomain(val items: PersistentList<ItemDomain>)
+                data class ContainerDomain(val items: PersistentList<ItemDomain>)
 
-            @MapTo(ItemDomain::class)
-            data class ItemRemote(val value: Int)
+                @MapTo(ItemDomain::class)
+                data class ItemRemote(val value: Int)
 
-            @MapTo(ContainerDomain::class)
-            data class ContainerRemote(val items: List<ItemRemote>)
-            """.trimIndent()
-        )
+                @MapTo(ContainerDomain::class)
+                data class ContainerRemote(val items: List<ItemRemote>)
+                """.trimIndent(),
+            )
         val (r, _) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
 
@@ -113,28 +114,29 @@ class CollectionWrapperTest {
      */
     @Test
     fun `duplicate wrapper for same type fails`() {
-        val src = SourceFile.kotlin(
-            "Dup.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.CollectionWrapper
-            import com.sahsenvar.kmapper.annotations.KMapperConfig
-            import kotlinx.collections.immutable.PersistentList
-            import kotlinx.collections.immutable.toPersistentList
+        val src =
+            SourceFile.kotlin(
+                "Dup.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.CollectionWrapper
+                import com.sahsenvar.kmapper.annotations.KMapperConfig
+                import kotlinx.collections.immutable.PersistentList
+                import kotlinx.collections.immutable.toPersistentList
 
-            @CollectionWrapper(forType = PersistentList::class)
-            object W1 {
-                fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
-            }
+                @CollectionWrapper(forType = PersistentList::class)
+                object W1 {
+                    fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
+                }
 
-            @CollectionWrapper(forType = PersistentList::class)
-            object W2 {
-                fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
-            }
+                @CollectionWrapper(forType = PersistentList::class)
+                object W2 {
+                    fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
+                }
 
-            @KMapperConfig(wrappers = [W1::class, W2::class])
-            object DupCfg
-            """.trimIndent()
-        )
+                @KMapperConfig(wrappers = [W1::class, W2::class])
+                object DupCfg
+                """.trimIndent(),
+            )
         val (r, _) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, r.exitCode)
         assertTrue(
@@ -143,7 +145,7 @@ class CollectionWrapperTest {
                 r.messages.contains("duplicate", ignoreCase = true) ||
                 r.messages.contains("conflict", ignoreCase = true) ||
                 r.messages.contains("multiple", ignoreCase = true),
-            "Expected conflict error in:\n${r.messages}"
+            "Expected conflict error in:\n${r.messages}",
         )
     }
 }

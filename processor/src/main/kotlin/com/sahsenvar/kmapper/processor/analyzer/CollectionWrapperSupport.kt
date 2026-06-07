@@ -26,21 +26,24 @@ private const val KMAPPER_CONFIG_ANNOTATION = "com.sahsenvar.kmapper.annotations
  */
 fun discoverWrappersFromConfig(
     resolver: Resolver,
-    logger: KSPLogger
+    logger: KSPLogger,
 ): Map<String, String> {
     // forTypeFqn → wrapperObjectFqn; accumulate all first, then check duplicates
     val entries = mutableListOf<Pair<String, String>>()
 
-    resolver.getSymbolsWithAnnotation(KMAPPER_CONFIG_ANNOTATION)
+    resolver
+        .getSymbolsWithAnnotation(KMAPPER_CONFIG_ANNOTATION)
         .filterIsInstance<KSClassDeclaration>()
         .forEach { cfg ->
-            val annotation = cfg.annotations.firstOrNull {
-                it.shortName.asString() == "KMapperConfig"
-            } ?: return@forEach
+            val annotation =
+                cfg.annotations.firstOrNull {
+                    it.shortName.asString() == "KMapperConfig"
+                } ?: return@forEach
 
-            val wrappersArg = annotation.arguments.firstOrNull {
-                it.name?.asString() == "wrappers"
-            } ?: return@forEach
+            val wrappersArg =
+                annotation.arguments.firstOrNull {
+                    it.name?.asString() == "wrappers"
+                } ?: return@forEach
 
             @Suppress("UNCHECKED_CAST")
             val wrapperTypes = wrappersArg.value as? List<KSType> ?: return@forEach
@@ -51,30 +54,36 @@ fun discoverWrappersFromConfig(
 
                 // Read @CollectionWrapper.forType from the wrapper class declaration.
                 // This is a dependency annotation-resolution read — works cross-module in KSP2.
-                val collectionWrapperAnnotation = wrapperDecl.annotations.firstOrNull {
-                    it.shortName.asString() == "CollectionWrapper"
-                }
+                val collectionWrapperAnnotation =
+                    wrapperDecl.annotations.firstOrNull {
+                        it.shortName.asString() == "CollectionWrapper"
+                    }
 
                 if (collectionWrapperAnnotation == null) {
                     logger.error(
                         "Class $wrapperObjectFqn listed in @KMapperConfig.wrappers " +
                             "must be annotated with @CollectionWrapper(forType = ...)",
-                        cfg
+                        cfg,
                     )
                     continue
                 }
 
-                val forTypeArg = collectionWrapperAnnotation.arguments.firstOrNull {
-                    it.name?.asString() == "forType"
-                }?.value
+                val forTypeArg =
+                    collectionWrapperAnnotation.arguments
+                        .firstOrNull {
+                            it.name?.asString() == "forType"
+                        }?.value
 
-                val forTypeFqn = (forTypeArg as? KSType)
-                    ?.declaration?.qualifiedName?.asString()
+                val forTypeFqn =
+                    (forTypeArg as? KSType)
+                        ?.declaration
+                        ?.qualifiedName
+                        ?.asString()
 
                 if (forTypeFqn == null) {
                     logger.error(
                         "Could not resolve @CollectionWrapper.forType on $wrapperObjectFqn",
-                        wrapperDecl
+                        wrapperDecl,
                     )
                     continue
                 }
@@ -92,7 +101,7 @@ fun discoverWrappersFromConfig(
             logger.error(
                 "Duplicate @CollectionWrapper for forType=$forTypeFqn: " +
                     "both $existing and $wrapperObjectFqn are registered. " +
-                    "Remove one from @KMapperConfig.wrappers."
+                    "Remove one from @KMapperConfig.wrappers.",
             )
         } else {
             seenForTypes[forTypeFqn] = wrapperObjectFqn

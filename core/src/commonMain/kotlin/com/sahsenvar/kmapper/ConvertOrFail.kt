@@ -11,11 +11,14 @@ package com.sahsenvar.kmapper
  * @param to    FQN of the target type (for error reporting)
  * @param block The converter call to execute
  */
-inline fun <T> convertOrFail(from: String, to: String, block: () -> T): T =
-    try {
-        block()
-    } catch (e: MappingException) {
-        throw e
-    } catch (e: Throwable) {
-        throw MappingException.TypeConversionFailed(from, to, e)
-    }
+inline fun <T> convertOrFail(
+    from: String,
+    to: String,
+    block: () -> T,
+): T = try {
+    block()
+} catch (e: MappingException) {
+    throw e
+} catch (e: Throwable) {
+    throw MappingException.TypeConversionFailed(from, to, e)
+}

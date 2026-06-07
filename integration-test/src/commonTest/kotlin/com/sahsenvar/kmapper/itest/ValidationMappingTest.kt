@@ -6,7 +6,6 @@ import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
 class ValidationMappingTest {
-
     // ─── @ValidateFrom: validated on source field BEFORE mapping ─────────────
 
     @Test
@@ -18,17 +17,19 @@ class ValidationMappingTest {
 
     @Test
     fun `blank name throws ValidationFailed from ValidateFrom`() {
-        val ex = assertFailsWith<MappingException.ValidationFailed> {
-            ContactR(name = "   ", label = "ok").toContactD()
-        }
+        val ex =
+            assertFailsWith<MappingException.ValidationFailed> {
+                ContactR(name = "   ", label = "ok").toContactD()
+            }
         ex.field shouldBe "name"
     }
 
     @Test
     fun `empty name throws ValidationFailed from ValidateFrom`() {
-        val ex = assertFailsWith<MappingException.ValidationFailed> {
-            ContactR(name = "", label = null).toContactD()
-        }
+        val ex =
+            assertFailsWith<MappingException.ValidationFailed> {
+                ContactR(name = "", label = null).toContactD()
+            }
         ex.field shouldBe "name"
     }
 
@@ -36,9 +37,10 @@ class ValidationMappingTest {
 
     @Test
     fun `blank label throws ValidationFailed from ValidateTo`() {
-        val ex = assertFailsWith<MappingException.ValidationFailed> {
-            ContactR(name = "Bob", label = "  ").toContactD()
-        }
+        val ex =
+            assertFailsWith<MappingException.ValidationFailed> {
+                ContactR(name = "Bob", label = "  ").toContactD()
+            }
         ex.field shouldBe "label"
     }
 
@@ -54,9 +56,10 @@ class ValidationMappingTest {
 
     @Test
     fun `ValidationFailed message contains field name and reason`() {
-        val ex = assertFailsWith<MappingException.ValidationFailed> {
-            ContactR(name = "", label = null).toContactD()
-        }
+        val ex =
+            assertFailsWith<MappingException.ValidationFailed> {
+                ContactR(name = "", label = null).toContactD()
+            }
         ex.field shouldBe "name"
         ex.reason shouldBe "must not be blank"
         (ex.message ?: "").contains("name") shouldBe true

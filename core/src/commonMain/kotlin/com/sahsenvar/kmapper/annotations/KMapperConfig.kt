@@ -6,5 +6,5 @@ import kotlin.reflect.KClass
 @Retention(AnnotationRetention.SOURCE)
 annotation class KMapperConfig(
     val converters: Array<KClass<*>> = [],
-    val wrappers: Array<KClass<*>> = []
+    val wrappers: Array<KClass<*>> = [],
 )

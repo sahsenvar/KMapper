@@ -11,4 +11,6 @@ import kotlin.reflect.KClass
  */
 @Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.SOURCE)
-annotation class ValidateTo(vararg val validators: KClass<*>)
+annotation class ValidateTo(
+    vararg val validators: KClass<*>,
+)

@@ -13,13 +13,12 @@ import kotlin.test.Test
  * checkAll is suspend → wrapped in runBlocking.
  */
 class BigNumberRoundTripPropertyTest {
-
     @Test
     fun longBigInteger_Long_BigInteger_Long_round_trip() {
         runBlocking {
             checkAll(Arb.long()) { n ->
                 LongBigIntegerConverter.convertFromNonNull(
-                    LongBigIntegerConverter.convertToNonNull(n)
+                    LongBigIntegerConverter.convertToNonNull(n),
                 ) shouldBe n
             }
         }
@@ -33,7 +32,7 @@ class BigNumberRoundTripPropertyTest {
             checkAll(Arb.long()) { n ->
                 val original = BigDecimal.fromLong(n)
                 StringBigDecimalConverter.convertToNonNull(
-                    StringBigDecimalConverter.convertFromNonNull(original)
+                    StringBigDecimalConverter.convertFromNonNull(original),
                 ) shouldBe original
             }
         }

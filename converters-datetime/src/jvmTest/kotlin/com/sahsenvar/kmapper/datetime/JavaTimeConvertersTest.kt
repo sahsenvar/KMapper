@@ -1,18 +1,16 @@
 package com.sahsenvar.kmapper.datetime
 
-import kotlinx.datetime.Instant as KInstant
-import kotlinx.datetime.LocalDate as KLocalDate
+import kotlin.test.Test
+import kotlin.test.assertEquals
 import java.time.Instant as JInstant
 import java.time.LocalDate as JLocalDate
 import java.time.LocalDateTime as JLocalDateTime
 import java.time.LocalTime as JLocalTime
 import java.time.OffsetDateTime as JOffsetDateTime
-import java.time.ZonedDateTime as JZonedDateTime
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlinx.datetime.Instant as KInstant
+import kotlinx.datetime.LocalDate as KLocalDate
 
 class JavaTimeConvertersTest {
-
     // StringJavaInstantConverter
     @Test
     fun javaInstant_parseFromString() {
@@ -100,9 +98,9 @@ class JavaTimeConvertersTest {
             StringJavaZonedDateTimeConverter.convertToNonNull(s),
             StringJavaZonedDateTimeConverter.convertToNonNull(
                 StringJavaZonedDateTimeConverter.convertFromNonNull(
-                    StringJavaZonedDateTimeConverter.convertToNonNull(s)
-                )
-            )
+                    StringJavaZonedDateTimeConverter.convertToNonNull(s),
+                ),
+            ),
         )
     }
 

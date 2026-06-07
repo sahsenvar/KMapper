@@ -6,7 +6,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class NonEmptyListWrapperTest {
-
     @Test
     fun `non-empty list wraps`() {
         assertEquals(listOf(1, 2), NonEmptyListWrapper.wrap(listOf(1, 2)).toList())

@@ -15,7 +15,9 @@ import kotlin.reflect.KClass
  * @param T the type of value this validator accepts
  * @param targetType the KClass of T, used for documentation/introspection
  */
-abstract class Validator<T : Any>(val targetType: KClass<T>) {
+abstract class Validator<T : Any>(
+    val targetType: KClass<T>,
+) {
     /**
      * Returns `null` if [value] is valid, or a human-readable reason string if invalid.
      */

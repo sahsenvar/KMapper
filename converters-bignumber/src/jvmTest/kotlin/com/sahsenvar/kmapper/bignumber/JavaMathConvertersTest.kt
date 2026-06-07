@@ -1,12 +1,11 @@
 package com.sahsenvar.kmapper.bignumber
 
-import java.math.BigDecimal as JBigDecimal
-import java.math.BigInteger as JBigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import java.math.BigDecimal as JBigDecimal
+import java.math.BigInteger as JBigInteger
 
 class JavaMathConvertersTest {
-
     // StringJavaBigDecimalConverter
     @Test
     fun stringJavaBigDecimal_parseFromString() {

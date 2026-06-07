@@ -13,32 +13,33 @@ import kotlin.test.assertEquals
  * Each test inspects the KSP-generated .kt file for the expected emission shape.
  */
 class ValidateCodegenTest {
-
     // -----------------------------------------------------------------------
     // @ValidateFrom — non-null source field
     // -----------------------------------------------------------------------
 
     @Test
     fun `ValidateFrom on non-null field emits non-null validate call`() {
-        val src = SourceFile.kotlin(
-            "VF1.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.annotations.ValidateFrom
-            import com.sahsenvar.kmapper.validation.Validator
+        val src =
+            SourceFile.kotlin(
+                "VF1.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.annotations.ValidateFrom
+                import com.sahsenvar.kmapper.validation.Validator
 
-            data class NameDomain(val name: String)
+                data class NameDomain(val name: String)
 
-            object TestNotBlank : Validator<String>(String::class) {
-                override fun validate(value: String): String? =
-                    if (value.isBlank()) "must not be blank" else null
-            }
+                object TestNotBlank : Validator<String>(String::class) {
+                    override fun validate(value: String): String? =
+                        if (value.isBlank()) "must not be blank" else null
+                }
 
-            @MapTo(NameDomain::class)
-            data class NameRemote(
-                @ValidateFrom(TestNotBlank::class) val name: String
+                @MapTo(NameDomain::class)
+                data class NameRemote(
+                    @ValidateFrom(TestNotBlank::class) val name: String
+                )
+                """.trimIndent(),
             )
-            """.trimIndent()
-        )
         val (result, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -59,28 +60,30 @@ class ValidateCodegenTest {
 
     @Test
     fun `ValidateFrom on nullable source field emits nullable guard`() {
-        val src = SourceFile.kotlin(
-            "VF2.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.annotations.ValidateFrom
-            import com.sahsenvar.kmapper.annotations.MapDefaultValue
-            import com.sahsenvar.kmapper.validation.Validator
+        val src =
+            SourceFile.kotlin(
+                "VF2.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.annotations.ValidateFrom
+                import com.sahsenvar.kmapper.annotations.MapDefaultValue
+                import com.sahsenvar.kmapper.validation.Validator
 
-            data class TagDomain(val tag: String)
+                data class TagDomain(val tag: String)
 
-            object TestNotBlank : Validator<String>(String::class) {
-                override fun validate(value: String): String? =
-                    if (value.isBlank()) "must not be blank" else null
-            }
+                object TestNotBlank : Validator<String>(String::class) {
+                    override fun validate(value: String): String? =
+                        if (value.isBlank()) "must not be blank" else null
+                }
 
-            @MapTo(TagDomain::class)
-            data class TagRemote(
-                @ValidateFrom(TestNotBlank::class)
-                @MapDefaultValue("\"unknown\"")
-                val tag: String?
+                @MapTo(TagDomain::class)
+                data class TagRemote(
+                    @ValidateFrom(TestNotBlank::class)
+                    @MapDefaultValue("\"unknown\"")
+                    val tag: String?
+                )
+                """.trimIndent(),
             )
-            """.trimIndent()
-        )
         val (result, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -97,25 +100,27 @@ class ValidateCodegenTest {
 
     @Test
     fun `ValidateTo on non-null target field emits non-null validate call on __result`() {
-        val src = SourceFile.kotlin(
-            "VT1.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.annotations.ValidateTo
-            import com.sahsenvar.kmapper.validation.Validator
+        val src =
+            SourceFile.kotlin(
+                "VT1.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.annotations.ValidateTo
+                import com.sahsenvar.kmapper.validation.Validator
 
-            data class EmailDomain(val email: String)
+                data class EmailDomain(val email: String)
 
-            object TestNotEmpty : Validator<String>(String::class) {
-                override fun validate(value: String): String? =
-                    if (value.isEmpty()) "must not be empty" else null
-            }
+                object TestNotEmpty : Validator<String>(String::class) {
+                    override fun validate(value: String): String? =
+                        if (value.isEmpty()) "must not be empty" else null
+                }
 
-            @MapTo(EmailDomain::class)
-            data class EmailRemote(
-                @ValidateTo(TestNotEmpty::class) val email: String
+                @MapTo(EmailDomain::class)
+                data class EmailRemote(
+                    @ValidateTo(TestNotEmpty::class) val email: String
+                )
+                """.trimIndent(),
             )
-            """.trimIndent()
-        )
         val (result, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -134,16 +139,18 @@ class ValidateCodegenTest {
 
     @Test
     fun `field with no validation annotations generates unchanged code`() {
-        val src = SourceFile.kotlin(
-            "NoVal.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "NoVal.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class PlainDomain(val value: String)
+                data class PlainDomain(val value: String)
 
-            @MapTo(PlainDomain::class)
-            data class PlainRemote(val value: String)
-            """.trimIndent()
-        )
+                @MapTo(PlainDomain::class)
+                data class PlainRemote(val value: String)
+                """.trimIndent(),
+            )
         val (result, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -159,28 +166,30 @@ class ValidateCodegenTest {
 
     @Test
     fun `ValidationFailed uses target field name in thrown exception`() {
-        val src = SourceFile.kotlin(
-            "TargetName.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.annotations.ValidateFrom
-            import com.sahsenvar.kmapper.annotations.FieldMap
-            import com.sahsenvar.kmapper.validation.Validator
+        val src =
+            SourceFile.kotlin(
+                "TargetName.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.annotations.ValidateFrom
+                import com.sahsenvar.kmapper.annotations.FieldMap
+                import com.sahsenvar.kmapper.validation.Validator
 
-            data class OrderDomain(val orderId: String)
+                data class OrderDomain(val orderId: String)
 
-            object TestNotBlank : Validator<String>(String::class) {
-                override fun validate(value: String): String? =
-                    if (value.isBlank()) "must not be blank" else null
-            }
+                object TestNotBlank : Validator<String>(String::class) {
+                    override fun validate(value: String): String? =
+                        if (value.isBlank()) "must not be blank" else null
+                }
 
-            @MapTo(OrderDomain::class)
-            data class OrderRemote(
-                @FieldMap(fieldName = "orderId", targetClass = OrderDomain::class)
-                @ValidateFrom(TestNotBlank::class)
-                val id: String
+                @MapTo(OrderDomain::class)
+                data class OrderRemote(
+                    @FieldMap(fieldName = "orderId", targetClass = OrderDomain::class)
+                    @ValidateFrom(TestNotBlank::class)
+                    val id: String
+                )
+                """.trimIndent(),
             )
-            """.trimIndent()
-        )
         val (result, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 

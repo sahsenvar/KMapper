@@ -9,21 +9,23 @@ import kotlin.test.Test
 
 private object StringToInt : MapTypeConverter<String, Int>(String::class, Int::class) {
     override fun convertToNonNull(value: String) = value.toInt()
+
     override fun convertFromNonNull(value: Int) = value.toString()
 }
 
 private object StringToIntDuplicate : MapTypeConverter<String, Int>(String::class, Int::class) {
     override fun convertToNonNull(value: String) = -1
+
     override fun convertFromNonNull(value: Int) = "x"
 }
 
 private object LongToBoolean : MapTypeConverter<Long, Boolean>(Long::class, Boolean::class) {
     override fun convertToNonNull(value: Long) = value != 0L
+
     override fun convertFromNonNull(value: Boolean) = if (value) 1L else 0L
 }
 
 class TypeConverterRegistryTest {
-
     @Test
     fun `register then get returns it`() {
         TypeConverterRegistry.register(StringToInt)

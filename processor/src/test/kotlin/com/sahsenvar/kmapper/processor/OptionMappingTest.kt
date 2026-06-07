@@ -24,55 +24,57 @@ import kotlin.test.assertEquals
  *  7. Option→Option guard: source Option + target Option → compilation error (Unmappable), NOT Option<Option<T>>
  */
 class OptionMappingTest {
-
     // ─── shared model sources ──────────────────────────────────────────────────
 
     /** Simulates arrow.core.Option as a known FQN — the processor detects by string, no real arrow needed. */
-    private val arrowStubSrc = SourceFile.kotlin(
-        "ArrowStub.kt",
-        """
-        package arrow.core
+    private val arrowStubSrc =
+        SourceFile.kotlin(
+            "ArrowStub.kt",
+            """
+            package arrow.core
 
-        class Option<out A> private constructor(val value: A?) {
-            val isEmpty: Boolean get() = value == null
-            fun getOrNull(): A? = value
-            companion object {
-                fun <A> fromNullable(a: A?): Option<A> = Option(a)
-                val None: Option<Nothing> = Option(null)
+            class Option<out A> private constructor(val value: A?) {
+                val isEmpty: Boolean get() = value == null
+                fun getOrNull(): A? = value
+                companion object {
+                    fun <A> fromNullable(a: A?): Option<A> = Option(a)
+                    val None: Option<Nothing> = Option(null)
+                }
             }
-        }
-        fun <A> Option<A>.getOrNull(): A? = this.value
-        """.trimIndent()
-    )
+            fun <A> Option<A>.getOrNull(): A? = this.value
+            """.trimIndent(),
+        )
 
-    private val nestedModelSrc = SourceFile.kotlin(
-        "NestedModels.kt",
-        """
-        import com.sahsenvar.kmapper.annotations.MapTo
+    private val nestedModelSrc =
+        SourceFile.kotlin(
+            "NestedModels.kt",
+            """
+            import com.sahsenvar.kmapper.annotations.MapTo
 
-        data class TagD(val name: String)
+            data class TagD(val name: String)
 
-        @MapTo(TagD::class)
-        data class TagR(val name: String)
-        """.trimIndent()
-    )
+            @MapTo(TagD::class)
+            data class TagR(val name: String)
+            """.trimIndent(),
+        )
 
     // ─── Test 1: Nullable String? → Option<String> ────────────────────────────
 
     @Test
     fun `nullable String source to Option String emits fromNullable`() {
-        val src = SourceFile.kotlin(
-            "NullableWrap.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import arrow.core.Option
+        val src =
+            SourceFile.kotlin(
+                "NullableWrap.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import arrow.core.Option
 
-            data class TargetA(val maybeId: Option<String>)
+                data class TargetA(val maybeId: Option<String>)
 
-            @MapTo(TargetA::class)
-            data class SourceA(val maybeId: String?)
-            """.trimIndent()
-        )
+                @MapTo(TargetA::class)
+                data class SourceA(val maybeId: String?)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(arrowStubSrc, src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("SourceAMappers.kt")
@@ -88,18 +90,19 @@ class OptionMappingTest {
 
     @Test
     fun `non-null String source to Option String emits fromNullable`() {
-        val src = SourceFile.kotlin(
-            "NonNullWrap.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import arrow.core.Option
+        val src =
+            SourceFile.kotlin(
+                "NonNullWrap.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import arrow.core.Option
 
-            data class TargetB(val maybeId: Option<String>)
+                data class TargetB(val maybeId: Option<String>)
 
-            @MapTo(TargetB::class)
-            data class SourceB(val maybeId: String)
-            """.trimIndent()
-        )
+                @MapTo(TargetB::class)
+                data class SourceB(val maybeId: String)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(arrowStubSrc, src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("SourceBMappers.kt")
@@ -116,22 +119,23 @@ class OptionMappingTest {
 
     @Test
     fun `nullable nested source to Option nested target emits fromNullable with safe-call mapper`() {
-        val src = SourceFile.kotlin(
-            "NullableNestedWrap.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import arrow.core.Option
+        val src =
+            SourceFile.kotlin(
+                "NullableNestedWrap.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import arrow.core.Option
 
-            data class TagD(val name: String)
-            @MapTo(TagD::class)
-            data class TagR(val name: String)
+                data class TagD(val name: String)
+                @MapTo(TagD::class)
+                data class TagR(val name: String)
 
-            data class TargetC(val maybeTag: Option<TagD>)
+                data class TargetC(val maybeTag: Option<TagD>)
 
-            @MapTo(TargetC::class)
-            data class SourceC(val maybeTag: TagR?)
-            """.trimIndent()
-        )
+                @MapTo(TargetC::class)
+                data class SourceC(val maybeTag: TagR?)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(arrowStubSrc, src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("SourceCMappers.kt")
@@ -150,22 +154,23 @@ class OptionMappingTest {
 
     @Test
     fun `non-null nested source to Option nested target emits fromNullable with direct mapper`() {
-        val src = SourceFile.kotlin(
-            "NonNullNestedWrap.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import arrow.core.Option
+        val src =
+            SourceFile.kotlin(
+                "NonNullNestedWrap.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import arrow.core.Option
 
-            data class TagD(val name: String)
-            @MapTo(TagD::class)
-            data class TagR(val name: String)
+                data class TagD(val name: String)
+                @MapTo(TagD::class)
+                data class TagR(val name: String)
 
-            data class TargetD(val maybeTag: Option<TagD>)
+                data class TargetD(val maybeTag: Option<TagD>)
 
-            @MapTo(TargetD::class)
-            data class SourceD(val maybeTag: TagR)
-            """.trimIndent()
-        )
+                @MapTo(TargetD::class)
+                data class SourceD(val maybeTag: TagR)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(arrowStubSrc, src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("SourceDMappers.kt")
@@ -185,18 +190,19 @@ class OptionMappingTest {
 
     @Test
     fun `Option String source to non-null String target emits getOrNull and RequiredFieldMissing guard`() {
-        val src = SourceFile.kotlin(
-            "UnwrapNonNull.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import arrow.core.Option
+        val src =
+            SourceFile.kotlin(
+                "UnwrapNonNull.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import arrow.core.Option
 
-            data class TargetE(val id: String)
+                data class TargetE(val id: String)
 
-            @MapTo(TargetE::class)
-            data class SourceE(val id: Option<String>)
-            """.trimIndent()
-        )
+                @MapTo(TargetE::class)
+                data class SourceE(val id: Option<String>)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(arrowStubSrc, src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("SourceEMappers.kt")
@@ -212,18 +218,19 @@ class OptionMappingTest {
 
     @Test
     fun `Option String source to nullable String target emits getOrNull without RequiredFieldMissing`() {
-        val src = SourceFile.kotlin(
-            "UnwrapNullable.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import arrow.core.Option
+        val src =
+            SourceFile.kotlin(
+                "UnwrapNullable.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import arrow.core.Option
 
-            data class TargetF(val id: String?)
+                data class TargetF(val id: String?)
 
-            @MapTo(TargetF::class)
-            data class SourceF(val id: Option<String>)
-            """.trimIndent()
-        )
+                @MapTo(TargetF::class)
+                data class SourceF(val id: Option<String>)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(arrowStubSrc, src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("SourceFMappers.kt")
@@ -239,18 +246,19 @@ class OptionMappingTest {
 
     @Test
     fun `Option source to Option target produces compilation error not Option of Option`() {
-        val src = SourceFile.kotlin(
-            "OptionToOption.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import arrow.core.Option
+        val src =
+            SourceFile.kotlin(
+                "OptionToOption.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import arrow.core.Option
 
-            data class TargetG(val wrapped: Option<String>)
+                data class TargetG(val wrapped: Option<String>)
 
-            @MapTo(TargetG::class)
-            data class SourceG(val wrapped: Option<String>)
-            """.trimIndent()
-        )
+                @MapTo(TargetG::class)
+                data class SourceG(val wrapped: Option<String>)
+                """.trimIndent(),
+            )
         val (r, _) = compile(arrowStubSrc, src)
         // Option<T> → Option<T>: same type → Direct (isSameType passes), so compilation succeeds.
         // The guard simply ensures we never emit fromNullable(getOrNull()) double-wrap.

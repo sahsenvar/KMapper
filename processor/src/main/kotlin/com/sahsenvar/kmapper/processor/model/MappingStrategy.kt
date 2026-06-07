@@ -12,12 +12,16 @@ sealed class MappingStrategy {
     /**
      * Use a TypeConverter.
      */
-    data class Convert(val converterFqn: String) : MappingStrategy()
+    data class Convert(
+        val converterFqn: String,
+    ) : MappingStrategy()
 
     /**
      * Nested object mapping (recursive mapper call).
      */
-    data class Nested(val mapperFunctionName: String) : MappingStrategy()
+    data class Nested(
+        val mapperFunctionName: String,
+    ) : MappingStrategy()
 
     /**
      * Collection mapping (map each element).
@@ -28,13 +32,15 @@ sealed class MappingStrategy {
      */
     data class Collection(
         val elementStrategy: MappingStrategy,
-        val isSet: Boolean = false
+        val isSet: Boolean = false,
     ) : MappingStrategy()
 
     /**
      * External field (comes from function parameter).
      */
-    data class External(val parameterName: String) : MappingStrategy()
+    data class External(
+        val parameterName: String,
+    ) : MappingStrategy()
 
     /**
      * No mapping strategy could be determined (type mismatch without a converter).
@@ -45,7 +51,9 @@ sealed class MappingStrategy {
     /**
      * Wire-backed enum mapping: source wire value → target enum via MappableEnum.entries.
      */
-    data class EnumFromWire(val enumFqn: String) : MappingStrategy()
+    data class EnumFromWire(
+        val enumFqn: String,
+    ) : MappingStrategy()
 
     /**
      * Enum → wire value mapping via MappableEnum.wireValue.
@@ -61,7 +69,7 @@ sealed class MappingStrategy {
      */
     data class WrappedCollection(
         val elementStrategy: MappingStrategy,
-        val wrapperObjectFqn: String
+        val wrapperObjectFqn: String,
     ) : MappingStrategy()
 
     /**
@@ -74,7 +82,9 @@ sealed class MappingStrategy {
      * Plain kotlin.collections.Map only; PersistentMap/ImmutableMap wrappers are deferred.
      * @param valueStrategy how to map each value: Direct (same type) or Nested (toV2() call)
      */
-    data class MapValues(val valueStrategy: MappingStrategy) : MappingStrategy()
+    data class MapValues(
+        val valueStrategy: MappingStrategy,
+    ) : MappingStrategy()
 
     /**
      * Target field type is `arrow.core.Option<Inner>`.
@@ -83,7 +93,9 @@ sealed class MappingStrategy {
      *
      * @param innerMapperFn non-null when the inner type requires a nested mapper call (data class).
      */
-    data class OptionWrap(val innerMapperFn: String? = null) : MappingStrategy()
+    data class OptionWrap(
+        val innerMapperFn: String? = null,
+    ) : MappingStrategy()
 
     /**
      * Source field type is `arrow.core.Option<Inner>`.
@@ -92,5 +104,7 @@ sealed class MappingStrategy {
      *
      * @param innerMapperFn non-null when the inner type requires a nested mapper call (data class).
      */
-    data class OptionUnwrap(val innerMapperFn: String? = null) : MappingStrategy()
+    data class OptionUnwrap(
+        val innerMapperFn: String? = null,
+    ) : MappingStrategy()
 }

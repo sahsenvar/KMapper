@@ -1,9 +1,9 @@
 package com.sahsenvar.kmapper.processor.generator
 
-import com.sahsenvar.kmapper.processor.model.FieldInfo
-import com.sahsenvar.kmapper.processor.model.MappingStrategy
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSType
+import com.sahsenvar.kmapper.processor.model.FieldInfo
+import com.sahsenvar.kmapper.processor.model.MappingStrategy
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.MemberName
@@ -11,64 +11,71 @@ import com.squareup.kotlinpoet.MemberName
 /**
  * Generates mapping code using KotlinPoet.
  */
-class MappingCodeGenerator(private val logger: KSPLogger) {
-
+class MappingCodeGenerator(
+    private val logger: KSPLogger,
+) {
     fun generateFieldMapping(
         sourceField: FieldInfo,
         targetField: FieldInfo,
         strategy: MappingStrategy,
-        isReverse: Boolean = false
+        isReverse: Boolean = false,
     ): CodeBlock {
         // Unmappable: processor already emitted a compile error; return empty placeholder
         if (strategy is MappingStrategy.Unmappable) {
             return CodeBlock.of("/* unmappable field ${sourceField.name} — see KSP error above */")
         }
 
-        val baseMapping = when (strategy) {
-            is MappingStrategy.Direct -> CodeBlock.of("%N", sourceField.name)
-            is MappingStrategy.Convert -> generateConvertMapping(
-                sourceField,
-                targetField,
-                strategy,
-                isReverse
-            )
+        val baseMapping =
+            when (strategy) {
+                is MappingStrategy.Direct -> CodeBlock.of("%N", sourceField.name)
+                is MappingStrategy.Convert ->
+                    generateConvertMapping(
+                        sourceField,
+                        targetField,
+                        strategy,
+                        isReverse,
+                    )
 
-            is MappingStrategy.Nested -> if (sourceField.isNullable) {
-                CodeBlock.of("%N?.%N()", sourceField.name, strategy.mapperFunctionName)
-            } else {
-                CodeBlock.of("%N.%N()", sourceField.name, strategy.mapperFunctionName)
+                is MappingStrategy.Nested ->
+                    if (sourceField.isNullable) {
+                        CodeBlock.of("%N?.%N()", sourceField.name, strategy.mapperFunctionName)
+                    } else {
+                        CodeBlock.of("%N.%N()", sourceField.name, strategy.mapperFunctionName)
+                    }
+
+                is MappingStrategy.Collection ->
+                    generateCollectionMapping(
+                        sourceField,
+                        targetField,
+                        strategy,
+                    )
+
+                is MappingStrategy.WrappedCollection ->
+                    generateWrappedCollectionMapping(
+                        sourceField,
+                        strategy,
+                    )
+
+                is MappingStrategy.MapValues -> generateMapValuesMapping(sourceField, strategy)
+
+                is MappingStrategy.OptionWrap -> generateOptionWrapMapping(sourceField, strategy)
+
+                is MappingStrategy.OptionUnwrap -> generateOptionUnwrapMapping(sourceField, strategy)
+
+                is MappingStrategy.External -> CodeBlock.of("%N", targetField.name)
+
+                is MappingStrategy.EnumFromWire -> generateEnumFromWireMapping(sourceField, strategy)
+
+                is MappingStrategy.EnumToWire ->
+                    if (sourceField.isNullable) {
+                        CodeBlock.of("%N?.wireValue", sourceField.name)
+                    } else {
+                        CodeBlock.of("%N.wireValue", sourceField.name)
+                    }
+
+                // Unmappable is handled above; this branch is unreachable but required for exhaustiveness
+                is MappingStrategy.Unmappable -> CodeBlock.of("")
             }
-
-            is MappingStrategy.Collection -> generateCollectionMapping(
-                sourceField,
-                targetField,
-                strategy
-            )
-
-            is MappingStrategy.WrappedCollection -> generateWrappedCollectionMapping(
-                sourceField,
-                strategy
-            )
-
-            is MappingStrategy.MapValues -> generateMapValuesMapping(sourceField, strategy)
-
-            is MappingStrategy.OptionWrap -> generateOptionWrapMapping(sourceField, strategy)
-
-            is MappingStrategy.OptionUnwrap -> generateOptionUnwrapMapping(sourceField, strategy)
-
-            is MappingStrategy.External -> CodeBlock.of("%N", targetField.name)
-
-            is MappingStrategy.EnumFromWire -> generateEnumFromWireMapping(sourceField, strategy)
-
-            is MappingStrategy.EnumToWire -> if (sourceField.isNullable) {
-                CodeBlock.of("%N?.wireValue", sourceField.name)
-            } else {
-                CodeBlock.of("%N.wireValue", sourceField.name)
-            }
-
-            // Unmappable is handled above; this branch is unreachable but required for exhaustiveness
-            is MappingStrategy.Unmappable -> CodeBlock.of("")
-        }
 
         // OptionWrap: Option.fromNullable() NEVER returns null — it always yields Option.Some or
         // Option.None. The target field is Option<T> which is non-null by definition. Skip
@@ -80,11 +87,12 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
         // OptionUnwrap: getOrNull() always returns a nullable result, even when the source Option
         // field itself is non-null. Force sourceField.isNullable=true so applyNullableHandling
         // correctly emits the ?: throw RequiredFieldMissing guard when the target is non-null.
-        val effectiveSourceField = if (strategy is MappingStrategy.OptionUnwrap) {
-            sourceField.copy(isNullable = true)
-        } else {
-            sourceField
-        }
+        val effectiveSourceField =
+            if (strategy is MappingStrategy.OptionUnwrap) {
+                sourceField.copy(isNullable = true)
+            } else {
+                sourceField
+            }
         val nullableHandled = applyNullableHandling(effectiveSourceField, targetField, baseMapping)
         return wrapWithValidation(effectiveSourceField, targetField, nullableHandled)
     }
@@ -102,7 +110,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
     private fun wrapWithValidation(
         sourceField: FieldInfo,
         targetField: FieldInfo,
-        expr: CodeBlock
+        expr: CodeBlock,
     ): CodeBlock {
         val fromValidators = sourceField.validateFrom
         val toValidators = sourceField.validateTo
@@ -123,14 +131,19 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                 builder.beginControlFlow("%N?.let { __s ->", srcName)
                 builder.addStatement(
                     "%T.validate(__s)?.let { m -> throw %T(%S, m) }",
-                    validator, validationFailed, tgtName
+                    validator,
+                    validationFailed,
+                    tgtName,
                 )
                 builder.endControlFlow()
             } else {
                 // non-null source: direct validate call
                 builder.addStatement(
                     "%T.validate(%N)?.let { throw %T(%S, it) }",
-                    validator, srcName, validationFailed, tgtName
+                    validator,
+                    srcName,
+                    validationFailed,
+                    tgtName,
                 )
             }
         }
@@ -146,14 +159,18 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                 builder.beginControlFlow("__result?.let { __r ->")
                 builder.addStatement(
                     "%T.validate(__r)?.let { m -> throw %T(%S, m) }",
-                    validator, validationFailed, tgtName
+                    validator,
+                    validationFailed,
+                    tgtName,
                 )
                 builder.endControlFlow()
             } else {
                 // non-null result: direct validate call
                 builder.addStatement(
                     "%T.validate(__result)?.let { throw %T(%S, it) }",
-                    validator, validationFailed, tgtName
+                    validator,
+                    validationFailed,
+                    tgtName,
                 )
             }
         }
@@ -165,7 +182,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
 
     private fun generateEnumFromWireMapping(
         sourceField: FieldInfo,
-        strategy: MappingStrategy.EnumFromWire
+        strategy: MappingStrategy.EnumFromWire,
     ): CodeBlock {
         val enumClassName = ClassName.bestGuess(strategy.enumFqn)
         val enumSimpleName = strategy.enumFqn.substringAfterLast(".")
@@ -178,7 +195,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                 sourceField.name,
                 enumClassName,
                 mappingExceptionClass,
-                enumSimpleName
+                enumSimpleName,
             )
         } else {
             CodeBlock.of(
@@ -188,7 +205,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                 sourceField.name,
                 mappingExceptionClass,
                 enumSimpleName,
-                sourceField.name
+                sourceField.name,
             )
         }
     }
@@ -196,7 +213,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
     private fun applyNullableHandling(
         sourceField: FieldInfo,
         targetField: FieldInfo,
-        baseMapping: CodeBlock
+        baseMapping: CodeBlock,
     ): CodeBlock {
         // Rule 1-4: Compatible nullability
         if (!sourceField.isNullable || targetField.isNullable) {
@@ -215,7 +232,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
             "%L ?: throw %T(%S)",
             baseMapping,
             ClassName("com.sahsenvar.kmapper", "MappingException", "RequiredFieldMissing"),
-            "${targetField.name}"
+            "${targetField.name}",
         )
     }
 
@@ -223,7 +240,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
         sourceField: FieldInfo,
         targetField: FieldInfo,
         strategy: MappingStrategy.Convert,
-        isReverse: Boolean = false
+        isReverse: Boolean = false,
     ): CodeBlock {
         val converterClassName = ClassName.bestGuess(strategy.converterFqn)
         val convertOrFail = MemberName("com.sahsenvar.kmapper", "convertOrFail")
@@ -244,7 +261,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                 toFqn,
                 converterClassName,
                 convertNonNullMethod,
-                sourceField.name
+                sourceField.name,
             )
         }
 
@@ -256,14 +273,14 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
             toFqn,
             converterClassName,
             convertMethod,
-            sourceField.name
+            sourceField.name,
         )
     }
 
     private fun generateCollectionMapping(
         sourceField: FieldInfo,
         targetField: FieldInfo,
-        strategy: MappingStrategy.Collection
+        strategy: MappingStrategy.Collection,
     ): CodeBlock {
         val builder = CodeBlock.builder()
 
@@ -276,13 +293,13 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                     builder.add(
                         "%N?.map·{·it.%N()·}",
                         sourceField.name,
-                        mapperFn
+                        mapperFn,
                     )
                 } else {
                     builder.add(
                         "%N.map·{·it.%N()·}",
                         sourceField.name,
-                        mapperFn
+                        mapperFn,
                     )
                 }
             }
@@ -322,7 +339,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
      */
     private fun generateWrappedCollectionMapping(
         sourceField: FieldInfo,
-        strategy: MappingStrategy.WrappedCollection
+        strategy: MappingStrategy.WrappedCollection,
     ): CodeBlock {
         val builder = CodeBlock.builder()
         val wrapperClass = ClassName.bestGuess(strategy.wrapperObjectFqn)
@@ -336,7 +353,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                         "%N?.map·{·it.%N()·}?.let·{·%T.wrap(it)·}",
                         sourceField.name,
                         mapperFn,
-                        wrapperClass
+                        wrapperClass,
                     )
                 } else {
                     // WrapperObject.wrap(source.map { it.toX() })
@@ -344,7 +361,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                         "%T.wrap(%N.map·{·it.%N()·})",
                         wrapperClass,
                         sourceField.name,
-                        mapperFn
+                        mapperFn,
                     )
                 }
             }
@@ -384,7 +401,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
      */
     private fun generateMapValuesMapping(
         sourceField: FieldInfo,
-        strategy: MappingStrategy.MapValues
+        strategy: MappingStrategy.MapValues,
     ): CodeBlock = when (strategy.valueStrategy) {
         is MappingStrategy.Nested -> {
             val mapperFn = (strategy.valueStrategy as MappingStrategy.Nested).mapperFunctionName
@@ -392,13 +409,13 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
                 CodeBlock.of(
                     "%N?.mapValues·{·(_,·v)·->·v.%N()·}",
                     sourceField.name,
-                    mapperFn
+                    mapperFn,
                 )
             } else {
                 CodeBlock.of(
                     "%N.mapValues·{·(_,·v)·->·v.%N()·}",
                     sourceField.name,
-                    mapperFn
+                    mapperFn,
                 )
             }
         }
@@ -419,13 +436,14 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
      */
     private fun generateOptionWrapMapping(
         sourceField: FieldInfo,
-        strategy: MappingStrategy.OptionWrap
+        strategy: MappingStrategy.OptionWrap,
     ): CodeBlock {
-        val innerExpr = when {
-            strategy.innerMapperFn == null -> CodeBlock.of("%N", sourceField.name)
-            sourceField.isNullable -> CodeBlock.of("%N?.%N()", sourceField.name, strategy.innerMapperFn)
-            else -> CodeBlock.of("%N.%N()", sourceField.name, strategy.innerMapperFn)
-        }
+        val innerExpr =
+            when {
+                strategy.innerMapperFn == null -> CodeBlock.of("%N", sourceField.name)
+                sourceField.isNullable -> CodeBlock.of("%N?.%N()", sourceField.name, strategy.innerMapperFn)
+                else -> CodeBlock.of("%N.%N()", sourceField.name, strategy.innerMapperFn)
+            }
         // Emit FQN via ClassName — KotlinPoet renders it as "arrow.core.Option.fromNullable(…)".
         // ClassName construction requires only String args — no arrow classpath needed.
         val optionClass = ClassName("arrow.core", "Option")
@@ -441,7 +459,7 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
      */
     private fun generateOptionUnwrapMapping(
         sourceField: FieldInfo,
-        strategy: MappingStrategy.OptionUnwrap
+        strategy: MappingStrategy.OptionUnwrap,
     ): CodeBlock {
         val getOrNull = CodeBlock.of("%N.getOrNull()", sourceField.name)
         return if (strategy.innerMapperFn != null) {
@@ -453,5 +471,4 @@ class MappingCodeGenerator(private val logger: KSPLogger) {
 }
 
 /** Returns the fully-qualified name of this KSType for use in error messages. */
-private fun KSType.fqn(): String =
-    declaration.qualifiedName?.asString() ?: declaration.simpleName.asString()
+private fun KSType.fqn(): String = declaration.qualifiedName?.asString() ?: declaration.simpleName.asString()

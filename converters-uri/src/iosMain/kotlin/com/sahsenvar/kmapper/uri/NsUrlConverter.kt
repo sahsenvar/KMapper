@@ -14,14 +14,12 @@ import platform.Foundation.NSURL
  * Tests must use pre-normalized URLs to pass a true round-trip check.
  */
 object NsUrlStringConverter : MapTypeConverter<String, NSURL>(String::class, NSURL::class) {
-    override fun convertToNonNull(value: String): NSURL =
-        NSURL.URLWithString(value)
-            ?: throw MappingException.TypeConversionFailed(
-                "String",
-                "NSURL",
-                IllegalArgumentException("NSURL.URLWithString returned null for: $value")
-            )
+    override fun convertToNonNull(value: String): NSURL = NSURL.URLWithString(value)
+        ?: throw MappingException.TypeConversionFailed(
+            "String",
+            "NSURL",
+            IllegalArgumentException("NSURL.URLWithString returned null for: $value"),
+        )
 
-    override fun convertFromNonNull(value: NSURL): String =
-        value.absoluteString ?: value.path ?: ""
+    override fun convertFromNonNull(value: NSURL): String = value.absoluteString ?: value.path ?: ""
 }

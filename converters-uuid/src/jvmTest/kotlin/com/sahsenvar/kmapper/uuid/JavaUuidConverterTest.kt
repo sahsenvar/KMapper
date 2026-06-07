@@ -7,7 +7,6 @@ import kotlin.test.Test
 import kotlin.uuid.Uuid
 
 class JavaUuidConverterTest {
-
     private val sample = "550e8400-e29b-41d4-a716-446655440000"
 
     @Test fun `JavaStringUuidConverter round-trip`() {

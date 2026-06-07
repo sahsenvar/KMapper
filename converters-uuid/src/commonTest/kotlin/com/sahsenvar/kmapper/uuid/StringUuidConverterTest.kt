@@ -7,7 +7,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class StringUuidConverterTest {
-
     private val sample = "550e8400-e29b-41d4-a716-446655440000"
 
     @Test fun `round-trip valid UUID string`() {

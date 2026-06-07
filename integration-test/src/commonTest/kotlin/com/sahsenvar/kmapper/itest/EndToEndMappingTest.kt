@@ -10,7 +10,6 @@ import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
 class EndToEndMappingTest {
-
     private fun valid() = UserR(
         id = "42",
         joined = "2026-06-04",

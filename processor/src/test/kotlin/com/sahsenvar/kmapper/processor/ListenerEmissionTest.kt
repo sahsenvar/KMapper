@@ -9,16 +9,17 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class ListenerEmissionTest {
-
     @Test
     fun `generated mapper emits guarded listener dispatch`() {
-        val src = SourceFile.kotlin(
-            "L.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            data class UserDomain(val id: String)
-            @MapTo(UserDomain::class) data class UserRemote(val id: String)
-        """.trimIndent()
-        )
+        val src =
+            SourceFile.kotlin(
+                "L.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                data class UserDomain(val id: String)
+                @MapTo(UserDomain::class) data class UserRemote(val id: String)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("UserRemoteMappers.kt")

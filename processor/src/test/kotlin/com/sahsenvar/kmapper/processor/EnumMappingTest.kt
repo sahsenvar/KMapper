@@ -9,27 +9,28 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class EnumMappingTest {
-
     /**
      * Wire value (String) → MappableEnum: generates entries.firstOrNull + UnknownEnumValue throw.
      */
     @Test
     fun `string-backed MappableEnum wire to enum`() {
-        val src = SourceFile.kotlin(
-            "E2.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.MappableEnum
+        val src =
+            SourceFile.kotlin(
+                "E2.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.MappableEnum
 
-            enum class Status(override val wireValue: String) : MappableEnum<String> {
-                PENDING("PENDING"), SHIPPED("in_transit");
-            }
+                enum class Status(override val wireValue: String) : MappableEnum<String> {
+                    PENDING("PENDING"), SHIPPED("in_transit");
+                }
 
-            data class OrderDomain(val status: Status)
+                data class OrderDomain(val status: Status)
 
-            @MapTo(OrderDomain::class)
-            data class OrderRemote(val status: String)
-        """.trimIndent()
-        )
+                @MapTo(OrderDomain::class)
+                data class OrderRemote(val status: String)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("OrderRemoteMappers.kt")
@@ -46,21 +47,23 @@ class EnumMappingTest {
      */
     @Test
     fun `nullable string-backed MappableEnum wire to nullable enum`() {
-        val src = SourceFile.kotlin(
-            "E3.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.MappableEnum
+        val src =
+            SourceFile.kotlin(
+                "E3.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.MappableEnum
 
-            enum class Status(override val wireValue: String) : MappableEnum<String> {
-                PENDING("PENDING"), SHIPPED("in_transit");
-            }
+                enum class Status(override val wireValue: String) : MappableEnum<String> {
+                    PENDING("PENDING"), SHIPPED("in_transit");
+                }
 
-            data class OrderDomain(val status: Status?)
+                data class OrderDomain(val status: Status?)
 
-            @MapTo(OrderDomain::class)
-            data class OrderRemote(val status: String?)
-        """.trimIndent()
-        )
+                @MapTo(OrderDomain::class)
+                data class OrderRemote(val status: String?)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("OrderRemoteMappers.kt")
@@ -78,21 +81,23 @@ class EnumMappingTest {
      */
     @Test
     fun `MappableEnum to wire value`() {
-        val src = SourceFile.kotlin(
-            "E4.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.MappableEnum
+        val src =
+            SourceFile.kotlin(
+                "E4.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.MappableEnum
 
-            enum class Status(override val wireValue: String) : MappableEnum<String> {
-                PENDING("PENDING"), SHIPPED("in_transit");
-            }
+                enum class Status(override val wireValue: String) : MappableEnum<String> {
+                    PENDING("PENDING"), SHIPPED("in_transit");
+                }
 
-            data class OrderWire(val status: String)
+                data class OrderWire(val status: String)
 
-            @MapTo(OrderWire::class)
-            data class OrderDomain(val status: Status)
-        """.trimIndent()
-        )
+                @MapTo(OrderWire::class)
+                data class OrderDomain(val status: Status)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("OrderDomainMappers.kt")
@@ -107,18 +112,20 @@ class EnumMappingTest {
      */
     @Test
     fun `enum without MappableEnum fails with clear error`() {
-        val src = SourceFile.kotlin(
-            "E5.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "E5.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            enum class Plain { A, B }
+                enum class Plain { A, B }
 
-            data class DDomain(val p: Plain)
+                data class DDomain(val p: Plain)
 
-            @MapTo(DDomain::class)
-            data class DRemote(val p: String)
-        """.trimIndent()
-        )
+                @MapTo(DDomain::class)
+                data class DRemote(val p: String)
+                """.trimIndent(),
+            )
         val (r, _) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, r.exitCode)
         assert(r.messages.contains("MappableEnum", ignoreCase = true)) {

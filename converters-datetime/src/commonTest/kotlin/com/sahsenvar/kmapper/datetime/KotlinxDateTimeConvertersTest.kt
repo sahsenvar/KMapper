@@ -7,7 +7,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class KotlinxDateTimeConvertersTest {
-
     // StringLocalDateConverter
     @Test
     fun localDate_parseFromString() {

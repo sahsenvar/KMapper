@@ -3,8 +3,8 @@
 package com.sahsenvar.kmapper.processor
 
 import com.tschuchort.compiletesting.JvmCompilationResult
-import java.lang.reflect.InvocationTargetException
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
+import java.lang.reflect.InvocationTargetException
 
 /**
  * Invokes a KSP-generated top-level extension function via reflection.
@@ -18,7 +18,11 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
  * classloaders. Unwraps [InvocationTargetException] so callers receive the real thrown
  * exception (e.g. [com.sahsenvar.kmapper.MappingException.RequiredFieldMissing]).
  */
-fun JvmCompilationResult.invokeMapper(fileKtClass: String, fnName: String, receiver: Any?): Any? {
+fun JvmCompilationResult.invokeMapper(
+    fileKtClass: String,
+    fnName: String,
+    receiver: Any?,
+): Any? {
     val m = classLoader.loadClass(fileKtClass).declaredMethods.first { it.name == fnName }
     return try {
         m.invoke(null, receiver)
@@ -34,9 +38,15 @@ fun JvmCompilationResult.invokeMapper(fileKtClass: String, fnName: String, recei
  * so callers can create data class instances without knowing the exact parameter types
  * across classloaders.
  */
-fun JvmCompilationResult.newInstance(className: String, vararg args: Any?): Any {
-    val ctor = classLoader.loadClass(className).declaredConstructors
-        .first { it.parameterCount == args.size }
+fun JvmCompilationResult.newInstance(
+    className: String,
+    vararg args: Any?,
+): Any {
+    val ctor =
+        classLoader
+            .loadClass(className)
+            .declaredConstructors
+            .first { it.parameterCount == args.size }
     return ctor.newInstance(*args)
 }
 
@@ -46,5 +56,4 @@ fun JvmCompilationResult.newInstance(className: String, vararg args: Any?): Any 
  * Capitalises the first letter of [name] and prepends "get" to form the getter name.
  * Works across classloaders since it uses the object's own class.
  */
-fun Any.prop(name: String): Any? =
-    this::class.java.getMethod("get" + name.replaceFirstChar { it.uppercase() }).invoke(this)
+fun Any.prop(name: String): Any? = this::class.java.getMethod("get" + name.replaceFirstChar { it.uppercase() }).invoke(this)

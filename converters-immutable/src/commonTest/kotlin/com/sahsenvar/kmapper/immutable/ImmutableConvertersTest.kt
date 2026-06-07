@@ -9,7 +9,6 @@ import kotlinx.collections.immutable.PersistentSet
 import kotlin.test.Test
 
 class ImmutableConvertersTest {
-
     // ---- PersistentListWrapper ----
 
     @Test

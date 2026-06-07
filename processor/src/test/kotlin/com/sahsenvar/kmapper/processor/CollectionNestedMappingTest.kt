@@ -8,28 +8,28 @@ import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCompilerApi::class)
 class CollectionNestedMappingTest {
-
     /**
      * Non-null List<NestedSource> → List<NestedDomain> where NestedSource is itself @MapTo-mapped.
      * Generated code must use `.map { it.toTagDomain() }` (no safe-call `?.map`).
      */
     @Test
     fun `non-null list of mapped elements uses map not safe-call map`() {
-        val src = SourceFile.kotlin(
-            "CollNested.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "CollNested.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class TagDomain(val name: String)
-            data class ProductDomain(val tags: List<TagDomain>)
+                data class TagDomain(val name: String)
+                data class ProductDomain(val tags: List<TagDomain>)
 
-            @MapTo(TagDomain::class)
-            data class TagRemote(val name: String)
+                @MapTo(TagDomain::class)
+                data class TagRemote(val name: String)
 
-            @MapTo(ProductDomain::class)
-            data class ProductRemote(val tags: List<TagRemote>)
-            """.trimIndent()
-        )
+                @MapTo(ProductDomain::class)
+                data class ProductRemote(val tags: List<TagRemote>)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
@@ -53,21 +53,22 @@ class CollectionNestedMappingTest {
      */
     @Test
     fun `nullable list of mapped elements uses safe-call map`() {
-        val src = SourceFile.kotlin(
-            "CollNestedNullable.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "CollNestedNullable.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class TagDomain(val name: String)
-            data class ProductDomain(val tags: List<TagDomain>?)
+                data class TagDomain(val name: String)
+                data class ProductDomain(val tags: List<TagDomain>?)
 
-            @MapTo(TagDomain::class)
-            data class TagRemote(val name: String)
+                @MapTo(TagDomain::class)
+                data class TagRemote(val name: String)
 
-            @MapTo(ProductDomain::class)
-            data class ProductRemote(val tags: List<TagRemote>?)
-            """.trimIndent()
-        )
+                @MapTo(ProductDomain::class)
+                data class ProductRemote(val tags: List<TagRemote>?)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")

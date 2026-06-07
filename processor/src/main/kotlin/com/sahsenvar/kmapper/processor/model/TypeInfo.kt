@@ -10,5 +10,5 @@ data class TypeInfo(
     val simpleName: String,
     val isNullable: Boolean,
     val isCollection: Boolean,
-    val elementType: KSType?
+    val elementType: KSType?,
 )

@@ -5,20 +5,19 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class OkioConverterTest {
-
     // StringByteStringConverter
 
     @Test fun `StringByteStringConverter round-trip non-empty`() {
         val original = "hello KMapper"
         StringByteStringConverter.convertFromNonNull(
-            StringByteStringConverter.convertToNonNull(original)
+            StringByteStringConverter.convertToNonNull(original),
         ) shouldBe original
     }
 
     @Test fun `StringByteStringConverter round-trip empty string`() {
         val original = ""
         StringByteStringConverter.convertFromNonNull(
-            StringByteStringConverter.convertToNonNull(original)
+            StringByteStringConverter.convertToNonNull(original),
         ) shouldBe original
     }
 
@@ -26,17 +25,19 @@ class OkioConverterTest {
 
     @Test fun `ByteArrayByteStringConverter round-trip`() {
         val original = byteArrayOf(1, 2, 3, 4, 127, -1)
-        val roundTripped = ByteArrayByteStringConverter.convertFromNonNull(
-            ByteArrayByteStringConverter.convertToNonNull(original)
-        )
+        val roundTripped =
+            ByteArrayByteStringConverter.convertFromNonNull(
+                ByteArrayByteStringConverter.convertToNonNull(original),
+            )
         assertTrue(roundTripped.contentEquals(original), "ByteArray contents must be equal")
     }
 
     @Test fun `ByteArrayByteStringConverter round-trip empty`() {
         val original = byteArrayOf()
-        val roundTripped = ByteArrayByteStringConverter.convertFromNonNull(
-            ByteArrayByteStringConverter.convertToNonNull(original)
-        )
+        val roundTripped =
+            ByteArrayByteStringConverter.convertFromNonNull(
+                ByteArrayByteStringConverter.convertToNonNull(original),
+            )
         assertTrue(roundTripped.contentEquals(original), "Empty ByteArray round-trip")
     }
 
@@ -45,7 +46,7 @@ class OkioConverterTest {
     @Test fun `StringPathConverter round-trip unix path`() {
         val original = "/tmp/test"
         StringPathConverter.convertFromNonNull(
-            StringPathConverter.convertToNonNull(original)
+            StringPathConverter.convertToNonNull(original),
         ) shouldBe original
     }
 }

@@ -7,7 +7,7 @@ import kotlin.test.Test
 private data class AnnotationCompileCheck(
     @ValidateFrom(NotBlankValidator::class)
     @ValidateTo(NotBlankValidator::class)
-    val name: String
+    val name: String,
 )
 
 class ValidateAnnotationsTest {

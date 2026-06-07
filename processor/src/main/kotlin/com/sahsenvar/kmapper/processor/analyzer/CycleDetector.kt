@@ -16,27 +16,33 @@ import com.google.devtools.ksp.symbol.KSType
  *  - `Cat(parent: Cat?)`                    → OK  (nullable breaks the cycle)
  *  - `Node(children: List<Node>)`           → OK  (collection breaks the cycle)
  */
-class CycleDetector(private val logger: KSPLogger) {
-
+class CycleDetector(
+    private val logger: KSPLogger,
+) {
     fun check(mappedSources: List<KSClassDeclaration>) {
         // Build a set of FQNs that have @MapTo annotations
         val fqns = mappedSources.mapNotNull { it.qualifiedName?.asString() }.toSet()
 
         // Build the directed edge graph: source FQN -> list of target FQNs reachable via
         // unconditional (non-null, non-collection) fields that also have @MapTo
-        val edges: Map<String, List<String>> = mappedSources.associate { decl ->
-            val fqn = decl.qualifiedName!!.asString()
-            fqn to (decl.primaryConstructor?.parameters
-                ?.filter { p ->
-                    val resolvedType = p.type.resolve()
-                    !resolvedType.isMarkedNullable && !resolvedType.isCollection()
-                }
-                ?.mapNotNull { p ->
-                    p.type.resolve().declaration.qualifiedName?.asString()
-                }
-                ?.filter { it in fqns }
-                ?: emptyList())
-        }
+        val edges: Map<String, List<String>> =
+            mappedSources.associate { decl ->
+                val fqn = decl.qualifiedName!!.asString()
+                fqn to (
+                    decl.primaryConstructor
+                        ?.parameters
+                        ?.filter { p ->
+                            val resolvedType = p.type.resolve()
+                            !resolvedType.isMarkedNullable && !resolvedType.isCollection()
+                        }?.mapNotNull { p ->
+                            p.type
+                                .resolve()
+                                .declaration.qualifiedName
+                                ?.asString()
+                        }?.filter { it in fqns }
+                        ?: emptyList()
+                    )
+            }
 
         // DFS cycle detection
         val visiting = mutableSetOf<String>()
@@ -49,8 +55,8 @@ class CycleDetector(private val logger: KSPLogger) {
                 val cycle = stack.toList().dropWhile { it != node } + node
                 logger.error(
                     "Mapping cycle detected: ${cycle.joinToString(" -> ")}. " +
-                            "This would cause infinite construction at runtime. " +
-                            "Break the cycle with a nullable field, a collection, or @Ignore."
+                        "This would cause infinite construction at runtime. " +
+                        "Break the cycle with a nullable field, a collection, or @Ignore.",
                 )
                 return
             }
@@ -72,13 +78,14 @@ private fun KSType.isCollection(): Boolean {
     return fqn in COLLECTION_FQNS || fqn.startsWith("kotlinx.collections.immutable")
 }
 
-private val COLLECTION_FQNS = setOf(
-    "kotlin.collections.List",
-    "kotlin.collections.MutableList",
-    "kotlin.collections.Set",
-    "kotlin.collections.MutableSet",
-    "kotlin.collections.Collection",
-    "kotlin.collections.MutableCollection",
-    "kotlin.collections.Iterable",
-    "kotlin.Array"
-)
+private val COLLECTION_FQNS =
+    setOf(
+        "kotlin.collections.List",
+        "kotlin.collections.MutableList",
+        "kotlin.collections.Set",
+        "kotlin.collections.MutableSet",
+        "kotlin.collections.Collection",
+        "kotlin.collections.MutableCollection",
+        "kotlin.collections.Iterable",
+        "kotlin.Array",
+    )

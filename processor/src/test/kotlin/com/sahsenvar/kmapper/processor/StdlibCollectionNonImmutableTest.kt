@@ -17,29 +17,29 @@ import kotlin.test.assertEquals
  */
 @OptIn(ExperimentalCompilerApi::class)
 class StdlibCollectionNonImmutableTest {
-
     /**
      * stdlib List<NestedModel> → List<NestedDomain>: must use `.map { it.toTagDomain() }`
      * and must NOT emit `toImmutableList` / `toImmutableSet`.
      */
     @Test
     fun `stdlib List of nested model generates map and no toImmutableList`() {
-        val src = SourceFile.kotlin(
-            "StdlibList.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "StdlibList.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class TagDomain(val name: String)
+                data class TagDomain(val name: String)
 
-            @MapTo(TagDomain::class)
-            data class TagRemote(val name: String)
+                @MapTo(TagDomain::class)
+                data class TagRemote(val name: String)
 
-            data class ContainerDomain(val tags: List<TagDomain>)
+                data class ContainerDomain(val tags: List<TagDomain>)
 
-            @MapTo(ContainerDomain::class)
-            data class ContainerRemote(val tags: List<TagRemote>)
-            """.trimIndent()
-        )
+                @MapTo(ContainerDomain::class)
+                data class ContainerRemote(val tags: List<TagRemote>)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ContainerRemoteMappers.kt")
@@ -64,17 +64,18 @@ class StdlibCollectionNonImmutableTest {
      */
     @Test
     fun `stdlib List of String generates direct assign and no toImmutableList`() {
-        val src = SourceFile.kotlin(
-            "StdlibStringList.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "StdlibStringList.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class StringsDomain(val items: List<String>)
+                data class StringsDomain(val items: List<String>)
 
-            @MapTo(StringsDomain::class)
-            data class StringsRemote(val items: List<String>)
-            """.trimIndent()
-        )
+                @MapTo(StringsDomain::class)
+                data class StringsRemote(val items: List<String>)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("StringsRemoteMappers.kt")

@@ -7,7 +7,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class NonEmptySetWrapperTest {
-
     @Test
     fun `non-empty list wraps to NonEmptySet`() {
         val result = NonEmptySetWrapper.wrap(listOf(1, 2, 3))

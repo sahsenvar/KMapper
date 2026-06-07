@@ -1,17 +1,18 @@
 package com.sahsenvar.kmapper.processor.analyzer
 
-import com.sahsenvar.kmapper.processor.model.FieldInfo
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
+import com.sahsenvar.kmapper.processor.model.FieldInfo
 
 /**
  * Analyzes fields (constructor parameters) and extracts mapping annotations.
  */
-class FieldAnalyzer(private val logger: KSPLogger) {
-
+class FieldAnalyzer(
+    private val logger: KSPLogger,
+) {
     /**
      * Analyzes all constructors (primary + secondary) and returns a map of constructor -> field list.
      */
@@ -42,7 +43,7 @@ class FieldAnalyzer(private val logger: KSPLogger) {
 
     private fun analyzeConstructor(
         classDecl: KSClassDeclaration,
-        constructor: KSFunctionDeclaration
+        constructor: KSFunctionDeclaration,
     ): List<FieldInfo> {
         val constructorParamNames =
             constructor.parameters.mapNotNull { it.name?.asString() }.toSet()
@@ -59,10 +60,11 @@ class FieldAnalyzer(private val logger: KSPLogger) {
             val property = propertyAnnotationsMap[fieldName]
 
             // Merge @FieldMap annotations from both param and property
-            val fieldMapTargets = buildMap {
-                putAll(extractFieldMapTargets(param))
-                property?.let { putAll(extractFieldMapTargets(it)) }
-            }
+            val fieldMapTargets =
+                buildMap {
+                    putAll(extractFieldMapTargets(param))
+                    property?.let { putAll(extractFieldMapTargets(it)) }
+                }
 
             val mapDefaultValue =
                 extractMapDefaultValue(param) ?: property?.let { extractMapDefaultValue(it) }
@@ -87,7 +89,7 @@ class FieldAnalyzer(private val logger: KSPLogger) {
                     isIgnored = isIgnored,
                     validateFrom = validateFrom,
                     validateTo = validateTo,
-                )
+                ),
             )
         }
 
@@ -117,7 +119,7 @@ class FieldAnalyzer(private val logger: KSPLogger) {
                             isIgnored = isIgnored,
                             validateFrom = validateFrom,
                             validateTo = validateTo,
-                        )
+                        ),
                     )
                 }
             }
@@ -138,20 +140,28 @@ class FieldAnalyzer(private val logger: KSPLogger) {
             .filter {
                 val shortName = it.shortName.asString()
                 val qualifiedName =
-                    it.annotationType.resolve().declaration.qualifiedName?.asString()
+                    it.annotationType
+                        .resolve()
+                        .declaration.qualifiedName
+                        ?.asString()
                 shortName == "FieldMap" || qualifiedName == "com.sahsenvar.kmapper.annotations.FieldMap"
-            }
-            .forEach { annotation ->
-                val fieldName = annotation.arguments
-                    .firstOrNull { it.name?.asString() == "fieldName" }
-                    ?.value as? String ?: return@forEach
+            }.forEach { annotation ->
+                val fieldName =
+                    annotation.arguments
+                        .firstOrNull { it.name?.asString() == "fieldName" }
+                        ?.value as? String ?: return@forEach
 
-                val targetClassArg = annotation.arguments
-                    .firstOrNull { it.name?.asString() == "targetClass" }
-                    ?.value as? KSType
+                val targetClassArg =
+                    annotation.arguments
+                        .firstOrNull { it.name?.asString() == "targetClass" }
+                        ?.value as? KSType
 
-                val targetClassFqn = targetClassArg?.declaration?.qualifiedName?.asString()
-                    ?.takeIf { it != "kotlin.Nothing" }
+                val targetClassFqn =
+                    targetClassArg
+                        ?.declaration
+                        ?.qualifiedName
+                        ?.asString()
+                        ?.takeIf { it != "kotlin.Nothing" }
 
                 if (targetClassFqn != null) {
                     // Explicit targetClass specified - add to list
@@ -165,48 +175,61 @@ class FieldAnalyzer(private val logger: KSPLogger) {
         return result
     }
 
-    private fun extractFieldMapTarget(annotated: KSAnnotated): String? {
-        return extractFieldMapTargets(annotated).values.firstOrNull()?.firstOrNull()
-    }
+    private fun extractFieldMapTarget(annotated: KSAnnotated): String? = extractFieldMapTargets(annotated).values.firstOrNull()?.firstOrNull()
 
     private fun extractMapDefaultValue(annotated: KSAnnotated): String? {
-        val annotation = annotated.annotations.firstOrNull {
-            it.shortName.asString() == "MapDefaultValue"
-        } ?: return null
+        val annotation =
+            annotated.annotations.firstOrNull {
+                it.shortName.asString() == "MapDefaultValue"
+            } ?: return null
 
         return annotation.arguments.first().value as? String
     }
 
     private fun extractUseConverter(annotated: KSAnnotated): String? {
-        val annotation = annotated.annotations.firstOrNull {
-            val shortName = it.shortName.asString()
-            val qualifiedName = it.annotationType.resolve().declaration.qualifiedName?.asString()
-            shortName == "UseMapTypeConverter" || qualifiedName == "com.sahsenvar.kmapper.annotations.UseMapTypeConverter"
-        } ?: return null
+        val annotation =
+            annotated.annotations.firstOrNull {
+                val shortName = it.shortName.asString()
+                val qualifiedName =
+                    it.annotationType
+                        .resolve()
+                        .declaration.qualifiedName
+                        ?.asString()
+                shortName == "UseMapTypeConverter" || qualifiedName == "com.sahsenvar.kmapper.annotations.UseMapTypeConverter"
+            } ?: return null
 
         val converterType = annotation.arguments.first().value as? KSType
         return converterType?.declaration?.qualifiedName?.asString()
     }
 
-    private fun extractIgnore(annotated: KSAnnotated): Boolean {
-        return annotated.annotations.any {
-            val shortName = it.shortName.asString()
-            val qualifiedName = it.annotationType.resolve().declaration.qualifiedName?.asString()
-            shortName == "Ignore" || qualifiedName == "com.sahsenvar.kmapper.annotations.Ignore"
-        }
+    private fun extractIgnore(annotated: KSAnnotated): Boolean = annotated.annotations.any {
+        val shortName = it.shortName.asString()
+        val qualifiedName =
+            it.annotationType
+                .resolve()
+                .declaration.qualifiedName
+                ?.asString()
+        shortName == "Ignore" || qualifiedName == "com.sahsenvar.kmapper.annotations.Ignore"
     }
 
-    private fun extractValidateFrom(annotated: KSAnnotated): List<String> =
-        extractValidatorFqns(annotated, "ValidateFrom", "com.sahsenvar.kmapper.annotations.ValidateFrom")
+    private fun extractValidateFrom(annotated: KSAnnotated): List<String> = extractValidatorFqns(annotated, "ValidateFrom", "com.sahsenvar.kmapper.annotations.ValidateFrom")
 
-    private fun extractValidateTo(annotated: KSAnnotated): List<String> =
-        extractValidatorFqns(annotated, "ValidateTo", "com.sahsenvar.kmapper.annotations.ValidateTo")
+    private fun extractValidateTo(annotated: KSAnnotated): List<String> = extractValidatorFqns(annotated, "ValidateTo", "com.sahsenvar.kmapper.annotations.ValidateTo")
 
-    private fun extractValidatorFqns(annotated: KSAnnotated, shortName: String, fqn: String): List<String> {
-        val annotation = annotated.annotations.firstOrNull {
-            it.shortName.asString() == shortName ||
-                it.annotationType.resolve().declaration.qualifiedName?.asString() == fqn
-        } ?: return emptyList()
+    private fun extractValidatorFqns(
+        annotated: KSAnnotated,
+        shortName: String,
+        fqn: String,
+    ): List<String> {
+        val annotation =
+            annotated.annotations.firstOrNull {
+                it.shortName.asString() == shortName ||
+                    it.annotationType
+                        .resolve()
+                        .declaration.qualifiedName
+                        ?.asString() == fqn
+            } ?: return emptyList()
+
         // vararg validators: KClass<*> vararg — annotation.arguments[0].value is List<KSType>
         @Suppress("UNCHECKED_CAST")
         val validators = annotation.arguments.firstOrNull()?.value as? List<KSType> ?: return emptyList()

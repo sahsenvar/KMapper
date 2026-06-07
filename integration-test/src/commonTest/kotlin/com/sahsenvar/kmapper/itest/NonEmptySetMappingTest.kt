@@ -7,7 +7,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class NonEmptySetMappingTest {
-
     @Test
     fun `List of nested models maps to NonEmptySet`() {
         val source = RoleR(permissions = listOf(PermissionR("read"), PermissionR("write")))

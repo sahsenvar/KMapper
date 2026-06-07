@@ -8,10 +8,8 @@ import com.google.devtools.ksp.processing.SymbolProcessorProvider
  * Provider for MappingProcessor.
  */
 class MappingProcessorProvider : SymbolProcessorProvider {
-    override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
-        return MappingProcessor(
-            codeGenerator = environment.codeGenerator,
-            logger = environment.logger
-        )
-    }
+    override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor = MappingProcessor(
+        codeGenerator = environment.codeGenerator,
+        logger = environment.logger,
+    )
 }

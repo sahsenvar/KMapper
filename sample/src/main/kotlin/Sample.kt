@@ -10,20 +10,38 @@ import kotlinx.collections.immutable.PersistentSet
 @KMapperConfig(wrappers = [PersistentListWrapper::class, PersistentSetWrapper::class, NonEmptyListWrapper::class])
 object SampleConfig
 
-data class TagD(val name: String)
-data class ProductD(val tags: PersistentList<TagD>)
-data class CartD(val items: PersistentSet<TagD>)
+data class TagD(
+    val name: String,
+)
+
+data class ProductD(
+    val tags: PersistentList<TagD>,
+)
+
+data class CartD(
+    val items: PersistentSet<TagD>,
+)
 
 @MapTo(TagD::class)
-data class TagR(val name: String)
+data class TagR(
+    val name: String,
+)
 
 @MapTo(ProductD::class)
-data class ProductR(val tags: List<TagR>)
+data class ProductR(
+    val tags: List<TagR>,
+)
 
 @MapTo(CartD::class)
-data class CartR(val items: List<TagR>)
+data class CartR(
+    val items: List<TagR>,
+)
 
-data class TeamD(val members: NonEmptyList<TagD>)
+data class TeamD(
+    val members: NonEmptyList<TagD>,
+)
 
 @MapTo(TeamD::class)
-data class TeamR(val members: List<TagR>)
+data class TeamR(
+    val members: List<TagR>,
+)

@@ -17,8 +17,9 @@ import com.google.devtools.ksp.processing.KSPLogger
  * MapTypeConverter is bidirectional by design and the bilateral "conflict" was only
  * meaningful for the old "scan everything" approach, not for an explicit opt-in list.
  */
-class BuiltInConverterValidator(private val logger: KSPLogger) {
-
+class BuiltInConverterValidator(
+    private val logger: KSPLogger,
+) {
     /**
      * Validates the global converter list from @KMapperConfig(converters=[...]).
      *
@@ -53,7 +54,7 @@ class BuiltInConverterValidator(private val logger: KSPLogger) {
                     → Keep exactly one converter for this pair in @KMapperConfig(converters=[...]).
                       If you need a different converter for a specific field, use @UseMapTypeConverter
                       on that field instead of adding a second entry to @KMapperConfig.
-                    """.trimIndent()
+                    """.trimIndent(),
                 )
                 hasError = true
             } else {

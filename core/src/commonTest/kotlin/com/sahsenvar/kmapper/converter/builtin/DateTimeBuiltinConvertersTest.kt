@@ -7,7 +7,6 @@ import kotlinx.datetime.Instant
 import kotlin.test.Test
 
 class DateTimeBuiltinConvertersTest {
-
     // ---- StringInstantConverter ----
 
     @Test fun `StringInstant round-trip ISO-8601`() {

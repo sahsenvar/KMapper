@@ -14,6 +14,7 @@ import kotlinx.datetime.LocalTime
  */
 object StringLocalDateConverter : MapTypeConverter<String, LocalDate>(String::class, LocalDate::class) {
     override fun convertToNonNull(value: String): LocalDate = LocalDate.parse(value)
+
     override fun convertFromNonNull(value: LocalDate): String = value.toString()
 }
 
@@ -22,6 +23,7 @@ object StringLocalDateConverter : MapTypeConverter<String, LocalDate>(String::cl
  */
 object StringLocalDateTimeConverter : MapTypeConverter<String, LocalDateTime>(String::class, LocalDateTime::class) {
     override fun convertToNonNull(value: String): LocalDateTime = LocalDateTime.parse(value)
+
     override fun convertFromNonNull(value: LocalDateTime): String = value.toString()
 }
 
@@ -30,5 +32,6 @@ object StringLocalDateTimeConverter : MapTypeConverter<String, LocalDateTime>(St
  */
 object StringLocalTimeConverter : MapTypeConverter<String, LocalTime>(String::class, LocalTime::class) {
     override fun convertToNonNull(value: String): LocalTime = LocalTime.parse(value)
+
     override fun convertFromNonNull(value: LocalTime): String = value.toString()
 }

@@ -6,7 +6,6 @@ import io.kotest.matchers.shouldBe
 import kotlin.test.Test
 
 class PrimitiveConvertersTest {
-
     // ---- StringIntConverter ----
 
     @Test fun `StringInt convertToNonNull round-trip`() {

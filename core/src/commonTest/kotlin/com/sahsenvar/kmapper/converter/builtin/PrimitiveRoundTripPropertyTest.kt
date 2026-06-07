@@ -2,11 +2,11 @@ package com.sahsenvar.kmapper.converter.builtin
 
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
-import io.kotest.property.arbitrary.int
-import io.kotest.property.arbitrary.long
+import io.kotest.property.arbitrary.boolean
 import io.kotest.property.arbitrary.double
 import io.kotest.property.arbitrary.float
-import io.kotest.property.arbitrary.boolean
+import io.kotest.property.arbitrary.int
+import io.kotest.property.arbitrary.long
 import io.kotest.property.checkAll
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -17,7 +17,6 @@ import kotlin.test.Test
  * transitive dep of kotest-property and has iOS targets).
  */
 class PrimitiveRoundTripPropertyTest {
-
     @Test
     fun `StringIntConverter Int round-trip String-Int-String`() {
         runBlocking {

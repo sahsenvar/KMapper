@@ -1,12 +1,12 @@
 package com.sahsenvar.kmapper.processor.analyzer
 
-import com.sahsenvar.kmapper.processor.model.FieldInfo
-import com.sahsenvar.kmapper.processor.model.MappingStrategy
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.Modifier
+import com.sahsenvar.kmapper.processor.model.FieldInfo
+import com.sahsenvar.kmapper.processor.model.MappingStrategy
 
 /**
  * Determines the appropriate mapping strategy for field transformations.
@@ -20,13 +20,12 @@ import com.google.devtools.ksp.symbol.Modifier
 class TypeMatcher(
     private val logger: KSPLogger,
     private val customConverters: Map<Pair<String, String>, String> = emptyMap(),
-    private val collectionWrappers: Map<String, String> = emptyMap()
+    private val collectionWrappers: Map<String, String> = emptyMap(),
 ) {
-
     fun determineMappingStrategy(
         sourceField: FieldInfo,
         targetField: FieldInfo,
-        isReverse: Boolean = false
+        isReverse: Boolean = false,
     ): MappingStrategy {
         // 1. Check per-field @UseMapTypeConverter (highest priority)
         if (sourceField.useConverter != null) {
@@ -40,25 +39,28 @@ class TypeMatcher(
         //    Also handles @CollectionWrapper: when the target FQN (e.g. PersistentList) is in
         //    collectionWrappers, the source must be a standard collection (List/Set) and we emit
         //    WrappedCollection so the generator appends the wrapper call after .map { }.
-        val targetCollFqn = targetField.type.declaration.qualifiedName?.asString()
+        val targetCollFqn =
+            targetField.type.declaration.qualifiedName
+                ?.asString()
         val wrapperFqn = if (targetCollFqn != null) collectionWrappers[targetCollFqn] else null
 
         if (wrapperFqn != null && isCollectionType(sourceField.type)) {
             // Target is a wrapped collection (e.g. PersistentList); source is a plain List/Set.
             val sourceElementType = extractCollectionElementType(sourceField.type)
             val targetElementType = extractCollectionElementType(targetField.type)
-            val elementStrategy = if (sourceElementType != null && targetElementType != null) {
-                if (isSameType(sourceElementType, targetElementType)) {
-                    MappingStrategy.Direct
-                } else if (isDataClass(sourceElementType) && isDataClass(targetElementType)) {
-                    val mapperName = "to${targetElementType.declaration.simpleName.asString()}"
-                    MappingStrategy.Nested(mapperName)
+            val elementStrategy =
+                if (sourceElementType != null && targetElementType != null) {
+                    if (isSameType(sourceElementType, targetElementType)) {
+                        MappingStrategy.Direct
+                    } else if (isDataClass(sourceElementType) && isDataClass(targetElementType)) {
+                        val mapperName = "to${targetElementType.declaration.simpleName.asString()}"
+                        MappingStrategy.Nested(mapperName)
+                    } else {
+                        MappingStrategy.Direct
+                    }
                 } else {
                     MappingStrategy.Direct
                 }
-            } else {
-                MappingStrategy.Direct
-            }
             return MappingStrategy.WrappedCollection(elementStrategy, wrapperFqn)
         }
 
@@ -72,22 +74,27 @@ class TypeMatcher(
             val tgtKey = extractMapKeyType(targetField.type)
             val srcVal = extractMapValueType(sourceField.type)
             val tgtVal = extractMapValueType(targetField.type)
-            if (srcKey != null && tgtKey != null && isSameType(srcKey, tgtKey)
-                && srcVal != null && tgtVal != null) {
-                val valueStrategy = if (isSameType(srcVal, tgtVal)) {
-                    MappingStrategy.Direct
-                } else if (isDataClass(srcVal) && isDataClass(tgtVal)) {
-                    MappingStrategy.Nested("to${tgtVal.declaration.simpleName.asString()}")
-                } else {
-                    MappingStrategy.Direct // fallback; may emit a type error at Kotlin compile time
-                }
+            if (srcKey != null &&
+                tgtKey != null &&
+                isSameType(srcKey, tgtKey) &&
+                srcVal != null &&
+                tgtVal != null
+            ) {
+                val valueStrategy =
+                    if (isSameType(srcVal, tgtVal)) {
+                        MappingStrategy.Direct
+                    } else if (isDataClass(srcVal) && isDataClass(tgtVal)) {
+                        MappingStrategy.Nested("to${tgtVal.declaration.simpleName.asString()}")
+                    } else {
+                        MappingStrategy.Direct // fallback; may emit a type error at Kotlin compile time
+                    }
                 return MappingStrategy.MapValues(valueStrategy)
             }
             // Key type mismatch (or missing type args) → Unmappable; do NOT fall through
             // to isSameType which only compares outer FQNs and would give a wrong Direct.
             logger.error(
                 "no converter for ${sourceField.type.fqn()} -> ${targetField.type.fqn()}; " +
-                    "Map key types must match; add @UseMapTypeConverter to convert the field manually"
+                    "Map key types must match; add @UseMapTypeConverter to convert the field manually",
             )
             return MappingStrategy.Unmappable
         }
@@ -97,14 +104,15 @@ class TypeMatcher(
             val targetElementType = extractCollectionElementType(targetField.type)
 
             if (sourceElementType != null && targetElementType != null) {
-                val elementStrategy = if (isSameType(sourceElementType, targetElementType)) {
-                    MappingStrategy.Direct
-                } else if (isDataClass(sourceElementType) && isDataClass(targetElementType)) {
-                    val mapperName = "to${targetElementType.declaration.simpleName.asString()}"
-                    MappingStrategy.Nested(mapperName)
-                } else {
-                    MappingStrategy.Direct
-                }
+                val elementStrategy =
+                    if (isSameType(sourceElementType, targetElementType)) {
+                        MappingStrategy.Direct
+                    } else if (isDataClass(sourceElementType) && isDataClass(targetElementType)) {
+                        val mapperName = "to${targetElementType.declaration.simpleName.asString()}"
+                        MappingStrategy.Nested(mapperName)
+                    } else {
+                        MappingStrategy.Direct
+                    }
                 val isSet = isSetCollectionType(targetField.type)
                 return MappingStrategy.Collection(elementStrategy, isSet)
             }
@@ -115,21 +123,39 @@ class TypeMatcher(
         //     Guard: OptionWrap only when target is Option AND source is NOT Option.
         //            OptionUnwrap only when source is Option AND target is NOT Option.
         //            (Option→Option is out of scope — must not produce Option<Option<T>>.)
-        val targetOptionFqn = targetField.type.declaration.qualifiedName?.asString()
-        val sourceOptionFqn = sourceField.type.declaration.qualifiedName?.asString()
+        val targetOptionFqn =
+            targetField.type.declaration.qualifiedName
+                ?.asString()
+        val sourceOptionFqn =
+            sourceField.type.declaration.qualifiedName
+                ?.asString()
 
         if (targetOptionFqn == "arrow.core.Option" && sourceOptionFqn != "arrow.core.Option") {
-            val innerType = targetField.type.arguments.firstOrNull()?.type?.resolve()
-            val innerMapperFn = if (innerType != null && isDataClass(innerType)) {
-                "to${innerType.declaration.simpleName.asString()}"
-            } else null
+            val innerType =
+                targetField.type.arguments
+                    .firstOrNull()
+                    ?.type
+                    ?.resolve()
+            val innerMapperFn =
+                if (innerType != null && isDataClass(innerType)) {
+                    "to${innerType.declaration.simpleName.asString()}"
+                } else {
+                    null
+                }
             return MappingStrategy.OptionWrap(innerMapperFn)
         }
         if (sourceOptionFqn == "arrow.core.Option" && targetOptionFqn != "arrow.core.Option") {
-            val innerType = sourceField.type.arguments.firstOrNull()?.type?.resolve()
-            val innerMapperFn = if (innerType != null && isDataClass(innerType)) {
-                "to${innerType.declaration.simpleName.asString()}"
-            } else null
+            val innerType =
+                sourceField.type.arguments
+                    .firstOrNull()
+                    ?.type
+                    ?.resolve()
+            val innerMapperFn =
+                if (innerType != null && isDataClass(innerType)) {
+                    "to${innerType.declaration.simpleName.asString()}"
+                } else {
+                    null
+                }
             return MappingStrategy.OptionUnwrap(innerMapperFn)
         }
 
@@ -152,23 +178,25 @@ class TypeMatcher(
         }
 
         // 6. Check custom converters from @KMapperConfig (second priority after per-field)
-        val customConverterFqn = if (isReverse) {
-            customConverters[targetField.type.fqn() to sourceField.type.fqn()]
-                ?: customConverters[sourceField.type.fqn() to targetField.type.fqn()]
-        } else {
-            customConverters[sourceField.type.fqn() to targetField.type.fqn()]
-                ?: customConverters[targetField.type.fqn() to sourceField.type.fqn()]
-        }
+        val customConverterFqn =
+            if (isReverse) {
+                customConverters[targetField.type.fqn() to sourceField.type.fqn()]
+                    ?: customConverters[sourceField.type.fqn() to targetField.type.fqn()]
+            } else {
+                customConverters[sourceField.type.fqn() to targetField.type.fqn()]
+                    ?: customConverters[targetField.type.fqn() to sourceField.type.fqn()]
+            }
         if (customConverterFqn != null) {
             return MappingStrategy.Convert(customConverterFqn)
         }
 
         // 7. Check built-in converters
-        val converterFqn = if (isReverse) {
-            findBuiltInConverter(targetField.type, sourceField.type)
-        } else {
-            findBuiltInConverter(sourceField.type, targetField.type)
-        }
+        val converterFqn =
+            if (isReverse) {
+                findBuiltInConverter(targetField.type, sourceField.type)
+            } else {
+                findBuiltInConverter(sourceField.type, targetField.type)
+            }
 
         if (converterFqn != null) {
             return MappingStrategy.Convert(converterFqn)
@@ -177,7 +205,7 @@ class TypeMatcher(
         // 8. No strategy found — emit a compile error
         logger.error(
             "no converter for ${sourceField.type.fqn()} -> ${targetField.type.fqn()}; " +
-                "add it to @KMapperConfig(converters=[...]) or annotate the field with @UseMapTypeConverter"
+                "add it to @KMapperConfig(converters=[...]) or annotate the field with @UseMapTypeConverter",
         )
         return MappingStrategy.Unmappable
     }
@@ -186,7 +214,7 @@ class TypeMatcher(
         sourceField: FieldInfo,
         targetField: FieldInfo,
         sourceDecl: KSClassDeclaration?,
-        targetDecl: KSClassDeclaration?
+        targetDecl: KSClassDeclaration?,
     ): MappingStrategy {
         val mappableEnumFqn = "com.sahsenvar.kmapper.MappableEnum"
 
@@ -196,14 +224,14 @@ class TypeMatcher(
             if (wireFqn == null) {
                 logger.error(
                     "enum '${targetDecl.simpleName.asString()}' must implement MappableEnum<...> " +
-                        "or use @UseMapTypeConverter"
+                        "or use @UseMapTypeConverter",
                 )
                 return MappingStrategy.Unmappable
             }
             val sourceFqn = sourceField.type.fqn()
             if (sourceFqn != wireFqn) {
                 logger.error(
-                    "enum wire type mismatch: expected $wireFqn but source type is $sourceFqn"
+                    "enum wire type mismatch: expected $wireFqn but source type is $sourceFqn",
                 )
                 return MappingStrategy.Unmappable
             }
@@ -216,14 +244,14 @@ class TypeMatcher(
             if (wireFqn == null) {
                 logger.error(
                     "enum '${sourceDecl.simpleName.asString()}' must implement MappableEnum<...> " +
-                        "or use @UseMapTypeConverter"
+                        "or use @UseMapTypeConverter",
                 )
                 return MappingStrategy.Unmappable
             }
             val targetFqn = targetField.type.fqn()
             if (targetFqn != wireFqn) {
                 logger.error(
-                    "enum wire type mismatch: expected $wireFqn but target type is $targetFqn"
+                    "enum wire type mismatch: expected $wireFqn but target type is $targetFqn",
                 )
                 return MappingStrategy.Unmappable
             }
@@ -239,29 +267,37 @@ class TypeMatcher(
      * Resolves the wire type FQN from an enum's MappableEnum<W> supertype.
      * Returns null if the enum does not implement MappableEnum.
      */
-    private fun resolveEnumWireType(enumDecl: KSClassDeclaration, mappableEnumFqn: String): String? {
+    private fun resolveEnumWireType(
+        enumDecl: KSClassDeclaration,
+        mappableEnumFqn: String,
+    ): String? {
         for (supertype in enumDecl.superTypes) {
             val resolved = supertype.resolve()
             val declFqn = resolved.declaration.qualifiedName?.asString() ?: continue
             if (declFqn == mappableEnumFqn) {
                 // MappableEnum<W> — extract the W type argument
-                val wireTypeArg = resolved.arguments.firstOrNull()?.type?.resolve()
+                val wireTypeArg =
+                    resolved.arguments
+                        .firstOrNull()
+                        ?.type
+                        ?.resolve()
                 return wireTypeArg?.declaration?.qualifiedName?.asString()
             }
         }
         return null
     }
 
-    private fun isSameType(source: KSType, target: KSType): Boolean {
-        return source.declaration.qualifiedName?.asString() ==
-                target.declaration.qualifiedName?.asString()
-    }
+    private fun isSameType(
+        source: KSType,
+        target: KSType,
+    ): Boolean = source.declaration.qualifiedName?.asString() ==
+        target.declaration.qualifiedName?.asString()
 
     fun isCollectionType(type: KSType): Boolean {
         val fqn = type.declaration.qualifiedName?.asString() ?: return false
         return fqn.startsWith("kotlin.collections.List") ||
-                fqn.startsWith("kotlin.collections.Set") ||
-                fqn.startsWith("kotlinx.collections.immutable")
+            fqn.startsWith("kotlin.collections.Set") ||
+            fqn.startsWith("kotlinx.collections.immutable")
     }
 
     /**
@@ -271,21 +307,28 @@ class TypeMatcher(
     fun isSetCollectionType(type: KSType): Boolean {
         val fqn = type.declaration.qualifiedName?.asString() ?: return false
         return fqn.startsWith("kotlin.collections.Set") ||
-                fqn.startsWith("kotlin.collections.MutableSet")
+            fqn.startsWith("kotlin.collections.MutableSet")
     }
 
-    fun extractCollectionElementType(type: KSType): KSType? {
-        return type.arguments.firstOrNull()?.type?.resolve()
-    }
+    fun extractCollectionElementType(type: KSType): KSType? = type.arguments
+        .firstOrNull()
+        ?.type
+        ?.resolve()
 
     fun isMapType(type: KSType): Boolean {
         val fqn = type.declaration.qualifiedName?.asString() ?: return false
         return fqn == "kotlin.collections.Map" || fqn == "kotlin.collections.MutableMap"
     }
 
-    fun extractMapKeyType(type: KSType): KSType? = type.arguments.getOrNull(0)?.type?.resolve()
+    fun extractMapKeyType(type: KSType): KSType? = type.arguments
+        .getOrNull(0)
+        ?.type
+        ?.resolve()
 
-    fun extractMapValueType(type: KSType): KSType? = type.arguments.getOrNull(1)?.type?.resolve()
+    fun extractMapValueType(type: KSType): KSType? = type.arguments
+        .getOrNull(1)
+        ?.type
+        ?.resolve()
 
     private fun isDataClass(type: KSType): Boolean {
         val decl = type.declaration as? KSClassDeclaration ?: return false
@@ -300,7 +343,10 @@ class TypeMatcher(
      * - Reverse direction (T→S): the caller passes (target, source) so we still look up the forward key
      *   and let MappingCodeGenerator emit convertFromNonNull / convertFrom.
      */
-    private fun findBuiltInConverter(source: KSType, target: KSType): String? {
+    private fun findBuiltInConverter(
+        source: KSType,
+        target: KSType,
+    ): String? {
         val sourceFqn = source.declaration.qualifiedName?.asString()
         val targetFqn = target.declaration.qualifiedName?.asString()
 
@@ -368,5 +414,4 @@ class TypeMatcher(
 }
 
 /** Returns the fully-qualified name of this KSType for use in error messages and converter lookup. */
-internal fun KSType.fqn(): String =
-    declaration.qualifiedName?.asString() ?: declaration.simpleName.asString()
+internal fun KSType.fqn(): String = declaration.qualifiedName?.asString() ?: declaration.simpleName.asString()

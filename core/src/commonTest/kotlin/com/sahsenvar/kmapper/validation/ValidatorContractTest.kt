@@ -1,8 +1,8 @@
 package com.sahsenvar.kmapper.validation
 
 import kotlin.test.Test
-import kotlin.test.assertNull
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 private object AlwaysValidStringValidator : Validator<String>(String::class) {
     override fun validate(value: String): String? = null

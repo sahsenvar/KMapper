@@ -16,7 +16,6 @@ import kotlin.test.assertEquals
  */
 @OptIn(ExperimentalCompilerApi::class)
 class SetCollectionMappingTest {
-
     /**
      * Non-null Set<TagRemote> → Set<TagDomain> where TagRemote is @MapTo(TagDomain::class).
      * Generated code must:
@@ -26,21 +25,22 @@ class SetCollectionMappingTest {
      */
     @Test
     fun `non-null Set of mapped elements emits map toSet`() {
-        val src = SourceFile.kotlin(
-            "SetNested.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "SetNested.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class TagDomain(val name: String)
-            data class ProductDomain(val tags: Set<TagDomain>)
+                data class TagDomain(val name: String)
+                data class ProductDomain(val tags: Set<TagDomain>)
 
-            @MapTo(TagDomain::class)
-            data class TagRemote(val name: String)
+                @MapTo(TagDomain::class)
+                data class TagRemote(val name: String)
 
-            @MapTo(ProductDomain::class)
-            data class ProductRemote(val tags: Set<TagRemote>)
-            """.trimIndent()
-        )
+                @MapTo(ProductDomain::class)
+                data class ProductRemote(val tags: Set<TagRemote>)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
@@ -65,21 +65,22 @@ class SetCollectionMappingTest {
      */
     @Test
     fun `nullable Set of mapped elements emits safe-call map toSet`() {
-        val src = SourceFile.kotlin(
-            "SetNestedNullable.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "SetNestedNullable.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class TagDomain(val name: String)
-            data class ProductDomain(val tags: Set<TagDomain>?)
+                data class TagDomain(val name: String)
+                data class ProductDomain(val tags: Set<TagDomain>?)
 
-            @MapTo(TagDomain::class)
-            data class TagRemote(val name: String)
+                @MapTo(TagDomain::class)
+                data class TagRemote(val name: String)
 
-            @MapTo(ProductDomain::class)
-            data class ProductRemote(val tags: Set<TagRemote>?)
-            """.trimIndent()
-        )
+                @MapTo(ProductDomain::class)
+                data class ProductRemote(val tags: Set<TagRemote>?)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
@@ -104,21 +105,22 @@ class SetCollectionMappingTest {
      */
     @Test
     fun `List target does NOT emit toSet`() {
-        val src = SourceFile.kotlin(
-            "ListNestedGuard.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "ListNestedGuard.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class TagDomain(val name: String)
-            data class ProductDomain(val tags: List<TagDomain>)
+                data class TagDomain(val name: String)
+                data class ProductDomain(val tags: List<TagDomain>)
 
-            @MapTo(TagDomain::class)
-            data class TagRemote(val name: String)
+                @MapTo(TagDomain::class)
+                data class TagRemote(val name: String)
 
-            @MapTo(ProductDomain::class)
-            data class ProductRemote(val tags: List<TagRemote>)
-            """.trimIndent()
-        )
+                @MapTo(ProductDomain::class)
+                data class ProductRemote(val tags: List<TagRemote>)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")

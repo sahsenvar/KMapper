@@ -6,9 +6,20 @@ import kotlin.concurrent.Volatile
 import kotlin.reflect.KClass
 
 interface MappingListener {
-    fun onMapStart(source: Any, target: KClass<*>) {}
-    fun onMapComplete(source: Any, result: Any) {}
-    fun onError(source: Any, error: MappingException) {}
+    fun onMapStart(
+        source: Any,
+        target: KClass<*>,
+    ) {}
+
+    fun onMapComplete(
+        source: Any,
+        result: Any,
+    ) {}
+
+    fun onError(
+        source: Any,
+        error: MappingException,
+    ) {}
     // forward-compatible (default no-op): onFieldDefaulted / onConversion added in a later round
 }
 
@@ -43,17 +54,24 @@ object KMapper {
     }
 
     /** Runtime escape-hatch (NOT compile-time safe; prefer @KMapperConfig). */
-    fun <S : Any, T : Any> addConverter(converter: MapTypeConverter<S, T>) =
-        TypeConverterRegistry.register(converter)
+    fun <S : Any, T : Any> addConverter(converter: MapTypeConverter<S, T>) = TypeConverterRegistry.register(converter)
 }
 
-class LoggingMappingListener(private val log: (String) -> Unit) : MappingListener {
-    override fun onMapStart(source: Any, target: KClass<*>) =
-        log("KMapper start: ${source::class.simpleName} -> ${target.simpleName}")
+class LoggingMappingListener(
+    private val log: (String) -> Unit,
+) : MappingListener {
+    override fun onMapStart(
+        source: Any,
+        target: KClass<*>,
+    ) = log("KMapper start: ${source::class.simpleName} -> ${target.simpleName}")
 
-    override fun onMapComplete(source: Any, result: Any) =
-        log("KMapper done: ${source::class.simpleName} -> ${result::class.simpleName}")
+    override fun onMapComplete(
+        source: Any,
+        result: Any,
+    ) = log("KMapper done: ${source::class.simpleName} -> ${result::class.simpleName}")
 
-    override fun onError(source: Any, error: MappingException) =
-        log("KMapper error: ${error.message}")
+    override fun onError(
+        source: Any,
+        error: MappingException,
+    ) = log("KMapper error: ${error.message}")
 }

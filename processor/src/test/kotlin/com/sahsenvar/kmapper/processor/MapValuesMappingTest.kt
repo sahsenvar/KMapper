@@ -20,54 +20,56 @@ import kotlin.test.assertFails
  *  5. Regression: existing List/collection mapping still passes
  */
 class MapValuesMappingTest {
-
     // ─── shared model sources ──────────────────────────────────────────────────
 
-    private val nestedValueSrc = SourceFile.kotlin(
-        "MapNested.kt",
-        """
-        import com.sahsenvar.kmapper.annotations.MapTo
+    private val nestedValueSrc =
+        SourceFile.kotlin(
+            "MapNested.kt",
+            """
+            import com.sahsenvar.kmapper.annotations.MapTo
 
-        data class ValueD(val label: String)
+            data class ValueD(val label: String)
 
-        @MapTo(ValueD::class)
-        data class ValueR(val label: String)
+            @MapTo(ValueD::class)
+            data class ValueR(val label: String)
 
-        data class ContainerD(val items: Map<String, ValueD>)
+            data class ContainerD(val items: Map<String, ValueD>)
 
-        @MapTo(ContainerD::class)
-        data class ContainerR(val items: Map<String, ValueR>)
-        """.trimIndent()
-    )
+            @MapTo(ContainerD::class)
+            data class ContainerR(val items: Map<String, ValueR>)
+            """.trimIndent(),
+        )
 
-    private val directValueSrc = SourceFile.kotlin(
-        "MapDirect.kt",
-        """
-        import com.sahsenvar.kmapper.annotations.MapTo
+    private val directValueSrc =
+        SourceFile.kotlin(
+            "MapDirect.kt",
+            """
+            import com.sahsenvar.kmapper.annotations.MapTo
 
-        data class BagD(val tags: Map<String, String>)
+            data class BagD(val tags: Map<String, String>)
 
-        @MapTo(BagD::class)
-        data class BagR(val tags: Map<String, String>)
-        """.trimIndent()
-    )
+            @MapTo(BagD::class)
+            data class BagR(val tags: Map<String, String>)
+            """.trimIndent(),
+        )
 
-    private val nullableValueSrc = SourceFile.kotlin(
-        "MapNullable.kt",
-        """
-        import com.sahsenvar.kmapper.annotations.MapTo
+    private val nullableValueSrc =
+        SourceFile.kotlin(
+            "MapNullable.kt",
+            """
+            import com.sahsenvar.kmapper.annotations.MapTo
 
-        data class ValD(val n: Int)
+            data class ValD(val n: Int)
 
-        @MapTo(ValD::class)
-        data class ValR(val n: Int)
+            @MapTo(ValD::class)
+            data class ValR(val n: Int)
 
-        data class BoxD(val m: Map<String, ValD>)
+            data class BoxD(val m: Map<String, ValD>)
 
-        @MapTo(BoxD::class)
-        data class BoxR(val m: Map<String, ValR>?)
-        """.trimIndent()
-    )
+            @MapTo(BoxD::class)
+            data class BoxR(val m: Map<String, ValR>?)
+            """.trimIndent(),
+        )
 
     // ─── Test 1: Map<String, ValueR> → Map<String, ValueD> nested mapping ─────
 
@@ -93,16 +95,21 @@ class MapValuesMappingTest {
 
         // Build Map<String, ValueR> = {"a" → ValueR("hello"), "b" → ValueR("world")}
         val valueRClass = result.classLoader.loadClass("ValueR")
-        val valA = valueRClass.declaredConstructors.first { it.parameterCount == 1 }
-            .newInstance("hello")
-        val valB = valueRClass.declaredConstructors.first { it.parameterCount == 1 }
-            .newInstance("world")
+        val valA =
+            valueRClass.declaredConstructors
+                .first { it.parameterCount == 1 }
+                .newInstance("hello")
+        val valB =
+            valueRClass.declaredConstructors
+                .first { it.parameterCount == 1 }
+                .newInstance("world")
         val inputMap = mapOf("a" to valA, "b" to valB)
 
         val containerRClass = result.classLoader.loadClass("ContainerR")
-        val instance = containerRClass.declaredConstructors
-            .first { it.parameterCount == 1 }
-            .newInstance(inputMap)
+        val instance =
+            containerRClass.declaredConstructors
+                .first { it.parameterCount == 1 }
+                .newInstance(inputMap)
 
         val domain = result.invokeMapper("ContainerRMappersKt", "toContainerD", instance)!!
 
@@ -164,9 +171,10 @@ class MapValuesMappingTest {
 
         val instance = result.newInstance("BoxR", null as Any?)
 
-        val ex = assertFails {
-            result.invokeMapper("BoxRMappersKt", "toBoxD", instance)
-        }
+        val ex =
+            assertFails {
+                result.invokeMapper("BoxRMappersKt", "toBoxD", instance)
+            }
         assert(ex.javaClass.name.contains("RequiredFieldMissing")) {
             "Expected RequiredFieldMissing but got: ${ex.javaClass.name}: ${ex.message}"
         }
@@ -195,22 +203,23 @@ class MapValuesMappingTest {
 
     @Test
     fun `key type mismatch emits compiler error not mapValues`() {
-        val src = SourceFile.kotlin(
-            "MapKeyMismatch.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "MapKeyMismatch.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class ZD(val score: Int)
+                data class ZD(val score: Int)
 
-            @MapTo(ZD::class)
-            data class ZR(val score: Int)
+                @MapTo(ZD::class)
+                data class ZR(val score: Int)
 
-            data class TableD(val data: Map<String, ZD>)
+                data class TableD(val data: Map<String, ZD>)
 
-            @MapTo(TableD::class)
-            data class TableR(val data: Map<Int, ZR>)
-            """.trimIndent()
-        )
+                @MapTo(TableD::class)
+                data class TableR(val data: Map<Int, ZR>)
+                """.trimIndent(),
+            )
         val (r, _) = compile(src)
         // Key mismatch → Unmappable → processor emits a compile error
         assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, r.exitCode, r.messages)
@@ -218,7 +227,7 @@ class MapValuesMappingTest {
         assert(
             r.messages.contains("no converter", ignoreCase = true) ||
                 r.messages.contains("unmappable", ignoreCase = true) ||
-                r.messages.contains("converter", ignoreCase = true)
+                r.messages.contains("converter", ignoreCase = true),
         ) { "Expected converter/unmappable error but got:\n${r.messages}" }
     }
 
@@ -226,22 +235,23 @@ class MapValuesMappingTest {
 
     @Test
     fun `list collection mapping still works after map support added`() {
-        val src = SourceFile.kotlin(
-            "ListRegression.kt",
-            """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "ListRegression.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class ItemD(val id: String)
+                data class ItemD(val id: String)
 
-            @MapTo(ItemD::class)
-            data class ItemR(val id: String)
+                @MapTo(ItemD::class)
+                data class ItemR(val id: String)
 
-            data class OrderD(val items: List<ItemD>)
+                data class OrderD(val items: List<ItemD>)
 
-            @MapTo(OrderD::class)
-            data class OrderR(val items: List<ItemR>)
-            """.trimIndent()
-        )
+                @MapTo(OrderD::class)
+                data class OrderR(val items: List<ItemR>)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("OrderRMappers.kt")

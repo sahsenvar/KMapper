@@ -5,7 +5,6 @@ import io.kotest.matchers.string.shouldContain
 import kotlin.test.Test
 
 class MappingExceptionTest {
-
     @Test
     fun `RequiredFieldMissing message contains field name`() {
         val ex = MappingException.RequiredFieldMissing("userId")

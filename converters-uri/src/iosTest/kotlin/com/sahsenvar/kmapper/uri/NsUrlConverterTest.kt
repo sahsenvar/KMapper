@@ -4,7 +4,6 @@ import io.kotest.matchers.shouldBe
 import kotlin.test.Test
 
 class NsUrlConverterTest {
-
     // Use pre-normalized URLs: NSURL adds trailing slash to bare hosts.
     private val normalizedUrl = "https://example.com/"
 

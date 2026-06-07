@@ -1,8 +1,8 @@
 package com.sahsenvar.kmapper.bignumber
 
-import com.sahsenvar.kmapper.converter.MapTypeConverter
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import com.sahsenvar.kmapper.converter.MapTypeConverter
 
 // ---------------------------------------------------------------------------
 // ionspin BigDecimal / BigInteger scalar converters (commonMain)
@@ -21,12 +21,14 @@ import com.ionspin.kotlin.bignum.integer.BigInteger
 /** ISO decimal [String] ↔ ionspin [BigDecimal]. Uses base-10 parsing and expanded notation. */
 object StringBigDecimalConverter : MapTypeConverter<String, BigDecimal>(String::class, BigDecimal::class) {
     override fun convertToNonNull(value: String): BigDecimal = BigDecimal.parseString(value)
+
     override fun convertFromNonNull(value: BigDecimal): String = value.toStringExpanded()
 }
 
 /** Decimal [String] ↔ ionspin [BigInteger]. Parses in base 10. */
 object StringBigIntegerConverter : MapTypeConverter<String, BigInteger>(String::class, BigInteger::class) {
     override fun convertToNonNull(value: String): BigInteger = BigInteger.parseString(value, 10)
+
     override fun convertFromNonNull(value: BigInteger): String = value.toString()
 }
 
@@ -36,6 +38,7 @@ object StringBigIntegerConverter : MapTypeConverter<String, BigInteger>(String::
  */
 object DoubleBigDecimalConverter : MapTypeConverter<Double, BigDecimal>(Double::class, BigDecimal::class) {
     override fun convertToNonNull(value: Double): BigDecimal = BigDecimal.fromDouble(value)
+
     override fun convertFromNonNull(value: BigDecimal): Double = value.doubleValue(exactRequired = false)
 }
 
@@ -46,6 +49,7 @@ object DoubleBigDecimalConverter : MapTypeConverter<Double, BigDecimal>(Double::
  */
 object LongBigIntegerConverter : MapTypeConverter<Long, BigInteger>(Long::class, BigInteger::class) {
     override fun convertToNonNull(value: Long): BigInteger = BigInteger.fromLong(value)
+
     override fun convertFromNonNull(value: BigInteger): Long = value.longValue(exactRequired = false)
 }
 
@@ -55,11 +59,13 @@ object LongBigIntegerConverter : MapTypeConverter<Long, BigInteger>(Long::class,
  */
 object IntBigIntegerConverter : MapTypeConverter<Int, BigInteger>(Int::class, BigInteger::class) {
     override fun convertToNonNull(value: Int): BigInteger = BigInteger.fromInt(value)
+
     override fun convertFromNonNull(value: BigInteger): Int = value.intValue(exactRequired = false)
 }
 
 /** ionspin [BigInteger] ↔ ionspin [BigDecimal]. Lossless integer-to-decimal promotion. */
 object BigIntegerBigDecimalConverter : MapTypeConverter<BigInteger, BigDecimal>(BigInteger::class, BigDecimal::class) {
     override fun convertToNonNull(value: BigInteger): BigDecimal = BigDecimal.fromBigInteger(value)
+
     override fun convertFromNonNull(value: BigDecimal): BigInteger = value.toBigInteger()
 }

@@ -9,28 +9,30 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class BasicMappingTest {
-
     @Test
     fun `nested mapping with required-field null check`() {
-        val src = SourceFile.kotlin(
-            "Models.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "Models.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class AddressDomain(val city: String)
-            data class UserDomain(val id: String, val address: AddressDomain)
+                data class AddressDomain(val city: String)
+                data class UserDomain(val id: String, val address: AddressDomain)
 
-            @MapTo(AddressDomain::class)
-            data class AddressRemote(val city: String?)
+                @MapTo(AddressDomain::class)
+                data class AddressRemote(val city: String?)
 
-            @MapTo(UserDomain::class)
-            data class UserRemote(val id: String?, val address: AddressRemote?)
-        """.trimIndent()
-        )
+                @MapTo(UserDomain::class)
+                data class UserRemote(val id: String?, val address: AddressRemote?)
+                """.trimIndent(),
+            )
 
         val (result, compilation) = compile(src)
         assertEquals(
-            KotlinCompilation.ExitCode.OK, result.exitCode,
-            "Compilation failed:\n${result.messages}"
+            KotlinCompilation.ExitCode.OK,
+            result.exitCode,
+            "Compilation failed:\n${result.messages}",
         )
 
         val gen = compilation.generatedFile("UserRemoteMappers.kt")
@@ -45,21 +47,24 @@ class BasicMappingTest {
 
     @Test
     fun `reverse mapping via MapFrom`() {
-        val src = SourceFile.kotlin(
-            "Rev.kt", """
-            import com.sahsenvar.kmapper.annotations.MapFrom
+        val src =
+            SourceFile.kotlin(
+                "Rev.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapFrom
 
-            data class TagDomain(val name: String)
+                data class TagDomain(val name: String)
 
-            @MapFrom(TagDomain::class)
-            data class TagRemote(val name: String)
-        """.trimIndent()
-        )
+                @MapFrom(TagDomain::class)
+                data class TagRemote(val name: String)
+                """.trimIndent(),
+            )
 
         val (result, compilation) = compile(src)
         assertEquals(
-            KotlinCompilation.ExitCode.OK, result.exitCode,
-            "Compilation failed:\n${result.messages}"
+            KotlinCompilation.ExitCode.OK,
+            result.exitCode,
+            "Compilation failed:\n${result.messages}",
         )
 
         val gen = compilation.generatedFile("TagDomainMappers.kt")
@@ -68,21 +73,24 @@ class BasicMappingTest {
 
     @Test
     fun `built-in String to Int conversion`() {
-        val src = SourceFile.kotlin(
-            "Conv.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val src =
+            SourceFile.kotlin(
+                "Conv.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class CountDomain(val n: Int)
+                data class CountDomain(val n: Int)
 
-            @MapTo(CountDomain::class)
-            data class CountRemote(val n: String)
-        """.trimIndent()
-        )
+                @MapTo(CountDomain::class)
+                data class CountRemote(val n: String)
+                """.trimIndent(),
+            )
 
         val (result, compilation) = compile(src)
         assertEquals(
-            KotlinCompilation.ExitCode.OK, result.exitCode,
-            "Compilation failed:\n${result.messages}"
+            KotlinCompilation.ExitCode.OK,
+            result.exitCode,
+            "Compilation failed:\n${result.messages}",
         )
 
         val gen = compilation.generatedFile("CountRemoteMappers.kt")

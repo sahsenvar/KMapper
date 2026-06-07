@@ -15,7 +15,6 @@ import kotlin.test.assertFailsWith
  * MappingException rather than an IllegalArgumentException.
  */
 class IntLongConverterTest {
-
     // ---- convertToNonNull (Int → Long): always safe, just widen ----
 
     @Test
@@ -56,11 +55,12 @@ class IntLongConverterTest {
     @Test
     fun `convertOrFail wraps out-of-range Long as TypeConversionFailed`() {
         val overflow = Int.MAX_VALUE.toLong() + 1L
-        val ex = assertFailsWith<MappingException.TypeConversionFailed> {
-            convertOrFail("kotlin.Long", "kotlin.Int") {
-                IntLongConverter.convertFromNonNull(overflow)
+        val ex =
+            assertFailsWith<MappingException.TypeConversionFailed> {
+                convertOrFail("kotlin.Long", "kotlin.Int") {
+                    IntLongConverter.convertFromNonNull(overflow)
+                }
             }
-        }
         assertEquals("kotlin.Long", ex.from)
         assertEquals("kotlin.Int", ex.to)
     }

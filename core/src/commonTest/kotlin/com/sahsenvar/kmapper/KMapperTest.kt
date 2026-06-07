@@ -10,21 +10,29 @@ private class RecordingListener : MappingListener {
     val completes = mutableListOf<Pair<Any, Any>>()
     val errors = mutableListOf<Pair<Any, MappingException>>()
 
-    override fun onMapStart(source: Any, target: kotlin.reflect.KClass<*>) {
+    override fun onMapStart(
+        source: Any,
+        target: kotlin.reflect.KClass<*>,
+    ) {
         starts += source to target
     }
 
-    override fun onMapComplete(source: Any, result: Any) {
+    override fun onMapComplete(
+        source: Any,
+        result: Any,
+    ) {
         completes += source to result
     }
 
-    override fun onError(source: Any, error: MappingException) {
+    override fun onError(
+        source: Any,
+        error: MappingException,
+    ) {
         errors += source to error
     }
 }
 
 class KMapperTest {
-
     @Test
     fun `hasListeners is false when no listeners registered`() {
         // Clean up any listeners before testing (remove all known)
@@ -91,14 +99,17 @@ class KMapperTest {
     @Test
     fun `addConverter delegates to TypeConverterRegistry`() {
         // Use a unique type-pair not used elsewhere
-        val conv = object : MapTypeConverter<Char, Byte>(Char::class, Byte::class) {
-            override fun convertToNonNull(value: Char) = value.code.toByte()
-            override fun convertFromNonNull(value: Byte) = value.toInt().toChar()
-        }
+        val conv =
+            object : MapTypeConverter<Char, Byte>(Char::class, Byte::class) {
+                override fun convertToNonNull(value: Char) = value.code.toByte()
+
+                override fun convertFromNonNull(value: Byte) = value.toInt().toChar()
+            }
         KMapper.addConverter(conv)
         // If registered, hasListeners is unrelated — we just verify no exception
         // and the registry has it
-        com.sahsenvar.kmapper.converter.TypeConverterRegistry.has(Char::class, Byte::class) shouldBe true
+        com.sahsenvar.kmapper.converter.TypeConverterRegistry
+            .has(Char::class, Byte::class) shouldBe true
     }
 
     @Test

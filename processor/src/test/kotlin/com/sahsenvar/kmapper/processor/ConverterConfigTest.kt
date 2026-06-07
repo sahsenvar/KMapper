@@ -9,37 +9,40 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class ConverterConfigTest {
-
     /**
      * Baseline: @KMapperConfig with a single converter (HexIntConverter) compiles and
      * the generated file references that converter.
      */
     @Test
     fun `@KMapperConfig converter is applied`() {
-        val hexOnly = SourceFile.kotlin(
-            "HexConverter.kt", """
-            import com.sahsenvar.kmapper.converter.MapTypeConverter
+        val hexOnly =
+            SourceFile.kotlin(
+                "HexConverter.kt",
+                """
+                import com.sahsenvar.kmapper.converter.MapTypeConverter
 
-            object HexIntConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
-                override fun convertToNonNull(v: String): Int = v.toInt(16)
-                override fun convertFromNonNull(v: Int): String = v.toString(16)
-            }
-        """.trimIndent()
-        )
-        val model = SourceFile.kotlin(
-            "M.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.annotations.KMapperConfig
+                object HexIntConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
+                    override fun convertToNonNull(v: String): Int = v.toInt(16)
+                    override fun convertFromNonNull(v: Int): String = v.toString(16)
+                }
+                """.trimIndent(),
+            )
+        val model =
+            SourceFile.kotlin(
+                "M.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.annotations.KMapperConfig
 
-            @KMapperConfig(converters = [HexIntConverter::class])
-            object Cfg
+                @KMapperConfig(converters = [HexIntConverter::class])
+                object Cfg
 
-            data class ItemDomain(val code: Int)
+                data class ItemDomain(val code: Int)
 
-            @MapTo(ItemDomain::class)
-            data class ItemRemote(val code: String)
-        """.trimIndent()
-        )
+                @MapTo(ItemDomain::class)
+                data class ItemRemote(val code: String)
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(hexOnly, model)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ItemRemoteMappers.kt")
@@ -65,41 +68,45 @@ class ConverterConfigTest {
      */
     @Test
     fun `per-field @UseMapTypeConverter allows same-pair converter alongside global`() {
-        val converters = SourceFile.kotlin(
-            "Converters.kt", """
-            import com.sahsenvar.kmapper.converter.MapTypeConverter
+        val converters =
+            SourceFile.kotlin(
+                "Converters.kt",
+                """
+                import com.sahsenvar.kmapper.converter.MapTypeConverter
 
-            /** Global default: ISO-8601 string → Instant */
-            object IsoInstant : MapTypeConverter<String, Long>(String::class, Long::class) {
-                override fun convertToNonNull(v: String): Long = v.toLong() + 1000L
-                override fun convertFromNonNull(v: Long): String = v.toString()
-            }
+                /** Global default: ISO-8601 string → Instant */
+                object IsoInstant : MapTypeConverter<String, Long>(String::class, Long::class) {
+                    override fun convertToNonNull(v: String): Long = v.toLong() + 1000L
+                    override fun convertFromNonNull(v: Long): String = v.toString()
+                }
 
-            /** Per-field override: epoch-millis string → Instant (SAME String→Long pair!) */
-            object EpochInstant : MapTypeConverter<String, Long>(String::class, Long::class) {
-                override fun convertToNonNull(v: String): Long = v.toLong()
-                override fun convertFromNonNull(v: Long): String = v.toString()
-            }
-        """.trimIndent()
-        )
-        val model = SourceFile.kotlin(
-            "EvRemote.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.annotations.KMapperConfig
-            import com.sahsenvar.kmapper.annotations.UseMapTypeConverter
-
-            @KMapperConfig(converters = [IsoInstant::class])
-            object Cfg
-
-            data class EvDomain(val startsAt: Long, val legacy: Long)
-
-            @MapTo(EvDomain::class)
-            data class EvRemote(
-                val startsAt: String,
-                @UseMapTypeConverter(EpochInstant::class) val legacy: String,
+                /** Per-field override: epoch-millis string → Instant (SAME String→Long pair!) */
+                object EpochInstant : MapTypeConverter<String, Long>(String::class, Long::class) {
+                    override fun convertToNonNull(v: String): Long = v.toLong()
+                    override fun convertFromNonNull(v: Long): String = v.toString()
+                }
+                """.trimIndent(),
             )
-        """.trimIndent()
-        )
+        val model =
+            SourceFile.kotlin(
+                "EvRemote.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.annotations.KMapperConfig
+                import com.sahsenvar.kmapper.annotations.UseMapTypeConverter
+
+                @KMapperConfig(converters = [IsoInstant::class])
+                object Cfg
+
+                data class EvDomain(val startsAt: Long, val legacy: Long)
+
+                @MapTo(EvDomain::class)
+                data class EvRemote(
+                    val startsAt: String,
+                    @UseMapTypeConverter(EpochInstant::class) val legacy: String,
+                )
+                """.trimIndent(),
+            )
         val (r, compilation) = compile(converters, model)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("EvRemoteMappers.kt")
@@ -120,42 +127,46 @@ class ConverterConfigTest {
      */
     @Test
     fun `two converters for same pair in @KMapperConfig is an error`() {
-        val converters = SourceFile.kotlin(
-            "DupConverters.kt", """
-            import com.sahsenvar.kmapper.converter.MapTypeConverter
+        val converters =
+            SourceFile.kotlin(
+                "DupConverters.kt",
+                """
+                import com.sahsenvar.kmapper.converter.MapTypeConverter
 
-            object ConverterA : MapTypeConverter<String, Long>(String::class, Long::class) {
-                override fun convertToNonNull(v: String): Long = v.toLong()
-                override fun convertFromNonNull(v: Long): String = v.toString()
-            }
+                object ConverterA : MapTypeConverter<String, Long>(String::class, Long::class) {
+                    override fun convertToNonNull(v: String): Long = v.toLong()
+                    override fun convertFromNonNull(v: Long): String = v.toString()
+                }
 
-            object ConverterB : MapTypeConverter<String, Long>(String::class, Long::class) {
-                override fun convertToNonNull(v: String): Long = v.toLong() * 2L
-                override fun convertFromNonNull(v: Long): String = v.toString()
-            }
-        """.trimIndent()
-        )
-        val model = SourceFile.kotlin(
-            "AmbigModel.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
-            import com.sahsenvar.kmapper.annotations.KMapperConfig
+                object ConverterB : MapTypeConverter<String, Long>(String::class, Long::class) {
+                    override fun convertToNonNull(v: String): Long = v.toLong() * 2L
+                    override fun convertFromNonNull(v: Long): String = v.toString()
+                }
+                """.trimIndent(),
+            )
+        val model =
+            SourceFile.kotlin(
+                "AmbigModel.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.annotations.KMapperConfig
 
-            @KMapperConfig(converters = [ConverterA::class, ConverterB::class])
-            object Cfg
+                @KMapperConfig(converters = [ConverterA::class, ConverterB::class])
+                object Cfg
 
-            data class ADomain(val value: Long)
+                data class ADomain(val value: Long)
 
-            @MapTo(ADomain::class)
-            data class ARemote(val value: String)
-        """.trimIndent()
-        )
+                @MapTo(ADomain::class)
+                data class ARemote(val value: String)
+                """.trimIndent(),
+            )
         val (r, _) = compile(converters, model)
         assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, r.exitCode, r.messages)
         assert(
             r.messages.contains("DUPLICATE", ignoreCase = true) ||
                 r.messages.contains("duplicate", ignoreCase = true) ||
                 r.messages.contains("ambiguous", ignoreCase = true) ||
-                r.messages.contains("@KMapperConfig", ignoreCase = true)
+                r.messages.contains("@KMapperConfig", ignoreCase = true),
         ) { "Expected duplicate/ambiguous converter error in:\n${r.messages}" }
     }
 
@@ -165,22 +176,24 @@ class ConverterConfigTest {
      */
     @Test
     fun `missing converter fails with clear error`() {
-        val model = SourceFile.kotlin(
-            "M3.kt", """
-            import com.sahsenvar.kmapper.annotations.MapTo
+        val model =
+            SourceFile.kotlin(
+                "M3.kt",
+                """
+                import com.sahsenvar.kmapper.annotations.MapTo
 
-            data class XDomain(val flag: Boolean)
+                data class XDomain(val flag: Boolean)
 
-            @MapTo(XDomain::class)
-            data class XRemote(val flag: Int)
-        """.trimIndent()
-        )
+                @MapTo(XDomain::class)
+                data class XRemote(val flag: Int)
+                """.trimIndent(),
+            )
         val (r, _) = compile(model)
         assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, r.exitCode)
         assert(
             r.messages.contains("no converter", ignoreCase = true) ||
                 r.messages.contains("@KMapperConfig", ignoreCase = true) ||
-                r.messages.contains("UseMapTypeConverter", ignoreCase = true)
+                r.messages.contains("UseMapTypeConverter", ignoreCase = true),
         ) { "Expected missing-converter error in:\n${r.messages}" }
     }
 }

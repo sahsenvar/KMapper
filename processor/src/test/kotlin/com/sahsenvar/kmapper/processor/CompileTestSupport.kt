@@ -18,13 +18,14 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
  * so that the KSP tool is properly registered with the compilation.
  */
 fun compile(vararg sources: SourceFile): Pair<JvmCompilationResult, KotlinCompilation> {
-    val compilation = KotlinCompilation().apply {
-        this.sources = sources.toList()
-        inheritClassPath = true   // :core (annotations, MappingException, converters) on classpath
-        messageOutputStream = System.out
-        // Match the JVM target of :core's jvm() target so inline funs from core can be inlined.
-        jvmTarget = "21"
-    }
+    val compilation =
+        KotlinCompilation().apply {
+            this.sources = sources.toList()
+            inheritClassPath = true // :core (annotations, MappingException, converters) on classpath
+            messageOutputStream = System.out
+            // Match the JVM target of :core's jvm() target so inline funs from core can be inlined.
+            jvmTarget = "21"
+        }
     // configureKsp {} must be called BEFORE compile() to register KSP with the compilation.
     // symbolProcessorProviders is a mutable list retrieved from the KspTool.
     compilation.configureKsp {
@@ -40,11 +41,12 @@ fun compile(vararg sources: SourceFile): Pair<JvmCompilationResult, KotlinCompil
  */
 fun KotlinCompilation.generatedFile(fileName: String): String {
     val dir = kspSourcesDir
-    return dir.walkTopDown()
+    return dir
+        .walkTopDown()
         .firstOrNull { it.isFile && it.name == fileName }
         ?.readText()
         ?: error(
             "Generated file '$fileName' not found in $dir. " +
-                    "Available: ${dir.walkTopDown().filter { it.isFile }.map { it.name }.toList()}"
+                "Available: ${dir.walkTopDown().filter { it.isFile }.map { it.name }.toList()}",
         )
 }
