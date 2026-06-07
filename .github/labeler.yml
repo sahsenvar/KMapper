@@ -1,0 +1,37 @@
+core:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'core/**'
+
+processor:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'processor/**'
+
+converters:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'converters-*/**'
+
+validators:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'validators/**'
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docs/**'
+      - '**/*.md'
+
+build:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.gradle.kts'
+      - 'gradle/**'
+      - '*.properties'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**'

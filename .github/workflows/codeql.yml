@@ -1,0 +1,55 @@
+name: CodeQL Analysis
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Weekly on Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+
+permissions:
+  security-events: write
+  actions: read
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (java-kotlin)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+          build-mode: manual
+
+      # Build JVM + Android targets only.
+      # Kotlin/Native (iOS) is excluded — CodeQL cannot analyze it on ubuntu
+      # and the iOS toolchain is unavailable on linux runners.
+      - name: Build (JVM + Android, no iOS)
+        run: |
+          ./gradlew \
+            compileKotlinJvm \
+            compileKotlin \
+            --no-daemon \
+            --console=plain \
+            -q \
+            --warning-mode=summary \
+            --no-problems-report
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:java-kotlin'
