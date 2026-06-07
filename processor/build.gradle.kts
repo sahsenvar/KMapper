@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.vanniktech.publish)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.kover)
 }
 
 dependencies {
@@ -27,7 +28,9 @@ mavenPublishing {
     coordinates("io.github.sahsenvar", "kmapper-processor", version.toString())
     pom {
         name.set("KMapper processor")
-        description.set("KMP-friendly compile-time object mapper (KSP). Processor module: KSP code generator for @MapTo/@MapFrom → toX() extension functions.")
+        description.set(
+            "KMP-friendly compile-time object mapper (KSP). Processor module: KSP code generator for @MapTo/@MapFrom → toX() extension functions.",
+        )
         inceptionYear.set("2026")
         url.set("https://github.com/sahsenvar/KMapper")
         licenses {

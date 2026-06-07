@@ -1,10 +1,30 @@
 rootProject.name = "KMapper"
 
 pluginManagement {
-    repositories { google(); mavenCentral(); gradlePluginPortal() }
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
 }
 dependencyResolutionManagement {
-    repositories { google(); mavenCentral() }
+    repositories {
+        google()
+        mavenCentral()
+    }
 }
 
-include(":core", ":processor", ":converters-immutable", ":converters-arrow", ":converters-datetime", ":converters-bignumber", ":converters-uuid", ":converters-okio", ":converters-uri", ":validators", ":sample", ":integration-test")
+include(
+    ":core",
+    ":processor",
+    ":converters-immutable",
+    ":converters-arrow",
+    ":converters-datetime",
+    ":converters-bignumber",
+    ":converters-uuid",
+    ":converters-okio",
+    ":converters-uri",
+    ":validators",
+    ":sample",
+    ":integration-test",
+)

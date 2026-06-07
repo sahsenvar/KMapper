@@ -14,6 +14,8 @@ kotest = "6.1.11"
 okio = "3.9.1"
 bcv = "0.18.1"
 dokka = "2.2.0"
+spotless = "7.0.4"
+kover = "0.9.8"
 
 [libraries]
 ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
@@ -38,3 +40,5 @@ android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.
 vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-publish" }
 bcv = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "bcv" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.vanniktech.publish)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.kover)
 }
 
 kotlin {
@@ -40,7 +41,9 @@ mavenPublishing {
     coordinates("io.github.sahsenvar", "kmapper-core", version.toString())
     pom {
         name.set("KMapper core")
-        description.set("KMP-friendly compile-time object mapper (KSP). Core module: annotations, MappingException, MapTypeConverter registry, built-in converters, MappableEnum.")
+        description.set(
+            "KMP-friendly compile-time object mapper (KSP). Core module: annotations, MappingException, MapTypeConverter registry, built-in converters, MappableEnum.",
+        )
         inceptionYear.set("2026")
         url.set("https://github.com/sahsenvar/KMapper")
         licenses {

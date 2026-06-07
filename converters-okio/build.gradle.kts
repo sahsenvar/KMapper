@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.vanniktech.publish)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.kover)
 }
 
 kotlin {
@@ -38,7 +39,9 @@ mavenPublishing {
     coordinates("io.github.sahsenvar", "kmapper-converters-okio", version.toString())
     pom {
         name.set("KMapper converters-okio")
-        description.set("KMP-friendly compile-time object mapper (KSP). Converters-okio module: okio ByteString and Path scalar converters.")
+        description.set(
+            "KMP-friendly compile-time object mapper (KSP). Converters-okio module: okio ByteString and Path scalar converters.",
+        )
         inceptionYear.set("2026")
         url.set("https://github.com/sahsenvar/KMapper")
         licenses {

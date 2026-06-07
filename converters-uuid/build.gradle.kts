@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.vanniktech.publish)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.kover)
 }
 
 kotlin {
@@ -47,7 +48,9 @@ mavenPublishing {
     coordinates("io.github.sahsenvar", "kmapper-converters-uuid", version.toString())
     pom {
         name.set("KMapper converters-uuid")
-        description.set("KMP-friendly compile-time object mapper (KSP). Converters-uuid module: kotlin.uuid.Uuid (common) and java.util.UUID (jvm/android) scalar converters + kotlin↔java UUID bridges.")
+        description.set(
+            "KMP-friendly compile-time object mapper (KSP). Converters-uuid module: kotlin.uuid.Uuid (common) and java.util.UUID (jvm/android) scalar converters + kotlin↔java UUID bridges.",
+        )
         inceptionYear.set("2026")
         url.set("https://github.com/sahsenvar/KMapper")
         licenses {

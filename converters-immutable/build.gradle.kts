@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.vanniktech.publish)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.kover)
 }
 
 kotlin {
@@ -53,7 +54,9 @@ mavenPublishing {
     coordinates("io.github.sahsenvar", "kmapper-converters-immutable", version.toString())
     pom {
         name.set("KMapper converters-immutable")
-        description.set("KMP-friendly compile-time object mapper (KSP). Converters-immutable module: List → PersistentList/ImmutableList/ImmutableSet collection wrappers.")
+        description.set(
+            "KMP-friendly compile-time object mapper (KSP). Converters-immutable module: List → PersistentList/ImmutableList/ImmutableSet collection wrappers.",
+        )
         inceptionYear.set("2026")
         url.set("https://github.com/sahsenvar/KMapper")
         licenses {
