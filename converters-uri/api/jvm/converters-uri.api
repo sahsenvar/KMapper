@@ -1,0 +1,8 @@
+public final class com/sahsenvar/kmapper/uri/JavaStringUriConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/uri/JavaStringUriConverter;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFromNonNull (Ljava/net/URI;)Ljava/lang/String;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertToNonNull (Ljava/lang/String;)Ljava/net/URI;
+}
+

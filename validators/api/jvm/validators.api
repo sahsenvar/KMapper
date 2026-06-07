@@ -1,0 +1,12 @@
+public final class com/sahsenvar/kmapper/validators/EmailValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/EmailValidator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validators/UrlValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/UrlValidator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+

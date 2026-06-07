@@ -1,0 +1,12 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.sahsenvar:converters-uri>
+final object com.sahsenvar.kmapper.uri/NsUrlStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, platform.Foundation/NSURL> { // com.sahsenvar.kmapper.uri/NsUrlStringConverter|null[0]
+    final fun convertFromNonNull(platform.Foundation/NSURL): kotlin/String // com.sahsenvar.kmapper.uri/NsUrlStringConverter.convertFromNonNull|convertFromNonNull(platform.Foundation.NSURL){}[0]
+    final fun convertToNonNull(kotlin/String): platform.Foundation/NSURL // com.sahsenvar.kmapper.uri/NsUrlStringConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+}

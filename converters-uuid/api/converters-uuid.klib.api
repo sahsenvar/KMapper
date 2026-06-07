@@ -1,0 +1,12 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.sahsenvar:converters-uuid>
+final object com.sahsenvar.kmapper.uuid/StringUuidConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, kotlin.uuid/Uuid> { // com.sahsenvar.kmapper.uuid/StringUuidConverter|null[0]
+    final fun convertFromNonNull(kotlin.uuid/Uuid): kotlin/String // com.sahsenvar.kmapper.uuid/StringUuidConverter.convertFromNonNull|convertFromNonNull(kotlin.uuid.Uuid){}[0]
+    final fun convertToNonNull(kotlin/String): kotlin.uuid/Uuid // com.sahsenvar.kmapper.uuid/StringUuidConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+}

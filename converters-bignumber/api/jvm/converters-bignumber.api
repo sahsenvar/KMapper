@@ -1,0 +1,88 @@
+public final class com/sahsenvar/kmapper/bignumber/BigIntegerBigDecimalConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/bignumber/BigIntegerBigDecimalConverter;
+	public fun convertFromNonNull (Lcom/ionspin/kotlin/bignum/decimal/BigDecimal;)Lcom/ionspin/kotlin/bignum/integer/BigInteger;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertToNonNull (Lcom/ionspin/kotlin/bignum/integer/BigInteger;)Lcom/ionspin/kotlin/bignum/decimal/BigDecimal;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/bignumber/DoubleBigDecimalConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/bignumber/DoubleBigDecimalConverter;
+	public fun convertFromNonNull (Lcom/ionspin/kotlin/bignum/decimal/BigDecimal;)Ljava/lang/Double;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertToNonNull (D)Lcom/ionspin/kotlin/bignum/decimal/BigDecimal;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/bignumber/DoubleJavaBigDecimalConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/bignumber/DoubleJavaBigDecimalConverter;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFromNonNull (Ljava/math/BigDecimal;)Ljava/lang/Double;
+	public fun convertToNonNull (D)Ljava/math/BigDecimal;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/bignumber/IntBigIntegerConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/bignumber/IntBigIntegerConverter;
+	public fun convertFromNonNull (Lcom/ionspin/kotlin/bignum/integer/BigInteger;)Ljava/lang/Integer;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertToNonNull (I)Lcom/ionspin/kotlin/bignum/integer/BigInteger;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/bignumber/JavaBigIntegerBigDecimalConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/bignumber/JavaBigIntegerBigDecimalConverter;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFromNonNull (Ljava/math/BigDecimal;)Ljava/math/BigInteger;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertToNonNull (Ljava/math/BigInteger;)Ljava/math/BigDecimal;
+}
+
+public final class com/sahsenvar/kmapper/bignumber/LongBigIntegerConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/bignumber/LongBigIntegerConverter;
+	public fun convertFromNonNull (Lcom/ionspin/kotlin/bignum/integer/BigInteger;)Ljava/lang/Long;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertToNonNull (J)Lcom/ionspin/kotlin/bignum/integer/BigInteger;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/bignumber/LongJavaBigIntegerConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/bignumber/LongJavaBigIntegerConverter;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFromNonNull (Ljava/math/BigInteger;)Ljava/lang/Long;
+	public fun convertToNonNull (J)Ljava/math/BigInteger;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/bignumber/StringBigDecimalConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/bignumber/StringBigDecimalConverter;
+	public fun convertFromNonNull (Lcom/ionspin/kotlin/bignum/decimal/BigDecimal;)Ljava/lang/String;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertToNonNull (Ljava/lang/String;)Lcom/ionspin/kotlin/bignum/decimal/BigDecimal;
+}
+
+public final class com/sahsenvar/kmapper/bignumber/StringBigIntegerConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/bignumber/StringBigIntegerConverter;
+	public fun convertFromNonNull (Lcom/ionspin/kotlin/bignum/integer/BigInteger;)Ljava/lang/String;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertToNonNull (Ljava/lang/String;)Lcom/ionspin/kotlin/bignum/integer/BigInteger;
+}
+
+public final class com/sahsenvar/kmapper/bignumber/StringJavaBigDecimalConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/bignumber/StringJavaBigDecimalConverter;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFromNonNull (Ljava/math/BigDecimal;)Ljava/lang/String;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertToNonNull (Ljava/lang/String;)Ljava/math/BigDecimal;
+}
+
+public final class com/sahsenvar/kmapper/bignumber/StringJavaBigIntegerConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/bignumber/StringJavaBigIntegerConverter;
+	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFromNonNull (Ljava/math/BigInteger;)Ljava/lang/String;
+	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertToNonNull (Ljava/lang/String;)Ljava/math/BigInteger;
+}
+

@@ -1,0 +1,15 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.sahsenvar:validators>
+final object com.sahsenvar.kmapper.validators/EmailValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/EmailValidator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/EmailValidator.validate|validate(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.validators/UrlValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/UrlValidator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/UrlValidator.validate|validate(kotlin.String){}[0]
+}

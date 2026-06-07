@@ -1,8 +1,12 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinMultiplatform
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.ksp)
     alias(libs.plugins.vanniktech.publish)
+    alias(libs.plugins.dokka)
 }
 
 kotlin {
@@ -43,6 +47,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 }
 
 mavenPublishing {
+    configure(KotlinMultiplatform(javadocJar = JavadocJar.Dokka("dokkaGeneratePublicationHtml")))
     publishToMavenCentral()
     signAllPublications()
     coordinates("io.github.sahsenvar", "kmapper-converters-immutable", version.toString())

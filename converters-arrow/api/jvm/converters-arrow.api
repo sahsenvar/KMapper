@@ -1,0 +1,10 @@
+public final class com/sahsenvar/kmapper/arrow/NonEmptyListWrapper {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/arrow/NonEmptyListWrapper;
+	public final fun wrap-0-xjo5U (Ljava/util/List;)Ljava/util/List;
+}
+
+public final class com/sahsenvar/kmapper/arrow/NonEmptySetWrapper {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/arrow/NonEmptySetWrapper;
+	public final fun wrap-J9TPrxk (Ljava/util/List;)Ljava/util/Set;
+}
+

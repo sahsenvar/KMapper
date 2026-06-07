@@ -1,0 +1,22 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.sahsenvar:converters-datetime>
+final object com.sahsenvar.kmapper.datetime/StringLocalDateConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, kotlinx.datetime/LocalDate> { // com.sahsenvar.kmapper.datetime/StringLocalDateConverter|null[0]
+    final fun convertFromNonNull(kotlinx.datetime/LocalDate): kotlin/String // com.sahsenvar.kmapper.datetime/StringLocalDateConverter.convertFromNonNull|convertFromNonNull(kotlinx.datetime.LocalDate){}[0]
+    final fun convertToNonNull(kotlin/String): kotlinx.datetime/LocalDate // com.sahsenvar.kmapper.datetime/StringLocalDateConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.datetime/StringLocalDateTimeConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, kotlinx.datetime/LocalDateTime> { // com.sahsenvar.kmapper.datetime/StringLocalDateTimeConverter|null[0]
+    final fun convertFromNonNull(kotlinx.datetime/LocalDateTime): kotlin/String // com.sahsenvar.kmapper.datetime/StringLocalDateTimeConverter.convertFromNonNull|convertFromNonNull(kotlinx.datetime.LocalDateTime){}[0]
+    final fun convertToNonNull(kotlin/String): kotlinx.datetime/LocalDateTime // com.sahsenvar.kmapper.datetime/StringLocalDateTimeConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.datetime/StringLocalTimeConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, kotlinx.datetime/LocalTime> { // com.sahsenvar.kmapper.datetime/StringLocalTimeConverter|null[0]
+    final fun convertFromNonNull(kotlinx.datetime/LocalTime): kotlin/String // com.sahsenvar.kmapper.datetime/StringLocalTimeConverter.convertFromNonNull|convertFromNonNull(kotlinx.datetime.LocalTime){}[0]
+    final fun convertToNonNull(kotlin/String): kotlinx.datetime/LocalTime // com.sahsenvar.kmapper.datetime/StringLocalTimeConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+}

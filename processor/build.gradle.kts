@@ -1,6 +1,10 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinJvm
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.vanniktech.publish)
+    alias(libs.plugins.dokka)
 }
 
 dependencies {
@@ -17,6 +21,7 @@ dependencies {
 tasks.test { useJUnitPlatform() }
 
 mavenPublishing {
+    configure(KotlinJvm(javadocJar = JavadocJar.Dokka("dokkaGeneratePublicationHtml")))
     publishToMavenCentral()
     signAllPublications()
     coordinates("io.github.sahsenvar", "kmapper-processor", version.toString())

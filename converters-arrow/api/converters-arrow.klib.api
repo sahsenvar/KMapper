@@ -1,0 +1,15 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.sahsenvar:converters-arrow>
+final object com.sahsenvar.kmapper.arrow/NonEmptyListWrapper { // com.sahsenvar.kmapper.arrow/NonEmptyListWrapper|null[0]
+    final fun <#A1: kotlin/Any?> wrap(kotlin.collections/List<#A1>): arrow.core/NonEmptyList<#A1> // com.sahsenvar.kmapper.arrow/NonEmptyListWrapper.wrap|wrap(kotlin.collections.List<0:0>){0§<kotlin.Any?>}[0]
+}
+
+final object com.sahsenvar.kmapper.arrow/NonEmptySetWrapper { // com.sahsenvar.kmapper.arrow/NonEmptySetWrapper|null[0]
+    final fun <#A1: kotlin/Any?> wrap(kotlin.collections/List<#A1>): arrow.core/NonEmptySet<#A1> // com.sahsenvar.kmapper.arrow/NonEmptySetWrapper.wrap|wrap(kotlin.collections.List<0:0>){0§<kotlin.Any?>}[0]
+}

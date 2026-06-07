@@ -1,0 +1,233 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.sahsenvar:core>
+open annotation class com.sahsenvar.kmapper.annotations/CollectionWrapper : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/CollectionWrapper|null[0]
+    constructor <init>(kotlin.reflect/KClass<*>) // com.sahsenvar.kmapper.annotations/CollectionWrapper.<init>|<init>(kotlin.reflect.KClass<*>){}[0]
+
+    final val forType // com.sahsenvar.kmapper.annotations/CollectionWrapper.forType|{}forType[0]
+        final fun <get-forType>(): kotlin.reflect/KClass<*> // com.sahsenvar.kmapper.annotations/CollectionWrapper.forType.<get-forType>|<get-forType>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/FieldMap : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/FieldMap|null[0]
+    constructor <init>(kotlin/String, kotlin.reflect/KClass<*> = ...) // com.sahsenvar.kmapper.annotations/FieldMap.<init>|<init>(kotlin.String;kotlin.reflect.KClass<*>){}[0]
+
+    final val fieldName // com.sahsenvar.kmapper.annotations/FieldMap.fieldName|{}fieldName[0]
+        final fun <get-fieldName>(): kotlin/String // com.sahsenvar.kmapper.annotations/FieldMap.fieldName.<get-fieldName>|<get-fieldName>(){}[0]
+    final val targetClass // com.sahsenvar.kmapper.annotations/FieldMap.targetClass|{}targetClass[0]
+        final fun <get-targetClass>(): kotlin.reflect/KClass<*> // com.sahsenvar.kmapper.annotations/FieldMap.targetClass.<get-targetClass>|<get-targetClass>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/Ignore : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/Ignore|null[0]
+    constructor <init>() // com.sahsenvar.kmapper.annotations/Ignore.<init>|<init>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/KMapperConfig : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/KMapperConfig|null[0]
+    constructor <init>(kotlin/Array<kotlin.reflect/KClass<*>> = ..., kotlin/Array<kotlin.reflect/KClass<*>> = ...) // com.sahsenvar.kmapper.annotations/KMapperConfig.<init>|<init>(kotlin.Array<kotlin.reflect.KClass<*>>;kotlin.Array<kotlin.reflect.KClass<*>>){}[0]
+
+    final val converters // com.sahsenvar.kmapper.annotations/KMapperConfig.converters|{}converters[0]
+        final fun <get-converters>(): kotlin/Array<kotlin.reflect/KClass<*>> // com.sahsenvar.kmapper.annotations/KMapperConfig.converters.<get-converters>|<get-converters>(){}[0]
+    final val wrappers // com.sahsenvar.kmapper.annotations/KMapperConfig.wrappers|{}wrappers[0]
+        final fun <get-wrappers>(): kotlin/Array<kotlin.reflect/KClass<*>> // com.sahsenvar.kmapper.annotations/KMapperConfig.wrappers.<get-wrappers>|<get-wrappers>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/MapDefaultValue : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/MapDefaultValue|null[0]
+    constructor <init>(kotlin/String) // com.sahsenvar.kmapper.annotations/MapDefaultValue.<init>|<init>(kotlin.String){}[0]
+
+    final val expression // com.sahsenvar.kmapper.annotations/MapDefaultValue.expression|{}expression[0]
+        final fun <get-expression>(): kotlin/String // com.sahsenvar.kmapper.annotations/MapDefaultValue.expression.<get-expression>|<get-expression>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/MapFrom : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/MapFrom|null[0]
+    constructor <init>(kotlin.reflect/KClass<*>) // com.sahsenvar.kmapper.annotations/MapFrom.<init>|<init>(kotlin.reflect.KClass<*>){}[0]
+
+    final val source // com.sahsenvar.kmapper.annotations/MapFrom.source|{}source[0]
+        final fun <get-source>(): kotlin.reflect/KClass<*> // com.sahsenvar.kmapper.annotations/MapFrom.source.<get-source>|<get-source>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/MapTo : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/MapTo|null[0]
+    constructor <init>(kotlin.reflect/KClass<*>) // com.sahsenvar.kmapper.annotations/MapTo.<init>|<init>(kotlin.reflect.KClass<*>){}[0]
+
+    final val target // com.sahsenvar.kmapper.annotations/MapTo.target|{}target[0]
+        final fun <get-target>(): kotlin.reflect/KClass<*> // com.sahsenvar.kmapper.annotations/MapTo.target.<get-target>|<get-target>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/UseMapTypeConverter : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/UseMapTypeConverter|null[0]
+    constructor <init>(kotlin.reflect/KClass<out com.sahsenvar.kmapper.converter/MapTypeConverter<*, *>>) // com.sahsenvar.kmapper.annotations/UseMapTypeConverter.<init>|<init>(kotlin.reflect.KClass<out|com.sahsenvar.kmapper.converter.MapTypeConverter<*,*>>){}[0]
+
+    final val converter // com.sahsenvar.kmapper.annotations/UseMapTypeConverter.converter|{}converter[0]
+        final fun <get-converter>(): kotlin.reflect/KClass<out com.sahsenvar.kmapper.converter/MapTypeConverter<*, *>> // com.sahsenvar.kmapper.annotations/UseMapTypeConverter.converter.<get-converter>|<get-converter>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/ValidateFrom : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/ValidateFrom|null[0]
+    constructor <init>(kotlin/Array<out kotlin.reflect/KClass<*>>...) // com.sahsenvar.kmapper.annotations/ValidateFrom.<init>|<init>(kotlin.Array<out|kotlin.reflect.KClass<*>>...){}[0]
+
+    final val validators // com.sahsenvar.kmapper.annotations/ValidateFrom.validators|{}validators[0]
+        final fun <get-validators>(): kotlin/Array<out kotlin.reflect/KClass<*>> // com.sahsenvar.kmapper.annotations/ValidateFrom.validators.<get-validators>|<get-validators>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/ValidateTo : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/ValidateTo|null[0]
+    constructor <init>(kotlin/Array<out kotlin.reflect/KClass<*>>...) // com.sahsenvar.kmapper.annotations/ValidateTo.<init>|<init>(kotlin.Array<out|kotlin.reflect.KClass<*>>...){}[0]
+
+    final val validators // com.sahsenvar.kmapper.annotations/ValidateTo.validators|{}validators[0]
+        final fun <get-validators>(): kotlin/Array<out kotlin.reflect/KClass<*>> // com.sahsenvar.kmapper.annotations/ValidateTo.validators.<get-validators>|<get-validators>(){}[0]
+}
+
+abstract interface <#A: kotlin/Any> com.sahsenvar.kmapper/MappableEnum { // com.sahsenvar.kmapper/MappableEnum|null[0]
+    abstract val wireValue // com.sahsenvar.kmapper/MappableEnum.wireValue|{}wireValue[0]
+        abstract fun <get-wireValue>(): #A // com.sahsenvar.kmapper/MappableEnum.wireValue.<get-wireValue>|<get-wireValue>(){}[0]
+}
+
+abstract interface com.sahsenvar.kmapper/MappingListener { // com.sahsenvar.kmapper/MappingListener|null[0]
+    open fun onError(kotlin/Any, com.sahsenvar.kmapper/MappingException) // com.sahsenvar.kmapper/MappingListener.onError|onError(kotlin.Any;com.sahsenvar.kmapper.MappingException){}[0]
+    open fun onMapComplete(kotlin/Any, kotlin/Any) // com.sahsenvar.kmapper/MappingListener.onMapComplete|onMapComplete(kotlin.Any;kotlin.Any){}[0]
+    open fun onMapStart(kotlin/Any, kotlin.reflect/KClass<*>) // com.sahsenvar.kmapper/MappingListener.onMapStart|onMapStart(kotlin.Any;kotlin.reflect.KClass<*>){}[0]
+}
+
+abstract class <#A: kotlin/Any, #B: kotlin/Any> com.sahsenvar.kmapper.converter/MapTypeConverter { // com.sahsenvar.kmapper.converter/MapTypeConverter|null[0]
+    constructor <init>(kotlin.reflect/KClass<#A>, kotlin.reflect/KClass<#B>) // com.sahsenvar.kmapper.converter/MapTypeConverter.<init>|<init>(kotlin.reflect.KClass<1:0>;kotlin.reflect.KClass<1:1>){}[0]
+
+    final val sourceType // com.sahsenvar.kmapper.converter/MapTypeConverter.sourceType|{}sourceType[0]
+        final fun <get-sourceType>(): kotlin.reflect/KClass<#A> // com.sahsenvar.kmapper.converter/MapTypeConverter.sourceType.<get-sourceType>|<get-sourceType>(){}[0]
+    final val targetType // com.sahsenvar.kmapper.converter/MapTypeConverter.targetType|{}targetType[0]
+        final fun <get-targetType>(): kotlin.reflect/KClass<#B> // com.sahsenvar.kmapper.converter/MapTypeConverter.targetType.<get-targetType>|<get-targetType>(){}[0]
+
+    abstract fun convertFromNonNull(#B): #A // com.sahsenvar.kmapper.converter/MapTypeConverter.convertFromNonNull|convertFromNonNull(1:1){}[0]
+    abstract fun convertToNonNull(#A): #B // com.sahsenvar.kmapper.converter/MapTypeConverter.convertToNonNull|convertToNonNull(1:0){}[0]
+    final fun convertFrom(#B?): #A? // com.sahsenvar.kmapper.converter/MapTypeConverter.convertFrom|convertFrom(1:1?){}[0]
+    final fun convertTo(#A?): #B? // com.sahsenvar.kmapper.converter/MapTypeConverter.convertTo|convertTo(1:0?){}[0]
+}
+
+abstract class <#A: kotlin/Any> com.sahsenvar.kmapper.validation/Validator { // com.sahsenvar.kmapper.validation/Validator|null[0]
+    constructor <init>(kotlin.reflect/KClass<#A>) // com.sahsenvar.kmapper.validation/Validator.<init>|<init>(kotlin.reflect.KClass<1:0>){}[0]
+
+    final val targetType // com.sahsenvar.kmapper.validation/Validator.targetType|{}targetType[0]
+        final fun <get-targetType>(): kotlin.reflect/KClass<#A> // com.sahsenvar.kmapper.validation/Validator.targetType.<get-targetType>|<get-targetType>(){}[0]
+
+    abstract fun validate(#A): kotlin/String? // com.sahsenvar.kmapper.validation/Validator.validate|validate(1:0){}[0]
+}
+
+final class com.sahsenvar.kmapper/LoggingMappingListener : com.sahsenvar.kmapper/MappingListener { // com.sahsenvar.kmapper/LoggingMappingListener|null[0]
+    constructor <init>(kotlin/Function1<kotlin/String, kotlin/Unit>) // com.sahsenvar.kmapper/LoggingMappingListener.<init>|<init>(kotlin.Function1<kotlin.String,kotlin.Unit>){}[0]
+
+    final fun onError(kotlin/Any, com.sahsenvar.kmapper/MappingException) // com.sahsenvar.kmapper/LoggingMappingListener.onError|onError(kotlin.Any;com.sahsenvar.kmapper.MappingException){}[0]
+    final fun onMapComplete(kotlin/Any, kotlin/Any) // com.sahsenvar.kmapper/LoggingMappingListener.onMapComplete|onMapComplete(kotlin.Any;kotlin.Any){}[0]
+    final fun onMapStart(kotlin/Any, kotlin.reflect/KClass<*>) // com.sahsenvar.kmapper/LoggingMappingListener.onMapStart|onMapStart(kotlin.Any;kotlin.reflect.KClass<*>){}[0]
+}
+
+sealed class com.sahsenvar.kmapper/MappingException : kotlin/RuntimeException { // com.sahsenvar.kmapper/MappingException|null[0]
+    final class EmptyCollection : com.sahsenvar.kmapper/MappingException { // com.sahsenvar.kmapper/MappingException.EmptyCollection|null[0]
+        constructor <init>(kotlin/String) // com.sahsenvar.kmapper/MappingException.EmptyCollection.<init>|<init>(kotlin.String){}[0]
+
+        final val detail // com.sahsenvar.kmapper/MappingException.EmptyCollection.detail|{}detail[0]
+            final fun <get-detail>(): kotlin/String // com.sahsenvar.kmapper/MappingException.EmptyCollection.detail.<get-detail>|<get-detail>(){}[0]
+    }
+
+    final class RequiredFieldMissing : com.sahsenvar.kmapper/MappingException { // com.sahsenvar.kmapper/MappingException.RequiredFieldMissing|null[0]
+        constructor <init>(kotlin/String) // com.sahsenvar.kmapper/MappingException.RequiredFieldMissing.<init>|<init>(kotlin.String){}[0]
+
+        final val field // com.sahsenvar.kmapper/MappingException.RequiredFieldMissing.field|{}field[0]
+            final fun <get-field>(): kotlin/String // com.sahsenvar.kmapper/MappingException.RequiredFieldMissing.field.<get-field>|<get-field>(){}[0]
+    }
+
+    final class TypeConversionFailed : com.sahsenvar.kmapper/MappingException { // com.sahsenvar.kmapper/MappingException.TypeConversionFailed|null[0]
+        constructor <init>(kotlin/String, kotlin/String, kotlin/Throwable) // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.<init>|<init>(kotlin.String;kotlin.String;kotlin.Throwable){}[0]
+
+        final val from // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.from|{}from[0]
+            final fun <get-from>(): kotlin/String // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.from.<get-from>|<get-from>(){}[0]
+        final val to // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.to|{}to[0]
+            final fun <get-to>(): kotlin/String // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.to.<get-to>|<get-to>(){}[0]
+    }
+
+    final class UnknownEnumValue : com.sahsenvar.kmapper/MappingException { // com.sahsenvar.kmapper/MappingException.UnknownEnumValue|null[0]
+        constructor <init>(kotlin/String, kotlin/Any) // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.<init>|<init>(kotlin.String;kotlin.Any){}[0]
+
+        final val enum // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.enum|{}enum[0]
+            final fun <get-enum>(): kotlin/String // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.enum.<get-enum>|<get-enum>(){}[0]
+        final val value // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.value|{}value[0]
+            final fun <get-value>(): kotlin/Any // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.value.<get-value>|<get-value>(){}[0]
+    }
+
+    final class ValidationFailed : com.sahsenvar.kmapper/MappingException { // com.sahsenvar.kmapper/MappingException.ValidationFailed|null[0]
+        constructor <init>(kotlin/String, kotlin/String) // com.sahsenvar.kmapper/MappingException.ValidationFailed.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+        final val field // com.sahsenvar.kmapper/MappingException.ValidationFailed.field|{}field[0]
+            final fun <get-field>(): kotlin/String // com.sahsenvar.kmapper/MappingException.ValidationFailed.field.<get-field>|<get-field>(){}[0]
+        final val reason // com.sahsenvar.kmapper/MappingException.ValidationFailed.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // com.sahsenvar.kmapper/MappingException.ValidationFailed.reason.<get-reason>|<get-reason>(){}[0]
+    }
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/IntLongConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/Int, kotlin/Long> { // com.sahsenvar.kmapper.converter.builtin/IntLongConverter|null[0]
+    final fun convertFromNonNull(kotlin/Long): kotlin/Int // com.sahsenvar.kmapper.converter.builtin/IntLongConverter.convertFromNonNull|convertFromNonNull(kotlin.Long){}[0]
+    final fun convertToNonNull(kotlin/Int): kotlin/Long // com.sahsenvar.kmapper.converter.builtin/IntLongConverter.convertToNonNull|convertToNonNull(kotlin.Int){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/LongInstantConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/Long, kotlinx.datetime/Instant> { // com.sahsenvar.kmapper.converter.builtin/LongInstantConverter|null[0]
+    final fun convertFromNonNull(kotlinx.datetime/Instant): kotlin/Long // com.sahsenvar.kmapper.converter.builtin/LongInstantConverter.convertFromNonNull|convertFromNonNull(kotlinx.datetime.Instant){}[0]
+    final fun convertToNonNull(kotlin/Long): kotlinx.datetime/Instant // com.sahsenvar.kmapper.converter.builtin/LongInstantConverter.convertToNonNull|convertToNonNull(kotlin.Long){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/StringBooleanConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, kotlin/Boolean> { // com.sahsenvar.kmapper.converter.builtin/StringBooleanConverter|null[0]
+    final fun convertFromNonNull(kotlin/Boolean): kotlin/String // com.sahsenvar.kmapper.converter.builtin/StringBooleanConverter.convertFromNonNull|convertFromNonNull(kotlin.Boolean){}[0]
+    final fun convertToNonNull(kotlin/String): kotlin/Boolean // com.sahsenvar.kmapper.converter.builtin/StringBooleanConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/StringDoubleConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, kotlin/Double> { // com.sahsenvar.kmapper.converter.builtin/StringDoubleConverter|null[0]
+    final fun convertFromNonNull(kotlin/Double): kotlin/String // com.sahsenvar.kmapper.converter.builtin/StringDoubleConverter.convertFromNonNull|convertFromNonNull(kotlin.Double){}[0]
+    final fun convertToNonNull(kotlin/String): kotlin/Double // com.sahsenvar.kmapper.converter.builtin/StringDoubleConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/StringFloatConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, kotlin/Float> { // com.sahsenvar.kmapper.converter.builtin/StringFloatConverter|null[0]
+    final fun convertFromNonNull(kotlin/Float): kotlin/String // com.sahsenvar.kmapper.converter.builtin/StringFloatConverter.convertFromNonNull|convertFromNonNull(kotlin.Float){}[0]
+    final fun convertToNonNull(kotlin/String): kotlin/Float // com.sahsenvar.kmapper.converter.builtin/StringFloatConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/StringInstantConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, kotlinx.datetime/Instant> { // com.sahsenvar.kmapper.converter.builtin/StringInstantConverter|null[0]
+    final fun convertFromNonNull(kotlinx.datetime/Instant): kotlin/String // com.sahsenvar.kmapper.converter.builtin/StringInstantConverter.convertFromNonNull|convertFromNonNull(kotlinx.datetime.Instant){}[0]
+    final fun convertToNonNull(kotlin/String): kotlinx.datetime/Instant // com.sahsenvar.kmapper.converter.builtin/StringInstantConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/StringIntConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, kotlin/Int> { // com.sahsenvar.kmapper.converter.builtin/StringIntConverter|null[0]
+    final fun convertFromNonNull(kotlin/Int): kotlin/String // com.sahsenvar.kmapper.converter.builtin/StringIntConverter.convertFromNonNull|convertFromNonNull(kotlin.Int){}[0]
+    final fun convertToNonNull(kotlin/String): kotlin/Int // com.sahsenvar.kmapper.converter.builtin/StringIntConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/StringLongConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, kotlin/Long> { // com.sahsenvar.kmapper.converter.builtin/StringLongConverter|null[0]
+    final fun convertFromNonNull(kotlin/Long): kotlin/String // com.sahsenvar.kmapper.converter.builtin/StringLongConverter.convertFromNonNull|convertFromNonNull(kotlin.Long){}[0]
+    final fun convertToNonNull(kotlin/String): kotlin/Long // com.sahsenvar.kmapper.converter.builtin/StringLongConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter/TypeConverterRegistry { // com.sahsenvar.kmapper.converter/TypeConverterRegistry|null[0]
+    final fun <#A1: kotlin/Any, #B1: kotlin/Any> get(kotlin.reflect/KClass<#A1>, kotlin.reflect/KClass<#B1>): com.sahsenvar.kmapper.converter/MapTypeConverter<#A1, #B1>? // com.sahsenvar.kmapper.converter/TypeConverterRegistry.get|get(kotlin.reflect.KClass<0:0>;kotlin.reflect.KClass<0:1>){0§<kotlin.Any>;1§<kotlin.Any>}[0]
+    final fun <#A1: kotlin/Any, #B1: kotlin/Any> has(kotlin.reflect/KClass<#A1>, kotlin.reflect/KClass<#B1>): kotlin/Boolean // com.sahsenvar.kmapper.converter/TypeConverterRegistry.has|has(kotlin.reflect.KClass<0:0>;kotlin.reflect.KClass<0:1>){0§<kotlin.Any>;1§<kotlin.Any>}[0]
+    final fun <#A1: kotlin/Any, #B1: kotlin/Any> register(com.sahsenvar.kmapper.converter/MapTypeConverter<#A1, #B1>) // com.sahsenvar.kmapper.converter/TypeConverterRegistry.register|register(com.sahsenvar.kmapper.converter.MapTypeConverter<0:0,0:1>){0§<kotlin.Any>;1§<kotlin.Any>}[0]
+}
+
+final object com.sahsenvar.kmapper.validation.builtin/NotBlankValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validation.builtin/NotBlankValidator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/NotBlankValidator.validate|validate(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.validation.builtin/NotEmptyCollectionValidator : com.sahsenvar.kmapper.validation/Validator<kotlin.collections/Collection<*>> { // com.sahsenvar.kmapper.validation.builtin/NotEmptyCollectionValidator|null[0]
+    final fun validate(kotlin.collections/Collection<*>): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/NotEmptyCollectionValidator.validate|validate(kotlin.collections.Collection<*>){}[0]
+}
+
+final object com.sahsenvar.kmapper.validation.builtin/NotEmptyStringValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validation.builtin/NotEmptyStringValidator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/NotEmptyStringValidator.validate|validate(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper/KMapper { // com.sahsenvar.kmapper/KMapper|null[0]
+    final val hasListeners // com.sahsenvar.kmapper/KMapper.hasListeners|{}hasListeners[0]
+        final fun <get-hasListeners>(): kotlin/Boolean // com.sahsenvar.kmapper/KMapper.hasListeners.<get-hasListeners>|<get-hasListeners>(){}[0]
+
+    final fun <#A1: kotlin/Any, #B1: kotlin/Any> addConverter(com.sahsenvar.kmapper.converter/MapTypeConverter<#A1, #B1>) // com.sahsenvar.kmapper/KMapper.addConverter|addConverter(com.sahsenvar.kmapper.converter.MapTypeConverter<0:0,0:1>){0§<kotlin.Any>;1§<kotlin.Any>}[0]
+    final fun addListener(com.sahsenvar.kmapper/MappingListener) // com.sahsenvar.kmapper/KMapper.addListener|addListener(com.sahsenvar.kmapper.MappingListener){}[0]
+    final fun dispatch(kotlin/Function1<com.sahsenvar.kmapper/MappingListener, kotlin/Unit>) // com.sahsenvar.kmapper/KMapper.dispatch|dispatch(kotlin.Function1<com.sahsenvar.kmapper.MappingListener,kotlin.Unit>){}[0]
+    final fun removeListener(com.sahsenvar.kmapper/MappingListener) // com.sahsenvar.kmapper/KMapper.removeListener|removeListener(com.sahsenvar.kmapper.MappingListener){}[0]
+}
+
+final inline fun <#A: kotlin/Any?> com.sahsenvar.kmapper/convertOrFail(kotlin/String, kotlin/String, kotlin/Function0<#A>): #A // com.sahsenvar.kmapper/convertOrFail|convertOrFail(kotlin.String;kotlin.String;kotlin.Function0<0:0>){0§<kotlin.Any?>}[0]

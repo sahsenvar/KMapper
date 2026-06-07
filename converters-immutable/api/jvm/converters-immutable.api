@@ -1,0 +1,20 @@
+public final class com/sahsenvar/kmapper/immutable/ImmutableListWrapper {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/immutable/ImmutableListWrapper;
+	public final fun wrap (Ljava/util/List;)Lkotlinx/collections/immutable/ImmutableList;
+}
+
+public final class com/sahsenvar/kmapper/immutable/ImmutableSetWrapper {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/immutable/ImmutableSetWrapper;
+	public final fun wrap (Ljava/util/List;)Lkotlinx/collections/immutable/ImmutableSet;
+}
+
+public final class com/sahsenvar/kmapper/immutable/PersistentListWrapper {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/immutable/PersistentListWrapper;
+	public final fun wrap (Ljava/util/List;)Lkotlinx/collections/immutable/PersistentList;
+}
+
+public final class com/sahsenvar/kmapper/immutable/PersistentSetWrapper {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/immutable/PersistentSetWrapper;
+	public final fun wrap (Ljava/util/List;)Lkotlinx/collections/immutable/PersistentSet;
+}
+

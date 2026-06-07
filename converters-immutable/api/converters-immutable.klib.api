@@ -1,0 +1,23 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.sahsenvar:converters-immutable>
+final object com.sahsenvar.kmapper.immutable/ImmutableListWrapper { // com.sahsenvar.kmapper.immutable/ImmutableListWrapper|null[0]
+    final fun <#A1: kotlin/Any?> wrap(kotlin.collections/List<#A1>): kotlinx.collections.immutable/ImmutableList<#A1> // com.sahsenvar.kmapper.immutable/ImmutableListWrapper.wrap|wrap(kotlin.collections.List<0:0>){0§<kotlin.Any?>}[0]
+}
+
+final object com.sahsenvar.kmapper.immutable/ImmutableSetWrapper { // com.sahsenvar.kmapper.immutable/ImmutableSetWrapper|null[0]
+    final fun <#A1: kotlin/Any?> wrap(kotlin.collections/List<#A1>): kotlinx.collections.immutable/ImmutableSet<#A1> // com.sahsenvar.kmapper.immutable/ImmutableSetWrapper.wrap|wrap(kotlin.collections.List<0:0>){0§<kotlin.Any?>}[0]
+}
+
+final object com.sahsenvar.kmapper.immutable/PersistentListWrapper { // com.sahsenvar.kmapper.immutable/PersistentListWrapper|null[0]
+    final fun <#A1: kotlin/Any?> wrap(kotlin.collections/List<#A1>): kotlinx.collections.immutable/PersistentList<#A1> // com.sahsenvar.kmapper.immutable/PersistentListWrapper.wrap|wrap(kotlin.collections.List<0:0>){0§<kotlin.Any?>}[0]
+}
+
+final object com.sahsenvar.kmapper.immutable/PersistentSetWrapper { // com.sahsenvar.kmapper.immutable/PersistentSetWrapper|null[0]
+    final fun <#A1: kotlin/Any?> wrap(kotlin.collections/List<#A1>): kotlinx.collections.immutable/PersistentSet<#A1> // com.sahsenvar.kmapper.immutable/PersistentSetWrapper.wrap|wrap(kotlin.collections.List<0:0>){0§<kotlin.Any?>}[0]
+}
