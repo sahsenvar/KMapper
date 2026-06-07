@@ -4,12 +4,11 @@ KMP-friendly compile-time object mapping for Kotlin Multiplatform, powered by KS
 
 ## 📖 Documentation
 
-Full guide — also published on GitBook:
+Full guide on **GitBook**: **https://kmapper.gitbook.io/docs** (Türkçe)
 
-- **English:** [docs/guide-en](docs/guide-en/README.md)
-- **Türkçe:** [docs/guide](docs/guide/README.md)
+Source Markdown in the repo: **[English](docs/guide-en/README.md)** · **[Türkçe](docs/guide/README.md)**.
 
-Covers installation, `@MapTo`/`@MapFrom`, field mapping, null-safety, type converters, `MappableEnum`, error handling, observability, multi-module setup, and the full annotation reference.
+Covers installation, `@MapTo`/`@MapFrom`, field mapping, null-safety, type converters, validation (`@ValidateFrom`/`@ValidateTo`), `MappableEnum`, error handling, observability, multi-module setup, and the full annotation reference.
 
 Group `io.github.sahsenvar`:
 
@@ -17,8 +16,8 @@ Group `io.github.sahsenvar`:
 |----------|----------|---------|
 | `kmapper-core` | KMP | Annotations, `MappingException`, `MapTypeConverter` + registry, built-in primitive converters, `MappableEnum`, `KMapper`/`MappingListener` |
 | `kmapper-processor` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()` extensions) |
-| `kmapper-converters-immutable` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet`/`PersistentSet` wrappers (auto-discovered) |
-| `kmapper-converters-arrow` | KMP | `List` → `NonEmptyList` wrapper; empty source throws `MappingException.EmptyCollection` (auto-discovered) |
+| `kmapper-converters-immutable` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet`/`PersistentSet` wrappers (listed in `@KMapperConfig(wrappers)`) |
+| `kmapper-converters-arrow` | KMP | `List` → `NonEmptyList` wrapper; empty source throws `MappingException.EmptyCollection` (listed in `@KMapperConfig(wrappers)`) |
 | `kmapper-converters-datetime` | KMP (kotlinx) / JVM+Android (java.time, bridges) | Scalar converters: `String`/`Long` ↔ `LocalDate`, `LocalDateTime`, `LocalTime`, `ZonedDateTime`, `OffsetDateTime`, `Instant` |
 | `kmapper-converters-bignumber` | KMP (ionspin) / JVM+Android (java.math) | Scalar converters: `String`/`Double`/`Long`/`Int` ↔ `BigDecimal`, `BigInteger` |
 | `kmapper-converters-uuid` | KMP (commonMain) / JVM+Android | Scalar converters: `String` ↔ `kotlin.uuid.Uuid`; `String`/`kotlin.uuid.Uuid` ↔ `java.util.UUID` (JVM/Android) |
