@@ -25,11 +25,11 @@ data class UserRemote(
 )
 ```
 
-> kmap, modellerinizin belirli bir arayüzü (`RemoteModel`, `DomainModel` vb.) uygulamasını **zorunlu tutmaz**. Bu arayüzler yalnızca kendi mimarinizde bir konvansiyondur; isterseniz kullanabilirsiniz.
+> KMapper, modellerinizin belirli bir arayüzü (`RemoteModel`, `DomainModel` vb.) uygulamasını **zorunlu tutmaz**. Bu arayüzler yalnızca kendi mimarinizde bir konvansiyondur; isterseniz kullanabilirsiniz.
 
 ## 2. Derle
 
-Projeyi derleyin. kmap, kaynakla aynı pakette `UserRemoteMappers.kt` üretir:
+Projeyi derleyin. KMapper, kaynakla aynı pakette `UserRemoteMappers.kt` üretir:
 
 ```kotlin
 public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
@@ -51,7 +51,7 @@ Hepsi bu kadar. İsim eşleşen alanlar otomatik kopyalanır.
 
 ## İç içe modeller otomatik çalışır
 
-Bir alan kendisi de `@MapTo`'lu bir tipse, kmap iç eşlemeyi otomatik çağırır:
+Bir alan kendisi de `@MapTo`'lu bir tipse, KMapper iç eşlemeyi otomatik çağırır:
 
 ```kotlin
 data class AddressDomain(val city: String)
@@ -84,7 +84,7 @@ data class UserDomain(val id: String)          // zorunlu
 data class UserRemote(val id: String?)          // nullable
 ```
 
-kmap, `null` durumunu **sessizce yutmaz** — gürültülü bir istisna üretir:
+KMapper, `null` durumunu **sessizce yutmaz** — gürültülü bir istisna üretir:
 
 ```kotlin
 public fun UserRemote.toUserDomain(): UserDomain = UserDomain(

@@ -1,6 +1,6 @@
 # Kurulum
 
-kmap iki zorunlu parçadan oluşur: çalışma-zamanı kütüphanesi (`core`) ve KSP işlemcisi (`processor`). Koleksiyon sarmalayıcıları gibi ekler isteğe bağlıdır.
+KMapper iki zorunlu parçadan oluşur: çalışma-zamanı kütüphanesi (`core`) ve KSP işlemcisi (`processor`). Koleksiyon sarmalayıcıları gibi ekler isteğe bağlıdır.
 
 ## Gereksinimler
 

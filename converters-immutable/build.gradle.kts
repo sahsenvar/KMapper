@@ -47,10 +47,10 @@ mavenPublishing {
     signAllPublications()
     coordinates("io.github.sahsenvar", "kmapper-converters-immutable", version.toString())
     pom {
-        name.set("kmap converters-immutable")
+        name.set("KMapper converters-immutable")
         description.set("KMP-friendly compile-time object mapper (KSP). Converters-immutable module: List → PersistentList/ImmutableList/ImmutableSet collection wrappers.")
         inceptionYear.set("2026")
-        url.set("https://github.com/sahsenvar/kmap")
+        url.set("https://github.com/sahsenvar/KMapper")
         licenses {
             license {
                 name.set("The Apache License, Version 2.0")
@@ -65,9 +65,9 @@ mavenPublishing {
             }
         }
         scm {
-            url.set("https://github.com/sahsenvar/kmap")
-            connection.set("scm:git:git://github.com/sahsenvar/kmap.git")
-            developerConnection.set("scm:git:ssh://git@github.com/sahsenvar/kmap.git")
+            url.set("https://github.com/sahsenvar/KMapper")
+            connection.set("scm:git:git://github.com/sahsenvar/KMapper.git")
+            developerConnection.set("scm:git:ssh://git@github.com/sahsenvar/KMapper.git")
         }
     }
 }

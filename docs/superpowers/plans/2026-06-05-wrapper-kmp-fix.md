@@ -20,7 +20,7 @@
 
 **Why it works on KMP/iOS:** no cross-module *symbol enumeration*; only (a) the consumer's own `@KMapperConfig` (in-module) and (b) standard dependency *type+annotation resolution* — both fine in KSP2's per-module common-metadata invocation.
 
-**Repo:** `/Users/sahansenvar/StudioProjects/kmap`, root `0.2.0-SNAPSHOT`, HTTPS origin via gh helper.
+**Repo:** `/Users/sahansenvar/StudioProjects/KMapper`, root `0.2.0-SNAPSHOT`, HTTPS origin via gh helper.
 
 ---
 

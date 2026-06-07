@@ -2,7 +2,7 @@
 
 Mapping enums by `ordinal` or `name` is a silent trap. If you reorder constants, `ordinal` changes; if you rename a constant, `name` changes. In neither case do you get a compile error — and without tests you may not even get a runtime error; the wrong value is silently mapped.
 
-kmap eliminates this risk entirely: `ordinal` and `name` are **never** used.
+KMapper eliminates this risk entirely: `ordinal` and `name` are **never** used.
 
 ## The `MappableEnum<W>` Interface
 

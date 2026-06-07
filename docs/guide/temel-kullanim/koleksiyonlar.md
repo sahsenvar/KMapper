@@ -1,6 +1,6 @@
 # Koleksiyonlar
 
-kmap, `List` ve `Set` koleksiyonlarındaki her elemanı otomatik olarak eşler. Koleksiyon tipine özel bir anotasyon gerekmez — element tipi eşlenmiş bir model olduğunda processor bunu kendisi fark eder.
+KMapper, `List` ve `Set` koleksiyonlarındaki her elemanı otomatik olarak eşler. Koleksiyon tipine özel bir anotasyon gerekmez — element tipi eşlenmiş bir model olduğunda processor bunu kendisi fark eder.
 
 ---
 

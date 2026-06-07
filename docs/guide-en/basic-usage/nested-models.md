@@ -1,6 +1,6 @@
 # Nested Models
 
-kmap recognizes nested models automatically. When a field references another mapped model, the processor chains a `toX()` call in the generated code — no extra annotation is needed.
+KMapper recognizes nested models automatically. When a field references another mapped model, the processor chains a `toX()` call in the generated code — no extra annotation is needed.
 
 ---
 
@@ -77,7 +77,7 @@ If the target `address` field were required (`AddressDomain`, not nullable), the
 
 ## Circular Dependencies
 
-kmap catches **unconditional cycles** at compile time and reports an error:
+KMapper catches **unconditional cycles** at compile time and reports an error:
 
 ```kotlin
 // COMPILE ERROR — unconditional cycle:

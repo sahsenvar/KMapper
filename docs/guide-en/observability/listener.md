@@ -1,6 +1,6 @@
 # Observability — MappingListener
 
-kmap embeds a lightweight observability hook into every generated mapper. When no listener is registered, this hook has **~zero cost** and leaves no overhead in production builds.
+KMapper embeds a lightweight observability hook into every generated mapper. When no listener is registered, this hook has **~zero cost** and leaves no overhead in production builds.
 
 ## The `MappingListener` Interface
 
@@ -51,18 +51,18 @@ Events are emitted at **per-mapper** coarse granularity — the generated code s
 
 ## LoggingMappingListener
 
-kmap ships a basic logging implementation:
+KMapper ships a basic logging implementation:
 
 ```kotlin
 class LoggingMappingListener(private val log: (String) -> Unit) : MappingListener {
     override fun onMapStart(source: Any, target: KClass<*>) =
-        log("kmap start: ${source::class.simpleName} -> ${target.simpleName}")
+        log("KMapper start: ${source::class.simpleName} -> ${target.simpleName}")
 
     override fun onMapComplete(source: Any, result: Any) =
-        log("kmap done: ${source::class.simpleName} -> ${result::class.simpleName}")
+        log("KMapper done: ${source::class.simpleName} -> ${result::class.simpleName}")
 
     override fun onError(source: Any, error: MappingException) =
-        log("kmap error: ${error.message}")
+        log("KMapper error: ${error.message}")
 }
 ```
 
@@ -70,7 +70,7 @@ Pass any log function to the `log` parameter — `println`, Timber, Napier, or s
 
 ```kotlin
 // Android (Application.onCreate / DI init)
-KMapper.addListener(LoggingMappingListener { message -> Log.d("kmap", message) })
+KMapper.addListener(LoggingMappingListener { message -> Log.d("KMapper", message) })
 
 // Kotlin/Native or shared code
 KMapper.addListener(LoggingMappingListener(::println))
@@ -88,7 +88,7 @@ class MyApplication : Application() {
         super.onCreate()
         if (BuildConfig.DEBUG) {
             KMapper.addListener(LoggingMappingListener { message ->
-                Log.d("kmap", message)
+                Log.d("KMapper", message)
             })
         }
     }

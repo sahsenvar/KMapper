@@ -1,6 +1,6 @@
 # Installation
 
-kmap consists of two required pieces: the runtime library (`core`) and the KSP processor (`processor`). Add-ons such as collection wrappers are optional.
+KMapper consists of two required pieces: the runtime library (`core`) and the KSP processor (`processor`). Add-ons such as collection wrappers are optional.
 
 ## Requirements
 

@@ -1,4 +1,4 @@
-# kmap
+# KMapper
 
 KMP-friendly compile-time object mapping for Kotlin Multiplatform, powered by KSP.
 

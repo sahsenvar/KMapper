@@ -49,11 +49,11 @@ object KMapper {
 
 class LoggingMappingListener(private val log: (String) -> Unit) : MappingListener {
     override fun onMapStart(source: Any, target: KClass<*>) =
-        log("kmap start: ${source::class.simpleName} -> ${target.simpleName}")
+        log("KMapper start: ${source::class.simpleName} -> ${target.simpleName}")
 
     override fun onMapComplete(source: Any, result: Any) =
-        log("kmap done: ${source::class.simpleName} -> ${result::class.simpleName}")
+        log("KMapper done: ${source::class.simpleName} -> ${result::class.simpleName}")
 
     override fun onError(source: Any, error: MappingException) =
-        log("kmap error: ${error.message}")
+        log("KMapper error: ${error.message}")
 }

@@ -1,4 +1,4 @@
-# kmap — Mapping Library Extraction & Hardening (Round 1)
+# KMapper — Mapping Library Extraction & Hardening (Round 1)
 
 - **Date:** 2026-06-04
 - **Status:** Design — awaiting user review
@@ -16,11 +16,11 @@ DomatApp bugün KSP tabanlı bir compile-time object-mapping sistemi içeriyor:
 
 **Amaç:** Bu sistemi DomatApp'tan tamamen bağımsız, **yayınlanabilir bir kütüphaneye** çıkarmak ve bu sırada keşfedilen doğruluk eksiklerini düzeltmek.
 
-- **Repo adı:** `kmap` (KMP + mapper), GitHub'da kullanıcının hesabında.
+- **Repo adı:** `KMapper` (KMP + mapper), GitHub'da kullanıcının hesabında.
 - **groupId:** `com.sahsenvar.kmapper`
 - **Dağıtım:** Maven Central (başka projelerde de tüketilebilsin diye).
 
-**Bu round'un net çıktısı:** Ayrı bir Gradle projesi olarak `kmap` (bağımsız build + publish yapılandırması) + DomatApp'ın bu artifact'ı tüketecek şekilde güncellenmesi ve eski `core:mapping` + mapping processor'ının kaldırılması.
+**Bu round'un net çıktısı:** Ayrı bir Gradle projesi olarak `KMapper` (bağımsız build + publish yapılandırması) + DomatApp'ın bu artifact'ı tüketecek şekilde güncellenmesi ve eski `core:mapping` + mapping processor'ının kaldırılması.
 
 ---
 
@@ -28,7 +28,7 @@ DomatApp bugün KSP tabanlı bir compile-time object-mapping sistemi içeriyor:
 
 | Özellik | Değer |
 |---|---|
-| Repo | `kmap` (ayrı GitHub repo) |
+| Repo | `KMapper` (ayrı GitHub repo) |
 | groupId | `com.sahsenvar.kmapper` |
 | Hedef platformlar (runtime) | KMP: `androidTarget`, `iosArm64`, `iosSimulatorArm64`, (mümkünse `jvm`) |
 | Processor platformu | JVM-only (KSP) |
@@ -41,7 +41,7 @@ DomatApp bugün KSP tabanlı bir compile-time object-mapping sistemi içeriyor:
 ## 3. Module / Artifact Architecture
 
 ```
-kmap/ (com.sahsenvar.kmapper)
+KMapper/ (com.sahsenvar.kmapper)
 ├── core                  (KMP)  com.sahsenvar.kmapper:core
 │     • anotasyonlar: @MapTo, @MapFrom, @FieldMap, @MapDefaultValue,
 │       @UseMapTypeConverter, @Ignore, @KMapperConfig
@@ -293,7 +293,7 @@ Kapsanacak vakalar (en az):
 - Reverse mapping (`@MapFrom`).
 - `@FieldMap` rename, `@Ignore`, `@MapDefaultValue`.
 
-> Proje geneli test politikası "kapalı"; bu yalnızca `kmap` reposuna özeldir (DomatApp'a test eklenmez).
+> Proje geneli test politikası "kapalı"; bu yalnızca `KMapper` reposuna özeldir (DomatApp'a test eklenmez).
 
 ---
 
@@ -339,7 +339,7 @@ Kapsanacak vakalar (en az):
 
 ## 13. Migration (DomatApp tarafı, implementation sonrası)
 
-1. `kmap` artifact'ları publish (veya local Maven / `includeBuild` ile geçici tüketim).
+1. `KMapper` artifact'ları publish (veya local Maven / `includeBuild` ile geçici tüketim).
 2. DomatApp: `core:mapping` + `core:processor`'ın mapping kısmı **silinir** (navigation/remote/config processor'ları kalır).
 3. `feature:auth:data`: `MapperConfiguration.kt` (`startKMapper`) → `@KMapperConfig` object'ine dönüştürülür; `AuthMapper.toAuthError` `MappingException` dallarını ekler.
 4. Bağımlılıklar `com.sahsenvar.kmapper:*`'a çevrilir; build doğrulanır (`AuthSession`/`AuthUser` mapper'ları aynen üretilmeli).

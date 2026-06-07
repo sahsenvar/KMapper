@@ -1,6 +1,6 @@
 # Immutable Collections — converters-immutable
 
-kmap's `core` module only understands stdlib `List`/`Set` mappings. To use `kotlinx.collections.immutable` types such as `PersistentList`, `ImmutableList`, `ImmutableSet`, or `PersistentSet` as target types, add the **`converters-immutable`** module.
+KMapper's `core` module only understands stdlib `List`/`Set` mappings. To use `kotlinx.collections.immutable` types such as `PersistentList`, `ImmutableList`, `ImmutableSet`, or `PersistentSet` as target types, add the **`converters-immutable`** module.
 
 ---
 

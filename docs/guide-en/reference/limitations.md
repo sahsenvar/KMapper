@@ -4,7 +4,7 @@
 
 ### Constructor `val` Fields Only
 
-kmap analyzes only `val` parameters in the primary constructor. `var` properties, fields assigned in `init` blocks, and properties defined outside the constructor are not mapped.
+KMapper analyzes only `val` parameters in the primary constructor. `var` properties, fields assigned in `init` blocks, and properties defined outside the constructor are not mapped.
 
 ```kotlin
 data class OrderRemote(

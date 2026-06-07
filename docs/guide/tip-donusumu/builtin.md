@@ -1,6 +1,6 @@
 # Built-in Converter'lar
 
-kmap, en yaygın tip dönüşümlerini kutudan çıkar çıkmaz destekler. Bu converter'lar `com.sahsenvar.kmapper.converter.builtin` paketindedir ve `@KMapperConfig`'e eklemenize gerek kalmadan processor tarafından otomatik tanınır.
+KMapper, en yaygın tip dönüşümlerini kutudan çıkar çıkmaz destekler. Bu converter'lar `com.sahsenvar.kmapper.converter.builtin` paketindedir ve `@KMapperConfig`'e eklemenize gerek kalmadan processor tarafından otomatik tanınır.
 
 ---
 

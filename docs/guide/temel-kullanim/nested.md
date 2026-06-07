@@ -1,6 +1,6 @@
 # İç İçe Modeller
 
-kmap, iç içe geçmiş modelleri otomatik olarak tanır. Bir alan başka bir eşlenmiş modele referans veriyorsa processor, üretilen kodda doğrudan `toX()` çağrısı zincirler — fazladan anotasyon gerekmez.
+KMapper, iç içe geçmiş modelleri otomatik olarak tanır. Bir alan başka bir eşlenmiş modele referans veriyorsa processor, üretilen kodda doğrudan `toX()` çağrısı zincirler — fazladan anotasyon gerekmez.
 
 ---
 
@@ -77,7 +77,7 @@ Hedef `address` alanı zorunlu (`AddressDomain`, nullable değil) olsaydı null-
 
 ## Döngüsel Bağımlılıklar
 
-kmap, **koşulsuz döngüleri** derleme zamanında yakalar ve hata verir:
+KMapper, **koşulsuz döngüleri** derleme zamanında yakalar ve hata verir:
 
 ```kotlin
 // DERLEME HATASI — koşulsuz döngü:

@@ -1,6 +1,6 @@
 # Çok Modüllü Projeler
 
-kmap, her modülü bağımsız bir KSP çalıştırmasıyla derler. Bu sayfa scalar converter'lar ve koleksiyon wrapper'larının çok modüllü bir projede nasıl yapılandırıldığını açıklar.
+KMapper, her modülü bağımsız bir KSP çalıştırmasıyla derler. Bu sayfa scalar converter'lar ve koleksiyon wrapper'larının çok modüllü bir projede nasıl yapılandırıldığını açıklar.
 
 ## @KMapperConfig — Modül Başına Konum
 
@@ -86,7 +86,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 Aynı `forType` için `wrappers` listesinde birden fazla wrapper bulunursa processor **compile error** verir:
 
 ```
-e: [kmap] Multiple @CollectionWrapper found for 'PersistentList'. Remove one from the wrappers list.
+e: [KMapper] Multiple @CollectionWrapper found for 'PersistentList'. Remove one from the wrappers list.
 ```
 
 ## Örnek Çok Modüllü Yapı

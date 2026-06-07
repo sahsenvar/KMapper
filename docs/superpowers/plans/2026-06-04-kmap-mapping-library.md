@@ -1,14 +1,14 @@
-# kmap Mapping Library — Implementation Plan
+# KMapper Mapping Library — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Extract DomatApp's KSP object-mapping system into a standalone, Maven-Central-publishable library `kmap` (`com.sahsenvar.kmapper`) in a fresh GitHub repo, decoupled from DomatApp and hardened with correctness fixes + enum support.
+**Goal:** Extract DomatApp's KSP object-mapping system into a standalone, Maven-Central-publishable library `KMapper` (`com.sahsenvar.kmapper`) in a fresh GitHub repo, decoupled from DomatApp and hardened with correctness fixes + enum support.
 
 **Architecture:** Multi-module Gradle build — `core` (KMP: annotations + runtime + `MappingException` + primitive converters + `MappableEnum` + listener), `processor` (JVM-only KSP codegen, ported & decoupled), `converters-compose` (KMP add-on), `converters-arrow` (empty slot). Processor logic is verified with JVM `kotlin-compile-testing`.
 
 **Tech Stack:** Kotlin 2.3.10 (Multiplatform), KSP, KotlinPoet, kotlinx-datetime, kotlinx-collections-immutable, kotlin-compile-testing (Square), Gradle `maven-publish` + signing.
 
-**Source spec:** `docs/superpowers/specs/2026-06-04-kmap-mapping-library-design.md` (lives in DomatApp repo; this plan's code is built in the NEW `kmap` repo).
+**Source spec:** `docs/superpowers/specs/2026-06-04-KMapper-mapping-library-design.md` (lives in DomatApp repo; this plan's code is built in the NEW `KMapper` repo).
 
 ---
 
@@ -28,7 +28,7 @@ Each phase produces working, testable software and ends with commits.
 
 ## Phase 0 — Repo & Gradle Skeleton
 
-**Goal:** A new `kmap` GitHub repo with a multi-module Gradle build that compiles four empty modules.
+**Goal:** A new `KMapper` GitHub repo with a multi-module Gradle build that compiles four empty modules.
 
 **Files (all created):**
 - `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`
@@ -45,22 +45,22 @@ Expected: prints the personal account login (referred to below as `<gh-user>`; g
 - [ ] **Step 2: Create the project directory** (sibling to DomatApp)
 
 ```bash
-mkdir -p /Users/sahansenvar/StudioProjects/kmap
-cd /Users/sahansenvar/StudioProjects/kmap
+mkdir -p /Users/sahansenvar/StudioProjects/KMapper
+cd /Users/sahansenvar/StudioProjects/KMapper
 git init -b main
 ```
 
 - [ ] **Step 3: Create the empty GitHub repo (no push yet)**
 
 ```bash
-gh repo create <gh-user>/kmap --private --description "KMP-friendly compile-time object mapper (KSP)" 
+gh repo create <gh-user>/KMapper --private --description "KMP-friendly compile-time object mapper (KSP)" 
 ```
-Expected: "✓ Created repository <gh-user>/kmap". (Private now; can be made public at first release. Do NOT pass `--source/--push` yet — we push after the first commit.)
+Expected: "✓ Created repository <gh-user>/KMapper". (Private now; can be made public at first release. Do NOT pass `--source/--push` yet — we push after the first commit.)
 
 - [ ] **Step 4: Add remote**
 
 ```bash
-git remote add origin https://github.com/<gh-user>/kmap.git
+git remote add origin https://github.com/<gh-user>/KMapper.git
 ```
 
 ### Task 0.2: Version catalog (authoritative versions from DomatApp)
@@ -104,7 +104,7 @@ Run: `gh api -X GET search/repositories -f q=kotlin-compile-testing --jq '.items
 - [ ] **Step 1: Create `settings.gradle.kts`**
 
 ```kotlin
-rootProject.name = "kmap"
+rootProject.name = "KMapper"
 
 pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }
@@ -155,7 +155,7 @@ local.properties
 - [ ] **Step 5: Create `README.md`**
 
 ```markdown
-# kmap
+# KMapper
 
 KMP-friendly compile-time object mapping for Kotlin Multiplatform, powered by KSP.
 
@@ -239,12 +239,12 @@ Expected: BUILD SUCCESSFUL (empty modules, nothing to compile yet).
 
 ```bash
 git add -A
-git commit -m "chore: scaffold kmap multi-module Gradle project
+git commit -m "chore: scaffold KMapper multi-module Gradle project
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 git push -u origin main
 ```
-Expected: branch `main` pushed to `<gh-user>/kmap`.
+Expected: branch `main` pushed to `<gh-user>/KMapper`.
 
 ---
 
@@ -608,11 +608,11 @@ object KMapper {
 
 class LoggingMappingListener(private val log: (String) -> Unit) : MappingListener {
     override fun onMapStart(source: Any, target: KClass<*>) =
-        log("kmap start: ${source::class.simpleName} -> ${target.simpleName}")
+        log("KMapper start: ${source::class.simpleName} -> ${target.simpleName}")
     override fun onMapComplete(source: Any, result: Any) =
-        log("kmap done: ${source::class.simpleName} -> ${result::class.simpleName}")
+        log("KMapper done: ${source::class.simpleName} -> ${result::class.simpleName}")
     override fun onError(source: Any, error: MappingException) =
-        log("kmap error: ${error.message}")
+        log("KMapper error: ${error.message}")
 }
 ```
 > Thread-safety: listeners are expected to be registered once at startup; `dispatch` iterates a snapshot. Hardening (atomic list) is a later concern, not this round.
@@ -647,7 +647,7 @@ git push
 
 ## Phase 2 — `processor` Port + Walking Skeleton
 
-**Goal:** Port the DomatApp KSP pipeline into `kmap`, decouple every `com.domatapp` FQN, stand up `kotlin-compile-testing`, and get a first green test where a basic `@MapTo` (incl. nested + null-safety + built-in primitive conversion + `@MapFrom`) generates the correct mapper. **Excluded here (→ Phase 3):** custom-converter `@KMapperConfig` discovery (the regex code is NOT ported — it gets deleted), enum, cycle detection, `TypeConversionFailed` wrapping.
+**Goal:** Port the DomatApp KSP pipeline into `KMapper`, decouple every `com.domatapp` FQN, stand up `kotlin-compile-testing`, and get a first green test where a basic `@MapTo` (incl. nested + null-safety + built-in primitive conversion + `@MapFrom`) generates the correct mapper. **Excluded here (→ Phase 3):** custom-converter `@KMapperConfig` discovery (the regex code is NOT ported — it gets deleted), enum, cycle detection, `TypeConversionFailed` wrapping.
 
 **Source to port from:** `/Users/sahansenvar/StudioProjects/DomatApp/core/processor/src/main/kotlin/com/domatapp/core/processor/mapping/`
 
@@ -1309,7 +1309,7 @@ In `MappingProcessor.process()`:
 1. **Generate descriptors:** for each `getSymbolsWithAnnotation("com.sahsenvar.kmapper.annotations.CollectionWrapper")` function `f`, read `forType` (KSType→FQN) and build `wrapFqn = f.packageName + "." + f.simpleName`. Emit a file in package `com.sahsenvar.kmapper.generated`:
 ```kotlin
 @CollectionWrapperDescriptor(forType = "<forTypeFqn>", wrapFunction = "<wrapFqn>")
-public object KmapWrapper_<sanitized-wrapName>
+public object KMapperWrapper_<sanitized-wrapName>
 ```
 2. **Discover:** `resolver.getDeclarationsFromPackage("com.sahsenvar.kmapper.generated")` → for each class with `@CollectionWrapperDescriptor`, read `forType`/`wrapFunction`. Build `Map<forTypeFqn, wrapFqn>`. If a `forType` appears twice → `logger.error("multiple @CollectionWrapper for <forType>")`.
 3. **Use in generation:** in `TypeMatcher`, when target field is a collection whose FQN is a known `forType`, return `MappingStrategy.WrappedCollection(elementStrategy, wrapFqn)`. Generator emits `source.map { <elem> }.let(::<wrapFn>)` or, since wrapFn is an extension, `source.map { <elem> }.<wrapSimpleName>()` via `MemberName(wrapPkg, wrapSimple)`.
@@ -1518,7 +1518,7 @@ is MappingException -> AuthError.Unknown(message ?: "Mapping error", this)
 
 Run (per token rules, capture to log): `./gradlew :composeApp:compileDebugKotlin -I /tmp/agent-init.gradle --console=plain -q --warning-mode=summary --no-problems-report -x lintDebug > /tmp/g.log 2>&1; echo exit=$?`
 Then: `find feature/auth/data/build -name 'AuthSessionRemoteModelMappers.kt' -exec head -20 {} +`
-Expected: BUILD SUCCESSFUL; `toAuthSessionDomainModel()` regenerated with identical field mapping (now importing the kmap-generated nested call). If failure, parse `grep -nE '^e: |error:' /tmp/g.log`.
+Expected: BUILD SUCCESSFUL; `toAuthSessionDomainModel()` regenerated with identical field mapping (now importing the KMapper-generated nested call). If failure, parse `grep -nE '^e: |error:' /tmp/g.log`.
 
 - [ ] **Step 8: Commit DomatApp migration**
 
@@ -1570,7 +1570,7 @@ Run: `./gradlew publishToMavenLocal -q` (root) → all modules publish locally.
 
 ## Execution Handoff
 
-**Plan complete and saved to `docs/superpowers/plans/2026-06-04-kmap-mapping-library.md`.** Implementation happens in the NEW `kmap` repo (Phase 0 creates it); only the DomatApp migration (Task 4.3) touches this repo.
+**Plan complete and saved to `docs/superpowers/plans/2026-06-04-KMapper-mapping-library.md`.** Implementation happens in the NEW `KMapper` repo (Phase 0 creates it); only the DomatApp migration (Task 4.3) touches this repo.
 
 
 

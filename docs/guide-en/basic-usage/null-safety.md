@@ -1,6 +1,6 @@
 # Null-Safety and @MapDefaultValue
 
-kmap detects nullable-to-non-null conversions at compile time and generates safe code. `null` is never silently swallowed.
+KMapper detects nullable-to-non-null conversions at compile time and generates safe code. `null` is never silently swallowed.
 
 ---
 

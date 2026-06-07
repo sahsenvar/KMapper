@@ -1,6 +1,6 @@
 # Gözlemleme — MappingListener
 
-kmap, ürettiği her mapper'a hafif bir gözlemleme kancası yerleştirir. Dinleyici kayıtlı değilken bu kanca **~sıfır maliyete** sahiptir; production build'lerde herhangi bir overhead bırakmaz.
+KMapper, ürettiği her mapper'a hafif bir gözlemleme kancası yerleştirir. Dinleyici kayıtlı değilken bu kanca **~sıfır maliyete** sahiptir; production build'lerde herhangi bir overhead bırakmaz.
 
 ## MappingListener Interface'i
 
@@ -51,18 +51,18 @@ Olaylar **mapper başına** (per-mapper) kaba granülerlikte yayılır — üret
 
 ## LoggingMappingListener
 
-kmap, temel bir loglama implementasyonu sunar:
+KMapper, temel bir loglama implementasyonu sunar:
 
 ```kotlin
 class LoggingMappingListener(private val log: (String) -> Unit) : MappingListener {
     override fun onMapStart(source: Any, target: KClass<*>) =
-        log("kmap start: ${source::class.simpleName} -> ${target.simpleName}")
+        log("KMapper start: ${source::class.simpleName} -> ${target.simpleName}")
 
     override fun onMapComplete(source: Any, result: Any) =
-        log("kmap done: ${source::class.simpleName} -> ${result::class.simpleName}")
+        log("KMapper done: ${source::class.simpleName} -> ${result::class.simpleName}")
 
     override fun onError(source: Any, error: MappingException) =
-        log("kmap error: ${error.message}")
+        log("KMapper error: ${error.message}")
 }
 ```
 
@@ -70,7 +70,7 @@ class LoggingMappingListener(private val log: (String) -> Unit) : MappingListene
 
 ```kotlin
 // Android (Application.onCreate / DI init)
-KMapper.addListener(LoggingMappingListener { message -> Log.d("kmap", message) })
+KMapper.addListener(LoggingMappingListener { message -> Log.d("KMapper", message) })
 
 // Kotlin/Native veya ortak kod
 KMapper.addListener(LoggingMappingListener(::println))
@@ -88,7 +88,7 @@ class MyApplication : Application() {
         super.onCreate()
         if (BuildConfig.DEBUG) {
             KMapper.addListener(LoggingMappingListener { message ->
-                Log.d("kmap", message)
+                Log.d("KMapper", message)
             })
         }
     }

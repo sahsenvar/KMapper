@@ -2,8 +2,8 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use checkbox (- [ ]) syntax.
 
 **Goal:** Add three scalar converter modules (`converters-uuid`, `converters-okio`, `converters-uri`)
-and one processor rule (Arrow `Option<T>` wrap/unwrap) to the kmap library at
-`/Users/sahansenvar/StudioProjects/kmap`. All modules stay at version `0.2.0-SNAPSHOT`. No publish.
+and one processor rule (Arrow `Option<T>` wrap/unwrap) to the KMapper library at
+`/Users/sahansenvar/StudioProjects/KMapper`. All modules stay at version `0.2.0-SNAPSHOT`. No publish.
 
 **Architecture:** Scalar modules clone `converters-datetime` exactly (no KSP, commonMain + optional
 `jvmAndroidMain`, `mavenPublishing` block). `converters-uri` is platform-split (no commonMain
@@ -17,7 +17,7 @@ processor or core.
 
 ## Prerequisites
 
-- Repo path: `/Users/sahansenvar/StudioProjects/kmap`
+- Repo path: `/Users/sahansenvar/StudioProjects/KMapper`
 - All commands run via `mcp__plugin_context-mode_context-mode__ctx_execute` (never Bash for
   build/test output). Git commits use Bash.
 - Build commands use `--console=plain -q` and redirect to `/tmp/` log files.
@@ -32,13 +32,13 @@ processor or core.
 
 - [ ] **Step 1:** Add `:converters-uuid` to `settings.gradle.kts` include list.
 
-  File: `/Users/sahansenvar/StudioProjects/kmap/settings.gradle.kts`
+  File: `/Users/sahansenvar/StudioProjects/KMapper/settings.gradle.kts`
   Change the `include(…)` line to add `":converters-uuid"` after `":converters-bignumber"`.
 
 - [ ] **Step 2:** Create `converters-uuid/build.gradle.kts`:
 
   ```kotlin
-  // /Users/sahansenvar/StudioProjects/kmap/converters-uuid/build.gradle.kts
+  // /Users/sahansenvar/StudioProjects/KMapper/converters-uuid/build.gradle.kts
   plugins {
       alias(libs.plugins.kotlin.multiplatform)
       alias(libs.plugins.android.kotlin.multiplatform.library)
@@ -82,10 +82,10 @@ processor or core.
       signAllPublications()
       coordinates("io.github.sahsenvar", "kmapper-converters-uuid", version.toString())
       pom {
-          name.set("kmap converters-uuid")
+          name.set("KMapper converters-uuid")
           description.set("KMP-friendly compile-time object mapper (KSP). Converters-uuid module: kotlin.uuid.Uuid (common) and java.util.UUID (jvm/android) scalar converters + kotlin↔java UUID bridges.")
           inceptionYear.set("2026")
-          url.set("https://github.com/sahsenvar/kmap")
+          url.set("https://github.com/sahsenvar/KMapper")
           licenses {
               license {
                   name.set("The Apache License, Version 2.0")
@@ -99,7 +99,7 @@ processor or core.
                   url.set("https://github.com/sahsenvar")
               }
           }
-          scm { url.set("https://github.com/sahsenvar/kmap") }
+          scm { url.set("https://github.com/sahsenvar/KMapper") }
       }
   }
   ```
@@ -262,7 +262,7 @@ processor or core.
 - [ ] **Step 2:** Commit:
 
   ```bash
-  cd /Users/sahansenvar/StudioProjects/kmap
+  cd /Users/sahansenvar/StudioProjects/KMapper
   git add settings.gradle.kts converters-uuid
   git commit -m "feat(converters-uuid): add kotlin.uuid.Uuid + java.util.UUID scalar converters
 
@@ -296,7 +296,7 @@ processor or core.
 - [ ] **Step 3:** Create `converters-okio/build.gradle.kts`:
 
   ```kotlin
-  // /Users/sahansenvar/StudioProjects/kmap/converters-okio/build.gradle.kts
+  // /Users/sahansenvar/StudioProjects/KMapper/converters-okio/build.gradle.kts
   plugins {
       alias(libs.plugins.kotlin.multiplatform)
       alias(libs.plugins.android.kotlin.multiplatform.library)
@@ -331,10 +331,10 @@ processor or core.
       signAllPublications()
       coordinates("io.github.sahsenvar", "kmapper-converters-okio", version.toString())
       pom {
-          name.set("kmap converters-okio")
+          name.set("KMapper converters-okio")
           description.set("KMP-friendly compile-time object mapper (KSP). Converters-okio module: okio ByteString and Path scalar converters.")
           inceptionYear.set("2026")
-          url.set("https://github.com/sahsenvar/kmap")
+          url.set("https://github.com/sahsenvar/KMapper")
           licenses {
               license {
                   name.set("The Apache License, Version 2.0")
@@ -348,7 +348,7 @@ processor or core.
                   url.set("https://github.com/sahsenvar")
               }
           }
-          scm { url.set("https://github.com/sahsenvar/kmap") }
+          scm { url.set("https://github.com/sahsenvar/KMapper") }
       }
   }
   ```
@@ -371,7 +371,7 @@ processor or core.
       // StringByteStringConverter
 
       @Test fun `StringByteStringConverter round-trip non-empty`() {
-          val original = "hello kmap"
+          val original = "hello KMapper"
           StringByteStringConverter.convertFromNonNull(
               StringByteStringConverter.convertToNonNull(original)
           ) shouldBe original
@@ -480,7 +480,7 @@ processor or core.
 - [ ] **Step 2:** Commit:
 
   ```bash
-  cd /Users/sahansenvar/StudioProjects/kmap
+  cd /Users/sahansenvar/StudioProjects/KMapper
   git add gradle/libs.versions.toml settings.gradle.kts converters-okio
   git commit -m "feat(converters-okio): add okio ByteString and Path scalar converters
 
@@ -504,7 +504,7 @@ processor or core.
 - [ ] **Step 2:** Create `converters-uri/build.gradle.kts`:
 
   ```kotlin
-  // /Users/sahansenvar/StudioProjects/kmap/converters-uri/build.gradle.kts
+  // /Users/sahansenvar/StudioProjects/KMapper/converters-uri/build.gradle.kts
   plugins {
       alias(libs.plugins.kotlin.multiplatform)
       alias(libs.plugins.android.kotlin.multiplatform.library)
@@ -550,10 +550,10 @@ processor or core.
       signAllPublications()
       coordinates("io.github.sahsenvar", "kmapper-converters-uri", version.toString())
       pom {
-          name.set("kmap converters-uri")
+          name.set("KMapper converters-uri")
           description.set("KMP-friendly compile-time object mapper (KSP). Converters-uri module: platform-specific URI converters (java.net.URI, android.net.Uri, NSURL).")
           inceptionYear.set("2026")
-          url.set("https://github.com/sahsenvar/kmap")
+          url.set("https://github.com/sahsenvar/KMapper")
           licenses {
               license {
                   name.set("The Apache License, Version 2.0")
@@ -567,7 +567,7 @@ processor or core.
                   url.set("https://github.com/sahsenvar")
               }
           }
-          scm { url.set("https://github.com/sahsenvar/kmap") }
+          scm { url.set("https://github.com/sahsenvar/KMapper") }
       }
   }
   ```
@@ -740,7 +740,7 @@ processor or core.
 - [ ] **Step 2:** Commit:
 
   ```bash
-  cd /Users/sahansenvar/StudioProjects/kmap
+  cd /Users/sahansenvar/StudioProjects/KMapper
   git add settings.gradle.kts converters-uri
   git commit -m "feat(converters-uri): add platform-specific URI scalar converters
 
@@ -1002,7 +1002,7 @@ processor or core.
 - [ ] **Step 2:** Commit:
 
   ```bash
-  cd /Users/sahansenvar/StudioProjects/kmap
+  cd /Users/sahansenvar/StudioProjects/KMapper
   git add processor/src integration-test/src
   git commit -m "feat(processor): add Arrow Option<T> wrap/unwrap mapping rule
 
@@ -1030,7 +1030,7 @@ processor or core.
 - [ ] **Confirm no new modules publish accidentally:**
 
   ```
-  grep -r 'publishToMavenCentral\|publishToMavenLocal' /Users/sahansenvar/StudioProjects/kmap/converters-uuid /Users/sahansenvar/StudioProjects/kmap/converters-okio /Users/sahansenvar/StudioProjects/kmap/converters-uri --include='*.kts' | grep -v 'publishToMavenCentral()' | head -5
+  grep -r 'publishToMavenCentral\|publishToMavenLocal' /Users/sahansenvar/StudioProjects/KMapper/converters-uuid /Users/sahansenvar/StudioProjects/KMapper/converters-okio /Users/sahansenvar/StudioProjects/KMapper/converters-uri --include='*.kts' | grep -v 'publishToMavenCentral()' | head -5
   ```
 
   All three modules declare `publishToMavenCentral()` in pom setup (as required by vanniktech) but

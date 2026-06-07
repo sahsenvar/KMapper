@@ -1,4 +1,4 @@
-# kmap Add-on Converters R1 — Implementation Plan
+# KMapper Add-on Converters R1 — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-06-04-addon-converters-r1-design.md`
 
-**Repo:** `/Users/sahansenvar/StudioProjects/kmap` (HTTPS origin via gh credential helper — do not switch to ssh). Root version is `0.2.0-SNAPSHOT`.
+**Repo:** `/Users/sahansenvar/StudioProjects/KMapper` (HTTPS origin via gh credential helper — do not switch to ssh). Root version is `0.2.0-SNAPSHOT`.
 
 ---
 
@@ -60,7 +60,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [ ] **Step 1: Move the module dir and the package dir**
 
 ```bash
-cd /Users/sahansenvar/StudioProjects/kmap
+cd /Users/sahansenvar/StudioProjects/KMapper
 git mv converters-compose converters-immutable
 git mv converters-immutable/src/commonMain/kotlin/com/sahsenvar/kmapper/compose \
        converters-immutable/src/commonMain/kotlin/com/sahsenvar/kmapper/immutable
@@ -176,7 +176,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 mavenPublishing {
     publishToMavenCentral(); signAllPublications()
     coordinates("io.github.sahsenvar", "kmapper-converters-arrow", version.toString())
-    pom { /* same shape as other modules; name "kmap converters-arrow" */ }
+    pom { /* same shape as other modules; name "KMapper converters-arrow" */ }
 }
 ```
 Add `":converters-arrow"` to `settings.gradle.kts` `include(...)`.
@@ -270,7 +270,7 @@ kotlin {
 mavenPublishing {
     publishToMavenCentral(); signAllPublications()
     coordinates("io.github.sahsenvar", "kmapper-converters-datetime", version.toString())
-    pom { /* name "kmap converters-datetime"; same shape */ }
+    pom { /* name "KMapper converters-datetime"; same shape */ }
 }
 ```
 > If `val jvmAndroidMain by creating { … }` with the AGP-KMP plugin's android source set names mismatches, fall back to placing the java.time converters identically in both `jvmMain` and `androidMain` (duplication) — but prefer the shared set. Use whatever `android {}` block form the existing `core`/`converters-immutable` modules use (mirror them exactly). Add `":converters-datetime"` to `settings.gradle.kts`.

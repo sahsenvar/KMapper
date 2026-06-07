@@ -1,20 +1,20 @@
 # Introduction
 
-**kmap** is a **compile-time**, KSP-based object mapping library for Kotlin Multiplatform. Instead of hand-writing model transformation functions between layers (`RemoteModel → DomainModel`, `DomainModel → UiModel`, etc.), kmap generates `toX()` extension functions from annotations automatically.
+**KMapper** is a **compile-time**, KSP-based object mapping library for Kotlin Multiplatform. Instead of hand-writing model transformation functions between layers (`RemoteModel → DomainModel`, `DomainModel → UiModel`, etc.), KMapper generates `toX()` extension functions from annotations automatically.
 
 ```kotlin
 @MapTo(UserDomain::class)
 data class UserRemote(val id: String, val email: String) : RemoteModel
 
-// kmap generates:
+// KMapper generates:
 fun UserRemote.toUserDomain(): UserDomain = UserDomain(id = id, email = email)
 ```
 
 > **Note:** Examples show a simplified body. The actual generated code also includes `KMapper.hasListeners`-guarded observability hooks and uses a `val result = …; return result` form — see [MappingListener](observability/listener.md).
 
-## Why kmap?
+## Why KMapper?
 
-- **No reflection.** All mapping code is generated at compile time. This eliminates runtime overhead and makes kmap **Kotlin/Native (iOS) friendly** — it works seamlessly on platforms where reflection is restricted.
+- **No reflection.** All mapping code is generated at compile time. This eliminates runtime overhead and makes KMapper **Kotlin/Native (iOS) friendly** — it works seamlessly on platforms where reflection is restricted.
 - **Type- and null-safe.** Type mismatches, missing converters, and unmappable fields become **compile errors**; no runtime surprises.
 - **Zero boilerplate.** You never write mapper functions by hand; no maintenance burden.
 - **KMP-native.** Define mappings in `commonMain`; Android and iOS share the same generated code.
@@ -43,6 +43,6 @@ fun UserRemote.toUserDomain(): UserDomain = UserDomain(id = id, email = email)
 
 ## Version Status
 
-kmap **1.0.0** is published on [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core) — all 10 modules. See [Installation](getting-started/installation.md).
+KMapper **1.0.0** is published on [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core) — all 10 modules. See [Installation](getting-started/installation.md).
 
 > Next: **[Installation →](getting-started/installation.md)**

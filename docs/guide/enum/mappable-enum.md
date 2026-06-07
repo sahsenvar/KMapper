@@ -2,7 +2,7 @@
 
 `ordinal` ve `name` ile enum eşleştirmek sessiz bir tuzaktır. Sabitleri yeniden sıraladığınızda `ordinal` değişir; sabit adını yeniden adlandırdığınızda `name` değişir. Her iki durumda da derleme hatası almaz, test yazmazsanız runtime'da da hata almayabilirsiniz — yanlış değer sessizce eşlenir.
 
-kmap bu riski tamamen ortadan kaldırır: `ordinal` ya da `name` **asla** kullanılmaz.
+KMapper bu riski tamamen ortadan kaldırır: `ordinal` ya da `name` **asla** kullanılmaz.
 
 ## MappableEnum\<W\> Interface'i
 

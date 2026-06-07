@@ -1,8 +1,8 @@
 # Sık Sorulan Sorular
 
-## kmap çalışma zamanında reflection kullanıyor mu?
+## KMapper çalışma zamanında reflection kullanıyor mu?
 
-Hayır. kmap tamamen derleme zamanında çalışır. KSP processor anotasyonları analiz eder ve düz Kotlin extension fonksiyonları üretir. Üretilen kodda `KClass`, `::class.members`, `getDeclaredField` gibi reflection API'leri kullanılmaz. Bu nedenle iOS/Kotlin Native dahil tüm KMP hedeflerinde herhangi bir kısıtlama olmadan çalışır.
+Hayır. KMapper tamamen derleme zamanında çalışır. KSP processor anotasyonları analiz eder ve düz Kotlin extension fonksiyonları üretir. Üretilen kodda `KClass`, `::class.members`, `getDeclaredField` gibi reflection API'leri kullanılmaz. Bu nedenle iOS/Kotlin Native dahil tüm KMP hedeflerinde herhangi bir kısıtlama olmadan çalışır.
 
 ## iOS ve Kotlin/Native'de çalışıyor mu?
 
@@ -60,7 +60,7 @@ Bkz. [Çok Modüllü Projeler](../ileri/cok-modullu.md).
 
 ## Marker interface (RemoteModel, DomainModel vb.) zorunlu mu?
 
-Hayır. `@MapTo` ya da `@MapFrom` anotasyonunu herhangi bir sınıfa uygulayabilirsiniz; belirli bir marker interface implement etmek zorunda değilsiniz. Marker interface'ler, büyük projelerde sınıfları katmanlarına göre sınıflandırmak için yararlı bir konvansiyondur; kmap tarafından zorunlu tutulmaz.
+Hayır. `@MapTo` ya da `@MapFrom` anotasyonunu herhangi bir sınıfa uygulayabilirsiniz; belirli bir marker interface implement etmek zorunda değilsiniz. Marker interface'ler, büyük projelerde sınıfları katmanlarına göre sınıflandırmak için yararlı bir konvansiyondur; KMapper tarafından zorunlu tutulmaz.
 
 ## @Ignore ile bir alanı atlarsam hedef constructor'da ne olur?
 

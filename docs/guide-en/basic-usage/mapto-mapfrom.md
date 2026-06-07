@@ -1,6 +1,6 @@
 # @MapTo and @MapFrom
 
-kmap supports bidirectional mapping with two separate annotations: **`@MapTo`** generates a `toX()` function from the source class to the target, and **`@MapFrom`** generates one from the target class back toward the source.
+KMapper supports bidirectional mapping with two separate annotations: **`@MapTo`** generates a `toX()` function from the source class to the target, and **`@MapFrom`** generates one from the target class back toward the source.
 
 ---
 

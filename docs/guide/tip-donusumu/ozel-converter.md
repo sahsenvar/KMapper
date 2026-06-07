@@ -67,7 +67,7 @@ object StatusConverter : MapTypeConverter<StatusRemote, StatusDomain>(
 }
 ```
 
-> Enum eşleştirmesi için kmap'in `MappableEnum<W>` arayüzü de mevcuttur. Ayrıntılar için bkz. [MappableEnum](../enum/mappable-enum.md).
+> Enum eşleştirmesi için KMapper'in `MappableEnum<W>` arayüzü de mevcuttur. Ayrıntılar için bkz. [MappableEnum](../enum/mappable-enum.md).
 
 ---
 

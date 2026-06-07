@@ -1,4 +1,4 @@
-rootProject.name = "kmap"
+rootProject.name = "KMapper"
 
 pluginManagement {
     repositories { google(); mavenCentral(); gradlePluginPortal() }

@@ -1,6 +1,6 @@
 # Null-Safety ve @MapDefaultValue
 
-kmap, nullable-to-non-null dönüşümlerini derleme zamanında fark eder ve güvenli kod üretir. `null` hiçbir zaman sessizce yutulmaz.
+KMapper, nullable-to-non-null dönüşümlerini derleme zamanında fark eder ve güvenli kod üretir. `null` hiçbir zaman sessizce yutulmaz.
 
 ---
 

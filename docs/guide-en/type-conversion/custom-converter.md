@@ -67,7 +67,7 @@ object StatusConverter : MapTypeConverter<StatusRemote, StatusDomain>(
 }
 ```
 
-> kmap also provides the `MappableEnum<W>` interface for enum mapping. For details, see [MappableEnum](../enum/mappable-enum.md).
+> KMapper also provides the `MappableEnum<W>` interface for enum mapping. For details, see [MappableEnum](../enum/mappable-enum.md).
 
 ---
 

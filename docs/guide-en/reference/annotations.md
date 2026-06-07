@@ -1,6 +1,6 @@
 # Annotation Reference
 
-All kmap annotations are in the `com.sahsenvar.kmapper.annotations` package. They all have `SOURCE` retention — they are not included in the published binary; they are consumed only during the KSP compilation step. `@CollectionWrapper` is an exception and uses `BINARY` retention (required for type+annotation resolution from dependency artifacts).
+All KMapper annotations are in the `com.sahsenvar.kmapper.annotations` package. They all have `SOURCE` retention — they are not included in the published binary; they are consumed only during the KSP compilation step. `@CollectionWrapper` is an exception and uses `BINARY` retention (required for type+annotation resolution from dependency artifacts).
 
 ## Summary Table
 

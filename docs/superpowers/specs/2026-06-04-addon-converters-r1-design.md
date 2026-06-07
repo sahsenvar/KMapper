@@ -1,4 +1,4 @@
-# kmap Add-on Converters — Round 1 Design
+# KMapper Add-on Converters — Round 1 Design
 
 - **Date:** 2026-06-04
 - **Status:** Design — awaiting user review

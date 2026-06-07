@@ -1,10 +1,10 @@
 # Architecture — Modules and the KSP Pipeline
 
-This page explains kmap's internal design at a conceptual level. You do not need to know these details to use the library, but understanding how it works makes troubleshooting and contributing easier.
+This page explains KMapper's internal design at a conceptual level. You do not need to know these details to use the library, but understanding how it works makes troubleshooting and contributing easier.
 
 ## Module Split
 
-kmap consists of four separate artifacts:
+KMapper consists of four separate artifacts:
 
 ```
 com.sahsenvar.kmapper
@@ -35,7 +35,7 @@ com.sahsenvar.kmapper
 
 ## KSP Pipeline — Compile Time
 
-kmap never uses runtime reflection. All mapping code is generated during compilation:
+KMapper never uses runtime reflection. All mapping code is generated during compilation:
 
 ```
 Source class annotated with @MapTo

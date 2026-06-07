@@ -1,6 +1,6 @@
 # @MapTo ve @MapFrom
 
-kmap, iki yönlü eşleştirmeyi iki ayrı anotasyonla destekler: **`@MapTo`** kaynak sınıftan hedefe, **`@MapFrom`** ise hedef sınıftan kaynağa doğru bir `toX()` fonksiyonu üretir.
+KMapper, iki yönlü eşleştirmeyi iki ayrı anotasyonla destekler: **`@MapTo`** kaynak sınıftan hedefe, **`@MapFrom`** ise hedef sınıftan kaynağa doğru bir `toX()` fonksiyonu üretir.
 
 ---
 

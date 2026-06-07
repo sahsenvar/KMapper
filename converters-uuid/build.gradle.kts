@@ -41,10 +41,10 @@ mavenPublishing {
     signAllPublications()
     coordinates("io.github.sahsenvar", "kmapper-converters-uuid", version.toString())
     pom {
-        name.set("kmap converters-uuid")
+        name.set("KMapper converters-uuid")
         description.set("KMP-friendly compile-time object mapper (KSP). Converters-uuid module: kotlin.uuid.Uuid (common) and java.util.UUID (jvm/android) scalar converters + kotlin↔java UUID bridges.")
         inceptionYear.set("2026")
-        url.set("https://github.com/sahsenvar/kmap")
+        url.set("https://github.com/sahsenvar/KMapper")
         licenses {
             license {
                 name.set("The Apache License, Version 2.0")
@@ -58,6 +58,6 @@ mavenPublishing {
                 url.set("https://github.com/sahsenvar")
             }
         }
-        scm { url.set("https://github.com/sahsenvar/kmap") }
+        scm { url.set("https://github.com/sahsenvar/KMapper") }
     }
 }

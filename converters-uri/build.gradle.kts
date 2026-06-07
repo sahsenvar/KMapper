@@ -43,10 +43,10 @@ mavenPublishing {
     signAllPublications()
     coordinates("io.github.sahsenvar", "kmapper-converters-uri", version.toString())
     pom {
-        name.set("kmap converters-uri")
+        name.set("KMapper converters-uri")
         description.set("KMP-friendly compile-time object mapper (KSP). Converters-uri module: platform-specific URI converters (java.net.URI, android.net.Uri, NSURL).")
         inceptionYear.set("2026")
-        url.set("https://github.com/sahsenvar/kmap")
+        url.set("https://github.com/sahsenvar/KMapper")
         licenses {
             license {
                 name.set("The Apache License, Version 2.0")
@@ -60,6 +60,6 @@ mavenPublishing {
                 url.set("https://github.com/sahsenvar")
             }
         }
-        scm { url.set("https://github.com/sahsenvar/kmap") }
+        scm { url.set("https://github.com/sahsenvar/KMapper") }
     }
 }

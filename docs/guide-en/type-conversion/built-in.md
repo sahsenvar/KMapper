@@ -1,6 +1,6 @@
 # Built-in Converters
 
-kmap supports the most common type conversions out of the box. These converters live in the `com.sahsenvar.kmapper.converter.builtin` package and are recognized by the processor automatically — no `@KMapperConfig` registration is needed.
+KMapper supports the most common type conversions out of the box. These converters live in the `com.sahsenvar.kmapper.converter.builtin` package and are recognized by the processor automatically — no `@KMapperConfig` registration is needed.
 
 ---
 

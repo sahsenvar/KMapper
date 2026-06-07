@@ -1,6 +1,6 @@
 # Alan Eşleştirme — @FieldMap ve @Ignore
 
-kmap'in varsayılan davranışı, kaynak ve hedef arasında **ada göre** alan eşleştirmesidir. Alan adları veya tipler uyuşmadığında `@FieldMap`, bir alanın eşleştirme dışında tutulması gerektiğinde `@Ignore` devreye girer.
+KMapper'in varsayılan davranışı, kaynak ve hedef arasında **ada göre** alan eşleştirmesidir. Alan adları veya tipler uyuşmadığında `@FieldMap`, bir alanın eşleştirme dışında tutulması gerektiğinde `@Ignore` devreye girer.
 
 ---
 

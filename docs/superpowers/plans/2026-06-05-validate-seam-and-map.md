@@ -1,7 +1,7 @@
 # Validate Seam + Map<K,V> Mapping — Implementation Plan
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use checkbox (- [ ]) syntax.
 
-**Goal:** Implement three features in the `kmap` KMP KSP object-mapper library at `/Users/sahansenvar/StudioProjects/kmap`:
+**Goal:** Implement three features in the `KMapper` KMP KSP object-mapper library at `/Users/sahansenvar/StudioProjects/KMapper`:
 1. `@ValidateFrom` / `@ValidateTo` field-level validation seam with pluggable `Validator<T>` objects.
 2. `:validators` add-on module with `EmailValidator` and `UrlValidator`.
 3. `Map<K,V>` core mapping via a new `MappingStrategy.MapValues`.
@@ -12,7 +12,7 @@
 
 **Build tool:** ALL build/test commands MUST be run via the context-mode MCP tool
 `mcp__plugin_context-mode_context-mode__ctx_execute` (language: `bash`) from repo root
-`/Users/sahansenvar/StudioProjects/kmap` — NOT the Bash tool — per project rules.
+`/Users/sahansenvar/StudioProjects/KMapper` — NOT the Bash tool — per project rules.
 - JVM tests: `./gradlew :<module>:jvmTest --console=plain -q > /tmp/t.log 2>&1; echo exit=$?`
 - Processor tests: `./gradlew :processor:test --tests "*<TestClass>*" --console=plain -q > /tmp/t.log 2>&1; echo exit=$?`
 - iOS: `./gradlew :integration-test:iosSimulatorArm64Test --console=plain -q > /tmp/it-ios.log 2>&1; echo exit=$?`
@@ -759,7 +759,7 @@ class ValidateRuntimeTest {
 
 - [ ] **Step 1: Add `:validators` to `settings.gradle.kts`**
 
-  In `/Users/sahansenvar/StudioProjects/kmap/settings.gradle.kts`, add:
+  In `/Users/sahansenvar/StudioProjects/KMapper/settings.gradle.kts`, add:
   ```
   include(":validators")
   ```
@@ -798,8 +798,8 @@ class ValidateRuntimeTest {
   mavenPublishing {
       coordinates("io.github.sahsenvar", "kmapper-validators", version.toString())
       pom {
-          name.set("kmap-validators")
-          description.set("Pre-built Validator<T> implementations for kmap")
+          name.set("KMapper-validators")
+          description.set("Pre-built Validator<T> implementations for KMapper")
           // copy url/licenses/developers/scm from converters-datetime's pom block
       }
   }

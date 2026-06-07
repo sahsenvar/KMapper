@@ -4,7 +4,7 @@
 
 ### Yalnızca Constructor `val` Alanları
 
-kmap yalnızca primary constructor'daki `val` parametrelerini analiz eder. `var` property'ler, `init` bloğunda atanan alanlar ve constructor dışında tanımlanan property'ler eşleştirilmez.
+KMapper yalnızca primary constructor'daki `val` parametrelerini analiz eder. `var` property'ler, `init` bloğunda atanan alanlar ve constructor dışında tanımlanan property'ler eşleştirilmez.
 
 ```kotlin
 data class OrderRemote(

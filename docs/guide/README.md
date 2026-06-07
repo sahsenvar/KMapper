@@ -1,18 +1,18 @@
 # Giriş
 
-**kmap**, Kotlin Multiplatform için **derleme-zamanı (compile-time)** çalışan, KSP tabanlı bir nesne eşleme (object mapping) kütüphanesidir. Katmanlar arası model dönüşümlerini (`RemoteModel → DomainModel`, `DomainModel → UiModel` vb.) elle yazmak yerine, anotasyonlardan otomatik `toX()` uzantı fonksiyonları üretir.
+**KMapper**, Kotlin Multiplatform için **derleme-zamanı (compile-time)** çalışan, KSP tabanlı bir nesne eşleme (object mapping) kütüphanesidir. Katmanlar arası model dönüşümlerini (`RemoteModel → DomainModel`, `DomainModel → UiModel` vb.) elle yazmak yerine, anotasyonlardan otomatik `toX()` uzantı fonksiyonları üretir.
 
 ```kotlin
 @MapTo(UserDomain::class)
 data class UserRemote(val id: String, val email: String) : RemoteModel
 
-// kmap şunu üretir:
+// KMapper şunu üretir:
 fun UserRemote.toUserDomain(): UserDomain = UserDomain(id = id, email = email)
 ```
 
 > **Not:** Örneklerde sadeleştirilmiş gövde gösterilir. Üretilen gerçek kod ayrıca `KMapper.hasListeners` korumalı gözlemleme guard'ları içerir ve gövdesi `val result = …; return result` biçimindedir — bkz. [MappingListener](gozlemleme/listener.md).
 
-## Neden kmap?
+## Neden KMapper?
 
 - **Reflection yok.** Tüm eşleme kodu derleme zamanında üretilir. Bu, çalışma-zamanı maliyetini sıfırlar ve **Kotlin/Native (iOS) dostu** kılar — reflection'ın kısıtlı olduğu platformlarda sorunsuz çalışır.
 - **Tip ve null güvenli.** Tip uyuşmazlıkları, eksik converter'lar ve eşlenemeyen alanlar **derleme hatası** olur; runtime'da sürpriz yaşamazsınız.
@@ -43,6 +43,6 @@ fun UserRemote.toUserDomain(): UserDomain = UserDomain(id = id, email = email)
 
 ## Sürüm Durumu
 
-kmap **1.0.0**, [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core)'da yayınlanmıştır — tüm 10 modül dahil. Bkz. [Kurulum](baslarken/kurulum.md).
+KMapper **1.0.0**, [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core)'da yayınlanmıştır — tüm 10 modül dahil. Bkz. [Kurulum](baslarken/kurulum.md).
 
 > Sonraki adım: **[Kurulum →](baslarken/kurulum.md)**

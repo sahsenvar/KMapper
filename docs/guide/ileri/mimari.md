@@ -1,10 +1,10 @@
 # Mimari — Modüller ve KSP Pipeline
 
-Bu sayfa kmap'in iç tasarımını kavramsal düzeyde açıklar. Kütüphaneyi kullanmak için buradaki detayları bilmeniz gerekmez; ancak nasıl çalıştığını anlamak sorun gidermeyi ve katkı sağlamayı kolaylaştırır.
+Bu sayfa KMapper'in iç tasarımını kavramsal düzeyde açıklar. Kütüphaneyi kullanmak için buradaki detayları bilmeniz gerekmez; ancak nasıl çalıştığını anlamak sorun gidermeyi ve katkı sağlamayı kolaylaştırır.
 
 ## Modül Bölünmesi
 
-kmap dört ayrı artifact'tan oluşur:
+KMapper dört ayrı artifact'tan oluşur:
 
 ```
 com.sahsenvar.kmapper
@@ -35,7 +35,7 @@ com.sahsenvar.kmapper
 
 ## KSP Pipeline — Derleme Zamanı
 
-kmap hiçbir zaman çalışma zamanı reflection kullanmaz. Tüm mapping kodu derleme sırasında üretilir:
+KMapper hiçbir zaman çalışma zamanı reflection kullanmaz. Tüm mapping kodu derleme sırasında üretilir:
 
 ```
 @MapTo ile anotasyonlu kaynak sınıf

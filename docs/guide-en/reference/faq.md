@@ -1,8 +1,8 @@
 # FAQ
 
-## Does kmap use reflection at runtime?
+## Does KMapper use reflection at runtime?
 
-No. kmap runs entirely at compile time. The KSP processor analyzes annotations and generates plain Kotlin extension functions. The generated code does not use reflection APIs such as `KClass`, `::class.members`, or `getDeclaredField`. For this reason kmap works without any restrictions on all KMP targets, including iOS/Kotlin Native.
+No. KMapper runs entirely at compile time. The KSP processor analyzes annotations and generates plain Kotlin extension functions. The generated code does not use reflection APIs such as `KClass`, `::class.members`, or `getDeclaredField`. For this reason KMapper works without any restrictions on all KMP targets, including iOS/Kotlin Native.
 
 ## Does it work on iOS and Kotlin/Native?
 
@@ -60,7 +60,7 @@ See [Multi-Module Projects](../advanced/multi-module.md).
 
 ## Are marker interfaces (RemoteModel, DomainModel, etc.) required?
 
-No. You can apply the `@MapTo` or `@MapFrom` annotation to any class; you do not need to implement a specific marker interface. Marker interfaces are a useful convention for categorizing classes by layer in large projects; they are not enforced by kmap.
+No. You can apply the `@MapTo` or `@MapFrom` annotation to any class; you do not need to implement a specific marker interface. Marker interfaces are a useful convention for categorizing classes by layer in large projects; they are not enforced by KMapper.
 
 ## What happens to the target constructor if I skip a field with `@Ignore`?
 

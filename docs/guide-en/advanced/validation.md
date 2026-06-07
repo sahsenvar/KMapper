@@ -1,6 +1,6 @@
 # Validation — @ValidateFrom / @ValidateTo
 
-kmap's mapper can do more than convert and null-check fields: with `@ValidateFrom` and
+KMapper's mapper can do more than convert and null-check fields: with `@ValidateFrom` and
 `@ValidateTo` it can also enforce validation rules at mapping time, before the mapped object is
 ever returned to the caller.
 

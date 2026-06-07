@@ -9,7 +9,7 @@ class OkioConverterTest {
     // StringByteStringConverter
 
     @Test fun `StringByteStringConverter round-trip non-empty`() {
-        val original = "hello kmap"
+        val original = "hello KMapper"
         StringByteStringConverter.convertFromNonNull(
             StringByteStringConverter.convertToNonNull(original)
         ) shouldBe original

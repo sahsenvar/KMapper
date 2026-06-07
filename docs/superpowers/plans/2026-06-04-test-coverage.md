@@ -1,4 +1,4 @@
-# kmap Test Coverage — Implementation Plan
+# KMapper Test Coverage — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** kotlin.test, kotest-assertions-core 6.1.11, kotest-property 6.1.11, kctfork 0.12.1 (KSP2), Kotlin 2.3.10 KMP.
 
-**Basis:** the approved test audit/report (this session). Repo `/Users/sahansenvar/StudioProjects/kmap`, root version `0.2.0-SNAPSHOT`, HTTPS origin via gh helper.
+**Basis:** the approved test audit/report (this session). Repo `/Users/sahansenvar/StudioProjects/KMapper`, root version `0.2.0-SNAPSHOT`, HTTPS origin via gh helper.
 
 ---
 

@@ -1,6 +1,6 @@
 # Field Mapping — @FieldMap and @Ignore
 
-kmap's default behavior is to match fields **by name** between source and target. When field names or types don't align, use `@FieldMap`. When a field should be excluded from mapping entirely, use `@Ignore`.
+KMapper's default behavior is to match fields **by name** between source and target. When field names or types don't align, use `@FieldMap`. When a field should be excluded from mapping entirely, use `@Ignore`.
 
 ---
 

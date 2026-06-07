@@ -25,11 +25,11 @@ data class UserRemote(
 )
 ```
 
-> kmap does **not** require your models to implement a specific interface (`RemoteModel`, `DomainModel`, etc.). Those interfaces are a convention in your own architecture; use them if you like.
+> KMapper does **not** require your models to implement a specific interface (`RemoteModel`, `DomainModel`, etc.). Those interfaces are a convention in your own architecture; use them if you like.
 
 ## 2. Build
 
-Build the project. kmap generates `UserRemoteMappers.kt` in the same package as the source class:
+Build the project. KMapper generates `UserRemoteMappers.kt` in the same package as the source class:
 
 ```kotlin
 public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
@@ -51,7 +51,7 @@ That is all there is to it. Fields with matching names are copied automatically.
 
 ## Nested Models Work Automatically
 
-If a field is itself a type annotated with `@MapTo`, kmap chains the inner mapping call automatically:
+If a field is itself a type annotated with `@MapTo`, KMapper chains the inner mapping call automatically:
 
 ```kotlin
 data class AddressDomain(val city: String)
@@ -84,7 +84,7 @@ data class UserDomain(val id: String)          // required
 data class UserRemote(val id: String?)          // nullable
 ```
 
-kmap never silently swallows `null` — it generates a loud exception:
+KMapper never silently swallows `null` — it generates a loud exception:
 
 ```kotlin
 public fun UserRemote.toUserDomain(): UserDomain = UserDomain(

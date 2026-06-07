@@ -1,6 +1,6 @@
 # Anotasyon Referansı
 
-kmap'in tüm anotasyonları `com.sahsenvar.kmapper.annotations` paketindedir. Hepsi `SOURCE` retention'a sahiptir — yayınlanan binary'e dahil edilmezler; yalnızca KSP derleme adımında tüketilir. `@CollectionWrapper` istisnai olarak `BINARY` retention kullanır (dependency artifact'larından tür+anotasyon çözümlemesi için).
+KMapper'in tüm anotasyonları `com.sahsenvar.kmapper.annotations` paketindedir. Hepsi `SOURCE` retention'a sahiptir — yayınlanan binary'e dahil edilmezler; yalnızca KSP derleme adımında tüketilir. `@CollectionWrapper` istisnai olarak `BINARY` retention kullanır (dependency artifact'larından tür+anotasyon çözümlemesi için).
 
 ## Özet Tablo
 

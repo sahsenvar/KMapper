@@ -9,7 +9,7 @@
 
 ## 1. Scope
 
-Four additions to the kmap library:
+Four additions to the KMapper library:
 
 | # | Work Item | Module(s) Touched | Kind |
 |---|-----------|-------------------|------|
@@ -70,13 +70,13 @@ mavenPublishing {
     publishToMavenCentral(); signAllPublications()
     coordinates("io.github.sahsenvar", "kmapper-converters-{name}", version.toString())
     pom {
-        name.set("kmap converters-{name}")
+        name.set("KMapper converters-{name}")
         description.set("…")
         inceptionYear.set("2026")
-        url.set("https://github.com/sahsenvar/kmap")
+        url.set("https://github.com/sahsenvar/KMapper")
         licenses { license { name.set("The Apache License, Version 2.0"); url.set("https://www.apache.org/licenses/LICENSE-2.0.txt") } }
         developers { developer { id.set("sahsenvar"); name.set("Şahan Şenvar"); url.set("https://github.com/sahsenvar") } }
-        scm { url.set("https://github.com/sahsenvar/kmap") }
+        scm { url.set("https://github.com/sahsenvar/KMapper") }
     }
 }
 ```

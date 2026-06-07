@@ -1,6 +1,6 @@
 # Collections
 
-kmap maps each element in `List` and `Set` collections automatically. No special annotation is needed for collection fields — when the element type is a mapped model, the processor detects this on its own.
+KMapper maps each element in `List` and `Set` collections automatically. No special annotation is needed for collection fields — when the element type is a mapped model, the processor detects this on its own.
 
 ---
 

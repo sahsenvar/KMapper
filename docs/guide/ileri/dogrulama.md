@@ -1,6 +1,6 @@
 # Doğrulama — @ValidateFrom / @ValidateTo
 
-kmap mapper'ı yalnızca dönüştürme ve null kontrolü yapmakla kalmaz: `@ValidateFrom` ve
+KMapper mapper'ı yalnızca dönüştürme ve null kontrolü yapmakla kalmaz: `@ValidateFrom` ve
 `@ValidateTo` anotasyonları sayesinde eşleştirme anında doğrulama kuralları da uygulayabilir; bu
 sayede eşleştirilmiş nesne çağrıya dönmeden önce geçerliliği garanti altına alınır.
 

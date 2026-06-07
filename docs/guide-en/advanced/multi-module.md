@@ -1,6 +1,6 @@
 # Multi-Module Projects
 
-kmap compiles each module in an independent KSP run. This page explains how scalar converters and collection wrappers are configured in a multi-module project.
+KMapper compiles each module in an independent KSP run. This page explains how scalar converters and collection wrappers are configured in a multi-module project.
 
 ## `@KMapperConfig` — One per Module
 
@@ -86,7 +86,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 If more than one `@CollectionWrapper` for the same `forType` appears in the `wrappers` list, the processor emits a **compile error**:
 
 ```
-e: [kmap] Multiple @CollectionWrapper found for 'PersistentList'. Remove one from the wrappers list.
+e: [KMapper] Multiple @CollectionWrapper found for 'PersistentList'. Remove one from the wrappers list.
 ```
 
 ## Example Multi-Module Layout

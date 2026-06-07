@@ -1,6 +1,6 @@
 # Hata Yönetimi — MappingException
 
-kmap'in ürettiği tüm kodlar tek bir exception hiyerarşisi kullanır: `com.sahsenvar.kmapper.MappingException`. Feature katmanınız bu exception'ları kendi domain hatalarına dönüştürür — kütüphane tiplerine doğrudan bağımlı kalmazsınız.
+KMapper'in ürettiği tüm kodlar tek bir exception hiyerarşisi kullanır: `com.sahsenvar.kmapper.MappingException`. Feature katmanınız bu exception'ları kendi domain hatalarına dönüştürür — kütüphane tiplerine doğrudan bağımlı kalmazsınız.
 
 ## Hiyerarşi
 
