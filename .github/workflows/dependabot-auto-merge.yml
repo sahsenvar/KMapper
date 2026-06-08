@@ -22,10 +22,11 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Approve and enable auto-merge (patch or minor)
+      # Note: no `gh pr review --approve` — GitHub Actions is not permitted to approve PRs
+      # (and approval isn't required without branch-protection review rules). Enabling
+      # auto-merge is enough; the PR merges once required status checks pass.
+      - name: Enable auto-merge (patch or minor)
         if: |
           steps.meta.outputs.update-type == 'version-update:semver-patch' ||
           steps.meta.outputs.update-type == 'version-update:semver-minor'
-        run: |
-          gh pr review --approve "$PR_URL"
-          gh pr merge --auto --squash "$PR_URL"
+        run: gh pr merge --auto --squash "$PR_URL"
