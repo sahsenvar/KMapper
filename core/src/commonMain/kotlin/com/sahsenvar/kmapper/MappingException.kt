@@ -18,7 +18,11 @@ sealed class MappingException(
     /** Field path from the mapping root, e.g. "customer.address.zipCode" or "items[3].price". */
     abstract val path: String
 
-    /** Same exception type with [prefix] prepended to the path. Used by seams — NOT wrapping. */
+    /**
+     * Same exception type with [prefix] prepended to the path. Used by seams — NOT wrapping.
+     * Reconstructing means the rethrown exception's stack trace starts at the prefixing seam;
+     * the path string is the locator, by design.
+     */
     abstract fun withPathPrefix(prefix: String): MappingException
 
     class RequiredFieldMissing(
@@ -40,7 +44,7 @@ sealed class MappingException(
         override val path: String,
         val enum: String,
         val value: Any,
-    ) : MappingException("Unknown wire value '$value' for enum $enum at $path") {
+    ) : MappingException(unknownEnumMessage(path, enum, value)) {
         override fun withPathPrefix(prefix: String) = UnknownEnumValue(joinPath(prefix, path), enum, value)
     }
 
@@ -74,15 +78,27 @@ sealed class MappingException(
 /**
  * Joins a seam prefix onto an existing path: dot for plain segments
  * (`"address"` + `"zipCode"` → `"address.zipCode"`), no dot before an index segment
- * (`"items"` + `"[3]"` → `"items[3]"`), and an empty path yields just the prefix.
+ * (`"items"` + `"[3]"` → `"items[3]"`), an empty path yields just the prefix, and an
+ * empty prefix is a no-op yielding just the path.
  */
 private fun joinPath(
     prefix: String,
     path: String,
 ): String = when {
+    prefix.isEmpty() -> path
     path.isEmpty() -> prefix
     path.startsWith("[") -> "$prefix$path"
     else -> "$prefix.$path"
+}
+
+private fun unknownEnumMessage(
+    path: String,
+    enum: String,
+    value: Any,
+): String = if (path.isEmpty()) {
+    "Unknown wire value '$value' for enum $enum"
+} else {
+    "Unknown wire value '$value' for enum $enum at $path"
 }
 
 private fun conversionMessage(

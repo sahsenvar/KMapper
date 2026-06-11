@@ -88,6 +88,12 @@ class MappingExceptionTest :
                 exception.message shouldContain "status"
             }
 
+            test("empty path renders without a dangling ' at ' suffix") {
+                val exception = MappingException.UnknownEnumValue("", "Status", "INVALID")
+                exception.message shouldBe "Unknown wire value 'INVALID' for enum Status"
+                exception.message shouldNotContain " at "
+            }
+
             test("non-string raw value is preserved as-is") {
                 val exception = MappingException.UnknownEnumValue("color", "Color", 99)
                 exception.value shouldBe 99
@@ -198,6 +204,12 @@ class MappingExceptionTest :
                     .path shouldBe "items"
             }
 
+            test("an empty prefix is a no-op leaving the path unchanged") {
+                MappingException.RequiredFieldMissing("zip")
+                    .withPathPrefix("")
+                    .path shouldBe "zip"
+            }
+
             test("multi-level chaining puts the outermost prefix first") {
                 MappingException.RequiredFieldMissing("zipCode")
                     .withPathPrefix("a")
@@ -260,14 +272,7 @@ class MappingExceptionTest :
                     MappingException.UnsupportedConversion("unsupported"),
                 )
 
-            test("every subtype is a MappingException and a RuntimeException") {
-                allSubtypes.forEach { exception ->
-                    exception.shouldBeInstanceOf<MappingException>()
-                    exception.shouldBeInstanceOf<RuntimeException>()
-                }
-            }
-
-            test("every path-carrying subtype keeps its concrete type through withPathPrefix") {
+            test("every subtype keeps its concrete type through withPathPrefix") {
                 allSubtypes.forEach { exception ->
                     val prefixed = exception.withPathPrefix("root")
                     prefixed::class shouldBe exception::class

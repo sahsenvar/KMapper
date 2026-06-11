@@ -16,10 +16,10 @@ import platform.Foundation.NSURL
 object NsUrlStringConverter : MapTypeConverter<String, NSURL>(String::class, NSURL::class) {
     override fun convertToNonNull(value: String): NSURL = NSURL.URLWithString(value)
         ?: throw MappingException.TypeConversionFailed(
-            "",
-            "String",
-            "NSURL",
-            IllegalArgumentException("NSURL.URLWithString returned null for: $value"),
+            path = "",
+            from = "String",
+            to = "NSURL",
+            cause = IllegalArgumentException("NSURL.URLWithString returned null for: $value"),
         )
 
     override fun convertFromNonNull(value: NSURL): String = value.absoluteString ?: value.path ?: ""
