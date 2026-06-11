@@ -59,6 +59,8 @@ class ConverterShapeProbeProcessor(
 
     companion object {
         // Keep in sync with converterFixturesSource — unlisted declarations are silently skipped.
+        // The probe-line COUNT assertion in the test makes drift loud: every listed name must
+        // produce exactly one SHAPE: line.
         val PROBED_DECLARATION_NAMES = listOf(
             "fixtures.ForwardOnlyConverter",
             "fixtures.AnnotatedStubConverter",
@@ -67,8 +69,12 @@ class ConverterShapeProbeProcessor(
             "fixtures.OrNullAnnotatedConverter",
             "fixtures.TotalPlusOrNullConverter",
             "fixtures.BilateralConverter",
+            "fixtures.HelperOverloadConverter",
             "fixtures.DataModel",
             "fixtures.DoesNotExist",
+            // Classpath BINARY probe: a built-in from :core (inheritClassPath), asserting that
+            // BINARY-retained @UnsupportedDirection reasons stay readable cross-module.
+            "com.sahsenvar.kmapper.converter.builtin.LongIntConverter",
         )
     }
 }
@@ -159,6 +165,14 @@ class ConverterIntrospectorTest :
 
                 override fun convertFrom(target: Double): String = target.toString()
             }
+
+            /**
+             * Same-named helper OVERLOAD (two parameters, no override) and NO real override:
+             * must NOT count as declaring any direction.
+             */
+            object HelperOverloadConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
+                fun convertTo(source: String, radix: Int): Int = source.toInt(radix)
+            }
                 """.trimIndent(),
             )
 
@@ -241,12 +255,81 @@ class ConverterIntrospectorTest :
                         "orNullAnnotated=false"
                 }
 
+                then("a same-named helper overload without a real override declares NO direction") {
+                    compilationResult.messages shouldContain
+                        "SHAPE:fixtures.HelperOverloadConverter=" +
+                        "source=kotlin.String;target=kotlin.Int;" +
+                        "providesTo=false;providesFrom=false;" +
+                        "orNullOnlyTo=false;orNullOnlyFrom=false;" +
+                        "reasonTo=null;reasonFrom=null;" +
+                        "orNullAnnotated=false"
+                }
+
                 then("a non-converter class yields no shape") {
                     compilationResult.messages shouldContain "SHAPE:fixtures.DataModel=null"
                 }
 
                 then("an unresolvable FQN yields no shape") {
                     compilationResult.messages shouldContain "SHAPE:fixtures.DoesNotExist=null"
+                }
+
+                then("a classpath BINARY built-in keeps its @UnsupportedDirection reason readable cross-module") {
+                    compilationResult.messages shouldContain
+                        "SHAPE:com.sahsenvar.kmapper.converter.builtin.LongIntConverter=" +
+                        "source=kotlin.Long;target=kotlin.Int;" +
+                        "providesTo=false;providesFrom=true;" +
+                        "orNullOnlyTo=false;orNullOnlyFrom=false;" +
+                        "reasonTo=Long -> Int narrows and can truncate; convert explicitly if intended.;" +
+                        "reasonFrom=null;" +
+                        "orNullAnnotated=false"
+                }
+
+                then("every probed declaration produces exactly one SHAPE: line (drift is loud)") {
+                    Regex("SHAPE:").findAll(compilationResult.messages).count() shouldBe
+                        ConverterShapeProbeProcessor.PROBED_DECLARATION_NAMES.size
+                }
+            }
+        }
+
+        // Resolution-level coverage for detection hardening: a same-named helper overload
+        // (extra parameter, no `override`) must not masquerade as the total override. The
+        // needed direction is therefore NOT provided → guided compile error, never a Convert
+        // that would silently land on the throwing base method at runtime.
+        given("a mapping whose converter declares only a same-named helper overload, no real override") {
+            val helperOverloadMappingSource =
+                SourceFile.kotlin(
+                    "HelperOverloadMapping.kt",
+                    """
+                package fixtures
+
+                import com.sahsenvar.kmapper.annotations.KMapperConfig
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.converter.MapTypeConverter
+
+                /** Needed String -> Int direction exists only as a 2-parameter helper overload. */
+                object RadixHelperConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
+                    fun convertTo(source: String, radix: Int): Int = source.toInt(radix)
+                }
+
+                @KMapperConfig(converters = [RadixHelperConverter::class])
+                object MappingConfig
+
+                data class DomainModel(val amount: Int)
+
+                @MapTo(DomainModel::class)
+                data class DataModel(val amount: String)
+                    """.trimIndent(),
+                )
+
+            `when`("the mapping is compiled with the real processor") {
+                val (compilationResult, _) = compile(helperOverloadMappingSource)
+
+                then("compilation fails — the helper overload is not a provided direction") {
+                    compilationResult.exitCode shouldBe KotlinCompilation.ExitCode.COMPILATION_ERROR
+                }
+
+                then("the error carries the unsupported-conversion guidance, not a silent Convert") {
+                    compilationResult.messages shouldContain "conversion is unsupported"
                 }
             }
         }

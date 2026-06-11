@@ -8,6 +8,7 @@ import com.google.devtools.ksp.symbol.Modifier
 import com.sahsenvar.kmapper.missingConverterMessage
 import com.sahsenvar.kmapper.processor.model.FieldInfo
 import com.sahsenvar.kmapper.processor.model.MappingStrategy
+import com.sahsenvar.kmapper.processor.model.OnFailPolicy
 import com.sahsenvar.kmapper.unsupportedConversionMessage
 
 /**
@@ -44,7 +45,7 @@ class TypeMatcher(
         // Precondition: OnFail.Skip only makes sense for collection-like targets (compaction).
         val effectiveOnFail = sourceField.onFailFor(isReverse)
         val targetIsCollectionLike = isCollectionType(targetField.type) || isMapType(targetField.type)
-        if (effectiveOnFail == "Skip" && !targetIsCollectionLike) {
+        if (effectiveOnFail == OnFailPolicy.Skip && !targetIsCollectionLike) {
             logger.error(
                 "${sourceField.name}: OnFail.Skip applies to collection elements only; " +
                     "use OnFail.Throw or a nullable/defaulted target instead.",
@@ -52,15 +53,47 @@ class TypeMatcher(
             return MappingStrategy.Unmappable
         }
 
-        // Warning: nullable target fed from a non-null source can never receive null.
-        if (targetField.isNullable && !sourceField.isNullable) {
+        val strategy = resolveStrategy(sourceField, targetField, isReverse)
+
+        // Strategy-aware dead-'?' warning, AFTER resolution and only at this entry point
+        // (element-level recursion goes through resolveStrategy, so it fires once per field):
+        // a nullable target fed from a non-null source is dead ONLY when the resolved
+        // strategy provably never yields null.
+        if (targetField.isNullable && !sourceField.isNullable && neverYieldsNull(strategy)) {
             logger.warn(
                 "${sourceField.name}: target is nullable but mapping from a non-null source never produces null " +
                     "(dead '?'); consider dropping the '?' on the target.",
             )
         }
 
-        return resolveStrategy(sourceField, targetField, isReverse)
+        return strategy
+    }
+
+    /**
+     * True when [strategy] can never produce null from a non-null source: plain value flows
+     * (Direct, enum bridges, nested mapper, collection/map shapes) and converter calls whose
+     * resolved direction declares no OrNull variant. NOT true for OptionUnwrap (None becomes
+     * null) or a converter direction WITH a declared OrNull variant (sanctioned null).
+     */
+    private fun neverYieldsNull(strategy: MappingStrategy): Boolean = when (strategy) {
+        is MappingStrategy.Direct,
+        is MappingStrategy.EnumToWire,
+        is MappingStrategy.EnumFromWire,
+        is MappingStrategy.Nested,
+        is MappingStrategy.Collection,
+        is MappingStrategy.MapValues,
+        is MappingStrategy.WrappedCollection,
+        -> true
+
+        is MappingStrategy.Convert -> !resolvedDirectionDeclaresOrNull(strategy)
+
+        else -> false
+    }
+
+    /** True when the [strategy]'s resolved direction declares its OrNull variant (sanctioned null). */
+    private fun resolvedDirectionDeclaresOrNull(strategy: MappingStrategy.Convert): Boolean {
+        val shape = introspector?.shapeOf(strategy.converterFqn) ?: return false
+        return if (strategy.forward) shape.declaredToOrNull else shape.declaredFromOrNull
     }
 
     private fun resolveStrategy(
@@ -88,18 +121,13 @@ class TypeMatcher(
 
         if (wrapperFqn != null && isCollectionType(sourceField.type)) {
             // Target is a wrapped collection (e.g. PersistentList); source is a plain List/Set.
+            // Elements run the same full resolution as the other container shapes — no silent
+            // Direct fallback for element pairs that actually need a converter.
             val sourceElementType = extractCollectionElementType(sourceField.type)
             val targetElementType = extractCollectionElementType(targetField.type)
             val elementStrategy =
                 if (sourceElementType != null && targetElementType != null) {
-                    if (isSameType(sourceElementType, targetElementType)) {
-                        MappingStrategy.Direct
-                    } else if (isDataClass(sourceElementType) && isDataClass(targetElementType)) {
-                        val mapperName = "to${targetElementType.declaration.simpleName.asString()}"
-                        MappingStrategy.Nested(mapperName)
-                    } else {
-                        MappingStrategy.Direct
-                    }
+                    resolveElementStrategy(sourceField, targetField, sourceElementType, targetElementType, isReverse)
                 } else {
                     MappingStrategy.Direct
                 }
@@ -122,20 +150,7 @@ class TypeMatcher(
                 srcVal != null &&
                 tgtVal != null
             ) {
-                val valueStrategy =
-                    if (isSameType(srcVal, tgtVal)) {
-                        MappingStrategy.Direct
-                    } else if (isDataClass(srcVal) && isDataClass(tgtVal)) {
-                        MappingStrategy.Nested("to${tgtVal.declaration.simpleName.asString()}")
-                    } else {
-                        // Value conversion: recurse with synthetic value-typed FieldInfos so the
-                        // pair-keyed converter resolution (directive > custom > built-in) applies.
-                        resolveStrategy(
-                            sourceField.copy(type = srcVal, isNullable = srcVal.isMarkedNullable),
-                            targetField.copy(type = tgtVal, isNullable = tgtVal.isMarkedNullable),
-                            isReverse,
-                        )
-                    }
+                val valueStrategy = resolveElementStrategy(sourceField, targetField, srcVal, tgtVal, isReverse)
                 return MappingStrategy.MapValues(valueStrategy)
             }
             // Key type mismatch (or missing type args) → Unmappable; do NOT fall through
@@ -154,26 +169,7 @@ class TypeMatcher(
 
             if (sourceElementType != null && targetElementType != null) {
                 val elementStrategy =
-                    if (isSameType(sourceElementType, targetElementType)) {
-                        MappingStrategy.Direct
-                    } else if (isDataClass(sourceElementType) && isDataClass(targetElementType)) {
-                        val mapperName = "to${targetElementType.declaration.simpleName.asString()}"
-                        MappingStrategy.Nested(mapperName)
-                    } else {
-                        // Element conversion: recurse with synthetic element-typed FieldInfos so the
-                        // pair-keyed converter resolution (directive > custom > built-in) applies.
-                        resolveStrategy(
-                            sourceField.copy(
-                                type = sourceElementType,
-                                isNullable = sourceElementType.isMarkedNullable,
-                            ),
-                            targetField.copy(
-                                type = targetElementType,
-                                isNullable = targetElementType.isMarkedNullable,
-                            ),
-                            isReverse,
-                        )
-                    }
+                    resolveElementStrategy(sourceField, targetField, sourceElementType, targetElementType, isReverse)
                 val isSet = isSetCollectionType(targetField.type)
                 return MappingStrategy.Collection(elementStrategy, isSet)
             }
@@ -260,6 +256,32 @@ class TypeMatcher(
     }
 
     /**
+     * Shared element-level resolution for the three container shapes (plain Collection,
+     * Map values, @CollectionWrapper targets): same type → Direct, data-class pair → Nested,
+     * anything else recurses into the full pair-keyed converter resolution with synthetic
+     * element-typed FieldInfos (directive > custom > built-in, compile errors included).
+     */
+    private fun resolveElementStrategy(
+        sourceField: FieldInfo,
+        targetField: FieldInfo,
+        sourceElementType: KSType,
+        targetElementType: KSType,
+        isReverse: Boolean,
+    ): MappingStrategy = when {
+        isSameType(sourceElementType, targetElementType) -> MappingStrategy.Direct
+
+        isDataClass(sourceElementType) && isDataClass(targetElementType) ->
+            MappingStrategy.Nested("to${targetElementType.declaration.simpleName.asString()}")
+
+        else ->
+            resolveStrategy(
+                sourceField.copy(type = sourceElementType, isNullable = sourceElementType.isMarkedNullable),
+                targetField.copy(type = targetElementType, isNullable = targetElementType.isMarkedNullable),
+                isReverse,
+            )
+    }
+
+    /**
      * Resolves a referenced converter against the field pair, orientation-aware:
      * matches the field's (source, target) to the converter's (S, T) to pick the call
      * direction, then checks the needed direction is provided. Errors (compile-time):
@@ -278,13 +300,23 @@ class TypeMatcher(
         val targetFqn = targetField.type.fqn()
         val shape = introspector?.shapeOf(converterFqn)
         if (shape == null) {
-            logger.error("${sourceField.name}: " + missingConverterMessage(sourceFqn, targetFqn))
+            // Distinguish "reference does not resolve at all" from "resolves but is not a
+            // converter": the latter gets a precise message instead of the generic missing one.
+            if (introspector != null && introspector.declarationExists(converterFqn)) {
+                logger.error(
+                    "${sourceField.name}: $converterFqn is not a direct MapTypeConverter subtype — " +
+                        "converters must extend MapTypeConverter<S, T> directly.",
+                )
+            } else {
+                logger.error("${sourceField.name}: " + missingConverterMessage(sourceFqn, targetFqn))
+            }
             return MappingStrategy.Unmappable
         }
-        if (shape.orNullAnnotated) {
+        if (shape.orNullAnnotatedFunction != null) {
             logger.error(
                 "${sourceField.name}: @UnsupportedDirection must annotate the total method " +
-                    "(convertTo/convertFrom), not an OrNull variant — converter $converterFqn",
+                    "(convertTo/convertFrom), not the OrNull variant " +
+                    "${shape.orNullAnnotatedFunction} — converter $converterFqn",
             )
             return MappingStrategy.Unmappable
         }

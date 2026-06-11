@@ -3,13 +3,29 @@ package com.sahsenvar.kmapper.processor.model
 import com.google.devtools.ksp.symbol.KSType
 
 /**
+ * Processor-side mirror of `com.sahsenvar.kmapper.annotations.OnFail` — typed so policy
+ * comparisons are exhaustive instead of stringly.
+ */
+enum class OnFailPolicy {
+    Auto,
+    Throw,
+    Skip,
+    ;
+
+    companion object {
+        /** Parses an annotation argument's simple name; unknown or absent → [Auto]. */
+        fun parse(rawName: String?): OnFailPolicy = entries.firstOrNull { it.name == rawName } ?: Auto
+    }
+}
+
+/**
  * Per-field converter/policy override read from @ConvertWith / @ConvertTo / @ConvertFrom.
  */
 data class ConverterDirective(
     /** null = keep auto-discovery (the `use` parameter was left at its sentinel). */
     val converterFqn: String?,
-    /** "Auto" | "Throw" | "Skip" — mirror of com.sahsenvar.kmapper.annotations.OnFail. */
-    val onFail: String,
+    /** Failure policy for the directive's direction(s). */
+    val onFail: OnFailPolicy,
 )
 
 /**
@@ -43,8 +59,12 @@ data class FieldInfo(
     val usesDefaultInMapping: Boolean get() = hasDefault && !ignoreDefaultValue
 
     /** Effective directive for the requested direction (direction-scoped beats bilateral). */
-    fun directiveFor(isReverse: Boolean): ConverterDirective? = if (isReverse) convertFromDirective ?: convertWith else convertToDirective ?: convertWith
+    fun directiveFor(isReverse: Boolean): ConverterDirective? = if (isReverse) {
+        convertFromDirective ?: convertWith
+    } else {
+        convertToDirective ?: convertWith
+    }
 
-    /** Effective onFail policy for the requested direction; "Auto" when no directive applies. */
-    fun onFailFor(isReverse: Boolean): String = directiveFor(isReverse)?.onFail ?: "Auto"
+    /** Effective onFail policy for the requested direction; [OnFailPolicy.Auto] when no directive applies. */
+    fun onFailFor(isReverse: Boolean): OnFailPolicy = directiveFor(isReverse)?.onFail ?: OnFailPolicy.Auto
 }

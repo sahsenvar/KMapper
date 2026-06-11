@@ -2,11 +2,13 @@ package com.sahsenvar.kmapper.processor.analyzer
 
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSAnnotated
+import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.sahsenvar.kmapper.processor.model.ConverterDirective
 import com.sahsenvar.kmapper.processor.model.FieldInfo
+import com.sahsenvar.kmapper.processor.model.OnFailPolicy
 
 /**
  * Analyzes fields (constructor parameters) and extracts mapping annotations.
@@ -77,10 +79,16 @@ class FieldAnalyzer(
                 extractConverterDirective(param, "ConvertFrom")
                     ?: property?.let { extractConverterDirective(it, "ConvertFrom") }
             val isIgnored = extractIgnore(param) || (property?.let { extractIgnore(it) } == true)
+            // UNION of param-site and property-site validators (param-site first), deduplicated preserving order.
             val validators =
-                extractValidators(param).ifEmpty { property?.let { extractValidators(it) } ?: emptyList() }
+                (extractValidators(param) + (property?.let { extractValidators(it) } ?: emptyList())).distinct()
             val ignoreDefaultValue =
                 extractIgnoreDefaultValue(param) || (property?.let { extractIgnoreDefaultValue(it) } == true)
+            if (ignoreDefaultValue && !param.hasDefault) {
+                logger.warn(
+                    "$fieldName: @IgnoreDefaultValue has no effect — the field declares no constructor default.",
+                )
+            }
 
             result.add(
                 FieldInfo(
@@ -113,6 +121,13 @@ class FieldAnalyzer(
                     val isIgnored = extractIgnore(property)
                     val validators = extractValidators(property)
                     val ignoreDefaultValue = extractIgnoreDefaultValue(property)
+                    if (ignoreDefaultValue) {
+                        // Computed properties never have a constructor default to ignore.
+                        logger.warn(
+                            "$propertyName: @IgnoreDefaultValue has no effect — " +
+                                "the field declares no constructor default.",
+                        )
+                    }
 
                     result.add(
                         FieldInfo(
@@ -138,6 +153,19 @@ class FieldAnalyzer(
     }
 
     /**
+     * Shared KMapper-annotation matcher: shortName fast-path first (no resolve() cost),
+     * falling back to the resolved `com.sahsenvar.kmapper.annotations.<shortName>` FQN.
+     */
+    private fun KSAnnotation.isKMapperAnnotation(annotationShortName: String): Boolean = shortName.asString() == annotationShortName ||
+        annotationType
+            .resolve()
+            .declaration.qualifiedName
+            ?.asString() == "com.sahsenvar.kmapper.annotations.$annotationShortName"
+
+    /** First KMapper annotation named [annotationShortName] on this node, or null (shortName-OR-fqn semantics). */
+    private fun KSAnnotated.findKMapperAnnotation(annotationShortName: String): KSAnnotation? = annotations.firstOrNull { it.isKMapperAnnotation(annotationShortName) }
+
+    /**
      * Extracts all @FieldMap annotations from a field/property.
      * Returns a map of targetClass FQN -> list of target field names.
      * Supports multiple @FieldMap annotations for the same targetClass.
@@ -146,15 +174,8 @@ class FieldAnalyzer(
         val result = mutableMapOf<String, MutableList<String>>()
 
         annotated.annotations
-            .filter {
-                val shortName = it.shortName.asString()
-                val qualifiedName =
-                    it.annotationType
-                        .resolve()
-                        .declaration.qualifiedName
-                        ?.asString()
-                shortName == "FieldMap" || qualifiedName == "com.sahsenvar.kmapper.annotations.FieldMap"
-            }.forEach { annotation ->
+            .filter { it.isKMapperAnnotation("FieldMap") }
+            .forEach { annotation ->
                 val fieldName =
                     annotation.arguments
                         .firstOrNull { it.name?.asString() == "fieldName" }
@@ -184,8 +205,6 @@ class FieldAnalyzer(
         return result
     }
 
-    private fun extractFieldMapTarget(annotated: KSAnnotated): String? = extractFieldMapTargets(annotated).values.firstOrNull()?.firstOrNull()
-
     /**
      * Extracts a [ConverterDirective] from the @ConvertWith / @ConvertTo / @ConvertFrom
      * annotation named [shortName], or null when the annotation is absent.
@@ -197,15 +216,7 @@ class FieldAnalyzer(
         annotated: KSAnnotated,
         shortName: String,
     ): ConverterDirective? {
-        val annotationFqn = "com.sahsenvar.kmapper.annotations.$shortName"
-        val annotation =
-            annotated.annotations.firstOrNull {
-                it.shortName.asString() == shortName ||
-                    it.annotationType
-                        .resolve()
-                        .declaration.qualifiedName
-                        ?.asString() == annotationFqn
-            } ?: return null
+        val annotation = annotated.findKMapperAnnotation(shortName) ?: return null
 
         val useArgument = annotation.arguments.firstOrNull { it.name?.asString() == "use" }?.value as? KSType
         val useFqn =
@@ -216,50 +227,23 @@ class FieldAnalyzer(
                 ?.takeIf { it != "com.sahsenvar.kmapper.converter.MapTypeConverter" } // sentinel = unset
 
         val onFail =
-            annotation.arguments
-                .firstOrNull { it.name?.asString() == "onFail" }
-                ?.value
-                ?.toString()
-                ?.substringAfterLast('.') ?: "Auto"
+            OnFailPolicy.parse(
+                annotation.arguments
+                    .firstOrNull { it.name?.asString() == "onFail" }
+                    ?.value
+                    ?.toString()
+                    ?.substringAfterLast('.'),
+            )
 
         return ConverterDirective(converterFqn = useFqn, onFail = onFail)
     }
 
-    private fun extractIgnore(annotated: KSAnnotated): Boolean = annotated.annotations.any {
-        val shortName = it.shortName.asString()
-        val qualifiedName =
-            it.annotationType
-                .resolve()
-                .declaration.qualifiedName
-                ?.asString()
-        shortName == "IgnoreMap" || qualifiedName == "com.sahsenvar.kmapper.annotations.IgnoreMap"
-    }
+    private fun extractIgnore(annotated: KSAnnotated): Boolean = annotated.findKMapperAnnotation("IgnoreMap") != null
 
-    private fun extractIgnoreDefaultValue(annotated: KSAnnotated): Boolean = annotated.annotations.any {
-        val shortName = it.shortName.asString()
-        val qualifiedName =
-            it.annotationType
-                .resolve()
-                .declaration.qualifiedName
-                ?.asString()
-        shortName == "IgnoreDefaultValue" || qualifiedName == "com.sahsenvar.kmapper.annotations.IgnoreDefaultValue"
-    }
+    private fun extractIgnoreDefaultValue(annotated: KSAnnotated): Boolean = annotated.findKMapperAnnotation("IgnoreDefaultValue") != null
 
-    private fun extractValidators(annotated: KSAnnotated): List<String> = extractValidatorFqns(annotated, "Validate", "com.sahsenvar.kmapper.annotations.Validate")
-
-    private fun extractValidatorFqns(
-        annotated: KSAnnotated,
-        shortName: String,
-        fqn: String,
-    ): List<String> {
-        val annotation =
-            annotated.annotations.firstOrNull {
-                it.shortName.asString() == shortName ||
-                    it.annotationType
-                        .resolve()
-                        .declaration.qualifiedName
-                        ?.asString() == fqn
-            } ?: return emptyList()
+    private fun extractValidators(annotated: KSAnnotated): List<String> {
+        val annotation = annotated.findKMapperAnnotation("Validate") ?: return emptyList()
 
         // vararg validators: KClass<*> vararg — annotation.arguments[0].value is List<KSType>
         @Suppress("UNCHECKED_CAST")

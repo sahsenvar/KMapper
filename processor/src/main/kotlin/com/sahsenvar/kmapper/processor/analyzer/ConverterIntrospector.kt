@@ -4,6 +4,7 @@ import com.google.devtools.ksp.getDeclaredFunctions
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.Modifier
 
 /**
  * Which directions a converter provides, and any declared @UnsupportedDirection reasons.
@@ -31,9 +32,16 @@ data class ConverterShape(
     val unsupportedToReason: String?,
     /** Reason from @UnsupportedDirection on convertFrom, or null when not annotated. */
     val unsupportedFromReason: String?,
-    /** @UnsupportedDirection found on an OrNull variant — compile error at resolution. */
-    val orNullAnnotated: Boolean,
+    /**
+     * Name of the OrNull variant carrying a misplaced @UnsupportedDirection (e.g.
+     * "convertToOrNull"), or null when no OrNull variant is annotated — compile error
+     * at resolution, naming the offending function.
+     */
+    val orNullAnnotatedFunction: String?,
 ) {
+    /** True when an OrNull variant carries a misplaced @UnsupportedDirection. */
+    val orNullAnnotated: Boolean get() = orNullAnnotatedFunction != null
+
     /** True when the S -> T direction is provided: total convertTo declared, not annotated. */
     val providesTo: Boolean get() = declaredToTotal && unsupportedToReason == null
 
@@ -58,12 +66,39 @@ class ConverterIntrospector(
 ) {
     private val converterBaseFqn = "com.sahsenvar.kmapper.converter.MapTypeConverter"
     private val unsupportedDirectionFqn = "com.sahsenvar.kmapper.converter.UnsupportedDirection"
+    private val directionFunctionNames = setOf("convertTo", "convertFrom", "convertToOrNull", "convertFromOrNull")
+
+    // Per-instance memo: the introspector is created fresh each KSP round, so cached
+    // shapes can never go stale. Null results (non-converters) recompute — cheap and rare.
+    private val shapeCache = mutableMapOf<String, ConverterShape?>()
+
+    // MapTypeConverter's own direction methods by simple name — the overridee side of the
+    // resolver.overrides check for BINARY declarations (see [isRealDirectionOverride]).
+    private val baseDirectionFunctions: Map<String, KSFunctionDeclaration> by lazy {
+        resolver
+            .getClassDeclarationByName(resolver.getKSNameFromString(converterBaseFqn))
+            ?.getDeclaredFunctions()
+            ?.filter { it.simpleName.asString() in directionFunctionNames }
+            ?.associateBy { it.simpleName.asString() }
+            ?: emptyMap()
+    }
 
     /**
      * Returns the [ConverterShape] for [converterFqn], or null when the declaration cannot
-     * be resolved or does not extend MapTypeConverter<S, T> directly.
+     * be resolved or does not extend MapTypeConverter<S, T> directly. Memoized per instance.
      */
-    fun shapeOf(converterFqn: String): ConverterShape? {
+    fun shapeOf(converterFqn: String): ConverterShape? = shapeCache.getOrPut(converterFqn) { introspectShape(converterFqn) }
+
+    /**
+     * True when [converterFqn] resolves to ANY class declaration — converter or not.
+     * Lets callers distinguish "reference does not resolve" from "resolves but is not
+     * a direct MapTypeConverter subtype" when [shapeOf] returns null.
+     */
+    fun declarationExists(converterFqn: String): Boolean = resolver.getClassDeclarationByName(
+        resolver.getKSNameFromString(converterFqn),
+    ) != null
+
+    private fun introspectShape(converterFqn: String): ConverterShape? {
         val declaration = resolver.getClassDeclarationByName(
             resolver.getKSNameFromString(converterFqn),
         ) ?: return null
@@ -78,10 +113,14 @@ class ConverterIntrospector(
         var declaredFromOrNull = false
         var reasonTo: String? = null
         var reasonFrom: String? = null
-        var orNullAnnotated = false
+        var orNullAnnotatedFunction: String? = null
         declaration.getDeclaredFunctions().forEach { function ->
+            // Only a REAL override of the single-parameter base method counts: same-named
+            // helper overloads (extra parameters) or non-override declarations never
+            // declare a direction.
+            if (!isRealDirectionOverride(function)) return@forEach
             val reason = unsupportedReasonOf(function)
-            when (function.simpleName.asString()) {
+            when (val functionName = function.simpleName.asString()) {
                 "convertTo" -> {
                     declaredToTotal = true
                     if (reason != null) reasonTo = reason
@@ -92,11 +131,11 @@ class ConverterIntrospector(
                 }
                 "convertToOrNull" -> {
                     declaredToOrNull = true
-                    if (reason != null) orNullAnnotated = true
+                    if (reason != null) orNullAnnotatedFunction = functionName
                 }
                 "convertFromOrNull" -> {
                     declaredFromOrNull = true
-                    if (reason != null) orNullAnnotated = true
+                    if (reason != null) orNullAnnotatedFunction = functionName
                 }
             }
         }
@@ -109,14 +148,32 @@ class ConverterIntrospector(
             declaredFromOrNull = declaredFromOrNull,
             unsupportedToReason = reasonTo,
             unsupportedFromReason = reasonFrom,
-            orNullAnnotated = orNullAnnotated,
+            orNullAnnotatedFunction = orNullAnnotatedFunction,
         )
+    }
+
+    /**
+     * True when [function] is a genuine override of one of MapTypeConverter's four
+     * single-parameter direction methods. Two gates:
+     * - exactly one parameter — same-named helper overloads never count;
+     * - Modifier.OVERRIDE (source declarations, fast path) OR resolver.overrides against
+     *   the base method — BINARY declarations surface no OVERRIDE modifier in KSP, so the
+     *   resolver answers for classpath converters (e.g. the built-ins from :core).
+     */
+    private fun isRealDirectionOverride(function: KSFunctionDeclaration): Boolean {
+        if (function.parameters.size != 1) return false
+        if (Modifier.OVERRIDE in function.modifiers) return true
+        val baseFunction = baseDirectionFunctions[function.simpleName.asString()] ?: return false
+        return resolver.overrides(function, baseFunction)
     }
 
     /** Reads the `reason` argument of @UnsupportedDirection on [function], or null when absent. */
     private fun unsupportedReasonOf(function: KSFunctionDeclaration): String? = function.annotations
         .firstOrNull {
-            it.annotationType.resolve().declaration.qualifiedName?.asString() == unsupportedDirectionFqn
+            // shortName fast-path first (FieldAnalyzer's idiom): the costly resolve() only
+            // runs for annotations whose short name does not already match.
+            it.shortName.asString() == "UnsupportedDirection" ||
+                it.annotationType.resolve().declaration.qualifiedName?.asString() == unsupportedDirectionFqn
         }?.arguments
         ?.firstOrNull { it.name?.asString() == "reason" }
         ?.value as? String
