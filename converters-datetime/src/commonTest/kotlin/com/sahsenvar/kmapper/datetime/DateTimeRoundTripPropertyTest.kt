@@ -1,6 +1,6 @@
 package com.sahsenvar.kmapper.datetime
 
-import com.sahsenvar.kmapper.converter.builtin.LongInstantConverter
+import com.sahsenvar.kmapper.converter.builtin.InstantLongConverter
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.long
@@ -10,7 +10,7 @@ import kotlin.test.Test
 
 /**
  * Property-based round-trip tests for datetime converters.
- * LongInstantConverter lives in :core (api dependency), so it is accessible here.
+ * InstantLongConverter lives in :core (api dependency), so it is accessible here.
  * checkAll is suspend → wrapped in runBlocking.
  */
 class DateTimeRoundTripPropertyTest {
@@ -21,8 +21,9 @@ class DateTimeRoundTripPropertyTest {
         // millis clamp differently per platform. Bound to a realistic timestamp range (year 0001..9999).
         runBlocking {
             checkAll(Arb.long(-62_135_596_800_000L..253_402_300_799_000L)) { millis ->
-                LongInstantConverter.convertFromNonNull(
-                    LongInstantConverter.convertToNonNull(millis),
+                // Richer-first InstantLongConverter: convertFrom parses millis, convertTo formats back.
+                InstantLongConverter.convertTo(
+                    InstantLongConverter.convertFrom(millis),
                 ) shouldBe millis
             }
         }
@@ -43,8 +44,8 @@ class DateTimeRoundTripPropertyTest {
                 "1900-01-01",
             )
         for (date in sampleDates) {
-            StringLocalDateConverter.convertFromNonNull(
-                StringLocalDateConverter.convertToNonNull(date),
+            StringLocalDateConverter.convertFrom(
+                StringLocalDateConverter.convertTo(date),
             ) shouldBe date
         }
     }

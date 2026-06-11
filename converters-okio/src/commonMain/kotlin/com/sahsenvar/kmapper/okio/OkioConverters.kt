@@ -9,21 +9,21 @@ import okio.Path.Companion.toPath
 
 /** [String] ↔ [okio.ByteString] via UTF-8 encoding. */
 object StringByteStringConverter : MapTypeConverter<String, ByteString>(String::class, ByteString::class) {
-    override fun convertToNonNull(value: String): ByteString = value.encodeUtf8()
+    override fun convertTo(source: String): ByteString = source.encodeUtf8()
 
-    override fun convertFromNonNull(value: ByteString): String = value.utf8()
+    override fun convertFrom(target: ByteString): String = target.utf8()
 }
 
 /** [ByteArray] ↔ [okio.ByteString]. */
 object ByteArrayByteStringConverter : MapTypeConverter<ByteArray, ByteString>(ByteArray::class, ByteString::class) {
-    override fun convertToNonNull(value: ByteArray): ByteString = value.toByteString()
+    override fun convertTo(source: ByteArray): ByteString = source.toByteString()
 
-    override fun convertFromNonNull(value: ByteString): ByteArray = value.toByteArray()
+    override fun convertFrom(target: ByteString): ByteArray = target.toByteArray()
 }
 
 /** [String] ↔ [okio.Path]. */
 object StringPathConverter : MapTypeConverter<String, Path>(String::class, Path::class) {
-    override fun convertToNonNull(value: String): Path = value.toPath()
+    override fun convertTo(source: String): Path = source.toPath()
 
-    override fun convertFromNonNull(value: Path): String = value.toString()
+    override fun convertFrom(target: Path): String = target.toString()
 }

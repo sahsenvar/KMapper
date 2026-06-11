@@ -17,8 +17,8 @@ class BigNumberRoundTripPropertyTest {
     fun longBigInteger_Long_BigInteger_Long_round_trip() {
         runBlocking {
             checkAll(Arb.long()) { n ->
-                LongBigIntegerConverter.convertFromNonNull(
-                    LongBigIntegerConverter.convertToNonNull(n),
+                LongBigIntegerConverter.convertFrom(
+                    LongBigIntegerConverter.convertTo(n),
                 ) shouldBe n
             }
         }
@@ -31,8 +31,8 @@ class BigNumberRoundTripPropertyTest {
         runBlocking {
             checkAll(Arb.long()) { n ->
                 val original = BigDecimal.fromLong(n)
-                StringBigDecimalConverter.convertToNonNull(
-                    StringBigDecimalConverter.convertFromNonNull(original),
+                StringBigDecimalConverter.convertTo(
+                    StringBigDecimalConverter.convertFrom(original),
                 ) shouldBe original
             }
         }

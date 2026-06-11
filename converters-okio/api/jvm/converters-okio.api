@@ -1,24 +1,24 @@
 public final class com/sahsenvar/kmapper/okio/ByteArrayByteStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/okio/ByteArrayByteStringConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Lokio/ByteString;)[B
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull ([B)Lokio/ByteString;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Lokio/ByteString;)[B
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo ([B)Lokio/ByteString;
 }
 
 public final class com/sahsenvar/kmapper/okio/StringByteStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/okio/StringByteStringConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Lokio/ByteString;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Lokio/ByteString;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Lokio/ByteString;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Lokio/ByteString;
 }
 
 public final class com/sahsenvar/kmapper/okio/StringPathConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/okio/StringPathConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Lokio/Path;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Lokio/Path;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Lokio/Path;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Lokio/Path;
 }
 

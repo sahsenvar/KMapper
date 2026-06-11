@@ -8,13 +8,13 @@ class NsUrlConverterTest {
     private val normalizedUrl = "https://example.com/"
 
     @Test fun `NsUrlStringConverter round-trip normalized URL`() {
-        val nsUrl = NsUrlStringConverter.convertToNonNull(normalizedUrl)
-        NsUrlStringConverter.convertFromNonNull(nsUrl) shouldBe normalizedUrl
+        val nsUrl = NsUrlStringConverter.convertTo(normalizedUrl)
+        NsUrlStringConverter.convertFrom(nsUrl) shouldBe normalizedUrl
     }
 
     @Test fun `NsUrlStringConverter round-trip path URL`() {
         val pathUrl = "https://api.example.com/v1/resource"
-        val nsUrl = NsUrlStringConverter.convertToNonNull(pathUrl)
-        NsUrlStringConverter.convertFromNonNull(nsUrl) shouldBe pathUrl
+        val nsUrl = NsUrlStringConverter.convertTo(pathUrl)
+        NsUrlStringConverter.convertFrom(nsUrl) shouldBe pathUrl
     }
 }

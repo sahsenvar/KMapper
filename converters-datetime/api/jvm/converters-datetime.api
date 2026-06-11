@@ -1,96 +1,96 @@
 public final class com/sahsenvar/kmapper/datetime/KotlinJavaInstantConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/KotlinJavaInstantConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Ljava/time/Instant;)Lkotlinx/datetime/Instant;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Lkotlinx/datetime/Instant;)Ljava/time/Instant;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/time/Instant;)Lkotlinx/datetime/Instant;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Lkotlinx/datetime/Instant;)Ljava/time/Instant;
 }
 
 public final class com/sahsenvar/kmapper/datetime/KotlinJavaLocalDateConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/KotlinJavaLocalDateConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Ljava/time/LocalDate;)Lkotlinx/datetime/LocalDate;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Lkotlinx/datetime/LocalDate;)Ljava/time/LocalDate;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/time/LocalDate;)Lkotlinx/datetime/LocalDate;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Lkotlinx/datetime/LocalDate;)Ljava/time/LocalDate;
 }
 
 public final class com/sahsenvar/kmapper/datetime/LongJavaInstantConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/LongJavaInstantConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Ljava/time/Instant;)Ljava/lang/Long;
-	public fun convertToNonNull (J)Ljava/time/Instant;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/time/Instant;)Ljava/lang/Long;
+	public fun convertTo (J)Ljava/time/Instant;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class com/sahsenvar/kmapper/datetime/StringJavaInstantConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringJavaInstantConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Ljava/time/Instant;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/time/Instant;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/time/Instant;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Ljava/time/Instant;
 }
 
 public final class com/sahsenvar/kmapper/datetime/StringJavaLocalDateConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringJavaLocalDateConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Ljava/time/LocalDate;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/time/LocalDate;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/time/LocalDate;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Ljava/time/LocalDate;
 }
 
 public final class com/sahsenvar/kmapper/datetime/StringJavaLocalDateTimeConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringJavaLocalDateTimeConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Ljava/time/LocalDateTime;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/time/LocalDateTime;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/time/LocalDateTime;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Ljava/time/LocalDateTime;
 }
 
 public final class com/sahsenvar/kmapper/datetime/StringJavaLocalTimeConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringJavaLocalTimeConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Ljava/time/LocalTime;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/time/LocalTime;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/time/LocalTime;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Ljava/time/LocalTime;
 }
 
 public final class com/sahsenvar/kmapper/datetime/StringJavaOffsetDateTimeConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringJavaOffsetDateTimeConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Ljava/time/OffsetDateTime;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/time/OffsetDateTime;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/time/OffsetDateTime;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Ljava/time/OffsetDateTime;
 }
 
 public final class com/sahsenvar/kmapper/datetime/StringJavaZonedDateTimeConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringJavaZonedDateTimeConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Ljava/time/ZonedDateTime;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/time/ZonedDateTime;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/time/ZonedDateTime;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Ljava/time/ZonedDateTime;
 }
 
 public final class com/sahsenvar/kmapper/datetime/StringLocalDateConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringLocalDateConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Lkotlinx/datetime/LocalDate;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Lkotlinx/datetime/LocalDate;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Lkotlinx/datetime/LocalDate;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Lkotlinx/datetime/LocalDate;
 }
 
 public final class com/sahsenvar/kmapper/datetime/StringLocalDateTimeConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringLocalDateTimeConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Lkotlinx/datetime/LocalDateTime;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Lkotlinx/datetime/LocalDateTime;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Lkotlinx/datetime/LocalDateTime;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Lkotlinx/datetime/LocalDateTime;
 }
 
 public final class com/sahsenvar/kmapper/datetime/StringLocalTimeConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringLocalTimeConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Lkotlinx/datetime/LocalTime;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Lkotlinx/datetime/LocalTime;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Lkotlinx/datetime/LocalTime;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Lkotlinx/datetime/LocalTime;
 }
 

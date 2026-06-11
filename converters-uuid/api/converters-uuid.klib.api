@@ -7,6 +7,6 @@
 
 // Library unique name: <io.github.sahsenvar:converters-uuid>
 final object com.sahsenvar.kmapper.uuid/StringUuidConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, kotlin.uuid/Uuid> { // com.sahsenvar.kmapper.uuid/StringUuidConverter|null[0]
-    final fun convertFromNonNull(kotlin.uuid/Uuid): kotlin/String // com.sahsenvar.kmapper.uuid/StringUuidConverter.convertFromNonNull|convertFromNonNull(kotlin.uuid.Uuid){}[0]
-    final fun convertToNonNull(kotlin/String): kotlin.uuid/Uuid // com.sahsenvar.kmapper.uuid/StringUuidConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+    final fun convertFrom(kotlin.uuid/Uuid): kotlin/String // com.sahsenvar.kmapper.uuid/StringUuidConverter.convertFrom|convertFrom(kotlin.uuid.Uuid){}[0]
+    final fun convertTo(kotlin/String): kotlin.uuid/Uuid // com.sahsenvar.kmapper.uuid/StringUuidConverter.convertTo|convertTo(kotlin.String){}[0]
 }

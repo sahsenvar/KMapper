@@ -9,15 +9,15 @@ class OkioConverterTest {
 
     @Test fun `StringByteStringConverter round-trip non-empty`() {
         val original = "hello KMapper"
-        StringByteStringConverter.convertFromNonNull(
-            StringByteStringConverter.convertToNonNull(original),
+        StringByteStringConverter.convertFrom(
+            StringByteStringConverter.convertTo(original),
         ) shouldBe original
     }
 
     @Test fun `StringByteStringConverter round-trip empty string`() {
         val original = ""
-        StringByteStringConverter.convertFromNonNull(
-            StringByteStringConverter.convertToNonNull(original),
+        StringByteStringConverter.convertFrom(
+            StringByteStringConverter.convertTo(original),
         ) shouldBe original
     }
 
@@ -26,8 +26,8 @@ class OkioConverterTest {
     @Test fun `ByteArrayByteStringConverter round-trip`() {
         val original = byteArrayOf(1, 2, 3, 4, 127, -1)
         val roundTripped =
-            ByteArrayByteStringConverter.convertFromNonNull(
-                ByteArrayByteStringConverter.convertToNonNull(original),
+            ByteArrayByteStringConverter.convertFrom(
+                ByteArrayByteStringConverter.convertTo(original),
             )
         assertTrue(roundTripped.contentEquals(original), "ByteArray contents must be equal")
     }
@@ -35,8 +35,8 @@ class OkioConverterTest {
     @Test fun `ByteArrayByteStringConverter round-trip empty`() {
         val original = byteArrayOf()
         val roundTripped =
-            ByteArrayByteStringConverter.convertFromNonNull(
-                ByteArrayByteStringConverter.convertToNonNull(original),
+            ByteArrayByteStringConverter.convertFrom(
+                ByteArrayByteStringConverter.convertTo(original),
             )
         assertTrue(roundTripped.contentEquals(original), "Empty ByteArray round-trip")
     }
@@ -45,8 +45,8 @@ class OkioConverterTest {
 
     @Test fun `StringPathConverter round-trip unix path`() {
         val original = "/tmp/test"
-        StringPathConverter.convertFromNonNull(
-            StringPathConverter.convertToNonNull(original),
+        StringPathConverter.convertFrom(
+            StringPathConverter.convertTo(original),
         ) shouldBe original
     }
 }

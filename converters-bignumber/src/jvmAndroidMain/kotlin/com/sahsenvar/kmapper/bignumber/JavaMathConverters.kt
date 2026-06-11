@@ -11,35 +11,35 @@ import java.math.BigInteger as JBigInteger
 
 /** ISO decimal [String] ↔ [java.math.BigDecimal]. */
 object StringJavaBigDecimalConverter : MapTypeConverter<String, JBigDecimal>(String::class, JBigDecimal::class) {
-    override fun convertToNonNull(value: String): JBigDecimal = JBigDecimal(value)
+    override fun convertTo(source: String): JBigDecimal = JBigDecimal(source)
 
-    override fun convertFromNonNull(value: JBigDecimal): String = value.toPlainString()
+    override fun convertFrom(target: JBigDecimal): String = target.toPlainString()
 }
 
 /** Decimal [String] ↔ [java.math.BigInteger]. */
 object StringJavaBigIntegerConverter : MapTypeConverter<String, JBigInteger>(String::class, JBigInteger::class) {
-    override fun convertToNonNull(value: String): JBigInteger = JBigInteger(value)
+    override fun convertTo(source: String): JBigInteger = JBigInteger(source)
 
-    override fun convertFromNonNull(value: JBigInteger): String = value.toString()
+    override fun convertFrom(target: JBigInteger): String = target.toString()
 }
 
 /** [Double] ↔ [java.math.BigDecimal]. Uses valueOf for reliable decimal representation. */
 object DoubleJavaBigDecimalConverter : MapTypeConverter<Double, JBigDecimal>(Double::class, JBigDecimal::class) {
-    override fun convertToNonNull(value: Double): JBigDecimal = JBigDecimal.valueOf(value)
+    override fun convertTo(source: Double): JBigDecimal = JBigDecimal.valueOf(source)
 
-    override fun convertFromNonNull(value: JBigDecimal): Double = value.toDouble()
+    override fun convertFrom(target: JBigDecimal): Double = target.toDouble()
 }
 
 /** [Long] ↔ [java.math.BigInteger]. */
 object LongJavaBigIntegerConverter : MapTypeConverter<Long, JBigInteger>(Long::class, JBigInteger::class) {
-    override fun convertToNonNull(value: Long): JBigInteger = JBigInteger.valueOf(value)
+    override fun convertTo(source: Long): JBigInteger = JBigInteger.valueOf(source)
 
-    override fun convertFromNonNull(value: JBigInteger): Long = value.toLong()
+    override fun convertFrom(target: JBigInteger): Long = target.toLong()
 }
 
 /** [java.math.BigInteger] ↔ [java.math.BigDecimal]. Lossless integer-to-decimal promotion. */
 object JavaBigIntegerBigDecimalConverter : MapTypeConverter<JBigInteger, JBigDecimal>(JBigInteger::class, JBigDecimal::class) {
-    override fun convertToNonNull(value: JBigInteger): JBigDecimal = JBigDecimal(value)
+    override fun convertTo(source: JBigInteger): JBigDecimal = JBigDecimal(source)
 
-    override fun convertFromNonNull(value: JBigDecimal): JBigInteger = value.toBigInteger()
+    override fun convertFrom(target: JBigDecimal): JBigInteger = target.toBigInteger()
 }
