@@ -50,7 +50,7 @@ abstract class MapTypeConverter<S : Any, T : Any>(
     /** Protected so authors can reject a shape from their own override bodies. */
     protected fun unsupported(message: String): Nothing = throw MappingException.UnsupportedConversion(message)
 
-    // The ONE permitted `simpleName` use in the codebase: sourceType/targetType are
+    // Sanctioned `simpleName` use (error-message path): sourceType/targetType are
     // compile-time-known class references supplied by the converter author, so the names
     // are stable literals, not reflection over user data.
     private fun defaultUnsupportedMessage(): String = unsupportedConversionMessage(sourceType.simpleName ?: "?", targetType.simpleName ?: "?")

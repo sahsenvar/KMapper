@@ -3,7 +3,7 @@ package com.sahsenvar.kmapper.validation
 import kotlin.reflect.KClass
 
 /**
- * Base class for field value validators used with [@ValidateFrom] and [@ValidateTo].
+ * Base class for field value validators used with the field-anchored [@Validate] annotation.
  *
  * Implementations MUST be `object` singletons — the processor emits direct FQN calls
  * (e.g. `NotBlankValidator.validate(x)`) with no reflection.
