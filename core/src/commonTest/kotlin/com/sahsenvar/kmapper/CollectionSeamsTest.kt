@@ -10,6 +10,7 @@ import io.kotest.property.arbitrary.int
 import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.orNull
 import io.kotest.property.checkAll
+import kotlin.coroutines.cancellation.CancellationException
 
 class CollectionSeamsTest :
     FunSpec({
@@ -61,6 +62,16 @@ class CollectionSeamsTest :
                 listOf("a", "b", "c").convertEachOrSkip("xs", "String", "Int", parseOrNull) shouldBe emptyList()
                 recorder.events.map { event -> event.path } shouldBe listOf("xs[0]", "xs[1]", "xs[2]")
                 recorder.events.forEach { event -> event.shouldBeInstanceOf<MappingDegradation.DroppedBrokenElement>() }
+            }
+            test("no listener registered: degrading run completes with the salvaged list; convert invoked once per non-null element") {
+                KMapper.removeListener(recorder)
+                var convertInvocations = 0
+                listOf("1", null, "abc", "4").convertEachOrSkip<String, Int>("xs", "String", "Int") { element ->
+                    convertInvocations += 1
+                    element.toInt()
+                } shouldBe listOf(1, 4)
+                convertInvocations shouldBe 3
+                recorder.events shouldBe emptyList()
             }
         }
 
@@ -170,19 +181,29 @@ class CollectionSeamsTest :
         }
 
         context("convertEntriesOrSkip — Map default") {
-            test("broken value drops the entry with the EXACT quoted entry path") {
+            test("broken value drops the entry with the EXACT quoted entry path and the REAL value pair labels") {
                 mapOf("a" to "1", "b" to "abc").convertEntriesOrSkip(
                     "prices",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> entryKey },
                     convertValue = parseOrNull,
                 ) shouldBe mapOf("a" to 1)
                 val event = recorder.events.single().shouldBeInstanceOf<MappingDegradation.DroppedBrokenElement>()
                 event.path shouldBe """prices["b"]"""
-                event.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>()
+                val typedCause = event.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>()
+                typedCause.from shouldBe "String"
+                typedCause.to shouldBe "Int"
             }
             test("key collision is last-wins + DuplicateKey with the colliding entry's path and key") {
                 mapOf("x" to "1", "X" to "2").convertEntriesOrSkip(
                     "byKey",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> entryKey.lowercase() },
                     convertValue = parseOrNull,
                 ) shouldBe mapOf("x" to 2)
@@ -193,6 +214,10 @@ class CollectionSeamsTest :
             test("sanctioned-null key converter silently drops the entry") {
                 mapOf("keep" to "1", "drop" to "2").convertEntriesOrSkip(
                     "byKey",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> if (entryKey == "drop") null else entryKey },
                     convertValue = parseOrNull,
                 ) shouldBe mapOf("keep" to 1)
@@ -202,6 +227,10 @@ class CollectionSeamsTest :
                 val keyBoom = IllegalStateException("key boom")
                 mapOf("bad" to "1", "absent" to null, "blank" to "", "ok" to "7").convertEntriesOrSkip(
                     "byKey",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> if (entryKey == "bad") throw keyBoom else entryKey },
                     convertValue = parseOrNull,
                 ) shouldBe mapOf("ok" to 7)
@@ -212,12 +241,34 @@ class CollectionSeamsTest :
                 val brokenKeyEvent = recorder.events.first().shouldBeInstanceOf<MappingDegradation.DroppedBrokenElement>()
                 brokenKeyEvent.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>().cause shouldBeSameInstanceAs keyBoom
             }
+            test("broken key's typed cause carries the REAL key pair labels (keyFrom/keyTo), not the value pair") {
+                val keyBoom = IllegalStateException("key boom")
+                mapOf("bad" to "1").convertEntriesOrSkip(
+                    "byKey",
+                    keyFrom = "String",
+                    keyTo = "UserId",
+                    valueFrom = "String",
+                    valueTo = "Int",
+                    convertKey = { entryKey -> if (entryKey == "bad") throw keyBoom else entryKey },
+                    convertValue = parseOrNull,
+                ) shouldBe emptyMap()
+                val event = recorder.events.single().shouldBeInstanceOf<MappingDegradation.DroppedBrokenElement>()
+                event.path shouldBe """byKey["bad"]"""
+                val typedCause = event.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>()
+                typedCause.from shouldBe "String"
+                typedCause.to shouldBe "UserId"
+                typedCause.cause shouldBeSameInstanceAs keyBoom
+            }
         }
 
         context("convertEntriesOrFail — Map OnFail.Throw") {
-            test("ok entries convert; broken value is hard with the quoted entry path") {
+            test("ok entries convert; broken value is hard with the quoted entry path and the REAL value pair labels") {
                 mapOf("a" to "1").convertEntriesOrFail(
                     "prices",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> entryKey },
                     convertValue = parse,
                 ) shouldBe mapOf("a" to 1)
@@ -225,24 +276,41 @@ class CollectionSeamsTest :
                 val failure = shouldThrow<MappingException.TypeConversionFailed> {
                     mapOf("a" to "1", "b" to "abc").convertEntriesOrFail(
                         "prices",
+                        keyFrom = "String",
+                        keyTo = "String",
+                        valueFrom = "String",
+                        valueTo = "Int",
                         convertKey = { entryKey -> entryKey },
                         convertValue = parse,
                     )
                 }
                 failure.path shouldBe """prices["b"]"""
+                failure.from shouldBe "String"
+                failure.to shouldBe "Int"
             }
-            test("broken key is hard with the quoted entry path") {
-                shouldThrow<MappingException.TypeConversionFailed> {
+            test("broken key is hard with the quoted entry path and the REAL key pair labels") {
+                val failure = shouldThrow<MappingException.TypeConversionFailed> {
                     mapOf("bad" to "1").convertEntriesOrFail(
                         "byKey",
+                        keyFrom = "String",
+                        keyTo = "UserId",
+                        valueFrom = "String",
+                        valueTo = "Int",
                         convertKey = { entryKey: String -> throw IllegalStateException("key boom") },
                         convertValue = parse,
                     )
-                }.path shouldBe """byKey["bad"]"""
+                }
+                failure.path shouldBe """byKey["bad"]"""
+                failure.from shouldBe "String"
+                failure.to shouldBe "UserId"
             }
             test("null source value skips the entry with report; collision is last-wins + report") {
                 mapOf("a" to "1", "gone" to null).convertEntriesOrFail(
                     "prices",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> entryKey },
                     convertValue = parse,
                 ) shouldBe mapOf("a" to 1)
@@ -252,6 +320,10 @@ class CollectionSeamsTest :
                 recorder.events.clear()
                 mapOf("x" to "1", "X" to "2").convertEntriesOrFail(
                     "byKey",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> entryKey.lowercase() },
                     convertValue = parse,
                 ) shouldBe mapOf("x" to 2)
@@ -260,10 +332,14 @@ class CollectionSeamsTest :
         }
 
         context("convertEntriesValueOrNull — Map with nullable target values") {
-            test("broken key drops the entry (reported); broken value goes null-in-place (reported); null source value is silent null") {
+            test("broken key drops the entry (reported, REAL key pair); broken value goes null-in-place (reported, REAL value pair); null source value is silent null") {
                 val keyBoom = IllegalStateException("key boom")
                 mapOf("badKey" to "1", "badValue" to "abc", "absent" to null, "ok" to "7").convertEntriesValueOrNull(
                     "prices",
+                    keyFrom = "String",
+                    keyTo = "UserId",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> if (entryKey == "badKey") throw keyBoom else entryKey },
                     convertValue = parseOrNull,
                 ) shouldBe mapOf("badValue" to null, "absent" to null, "ok" to 7)
@@ -271,12 +347,24 @@ class CollectionSeamsTest :
                     "DroppedBrokenElement" to """prices["badKey"]""",
                     "AbsorbedConversionError" to """prices["badValue"]""",
                 )
+                val brokenKey = recorder.events[0].shouldBeInstanceOf<MappingDegradation.DroppedBrokenElement>()
+                val brokenKeyCause = brokenKey.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>()
+                brokenKeyCause.from shouldBe "String"
+                brokenKeyCause.to shouldBe "UserId"
                 val absorbed = recorder.events[1].shouldBeInstanceOf<MappingDegradation.AbsorbedConversionError>()
-                absorbed.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>()
+                absorbed.from shouldBe "String"
+                absorbed.to shouldBe "Int"
+                val absorbedCause = absorbed.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>()
+                absorbedCause.from shouldBe "String"
+                absorbedCause.to shouldBe "Int"
             }
             test("collision is reported and the value is still written (last wins)") {
                 mapOf("x" to "1", "X" to "2").convertEntriesValueOrNull(
                     "byKey",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> entryKey.lowercase() },
                     convertValue = parseOrNull,
                 ) shouldBe mapOf("x" to 2)
@@ -287,6 +375,10 @@ class CollectionSeamsTest :
             test("sanctioned-null key converter silently drops the entry") {
                 mapOf("keep" to "1", "drop" to "2").convertEntriesValueOrNull(
                     "byKey",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> if (entryKey == "drop") null else entryKey },
                     convertValue = parseOrNull,
                 ) shouldBe mapOf("keep" to 1)
@@ -295,9 +387,24 @@ class CollectionSeamsTest :
             test("sanctioned-null value converter goes null-in-place SILENTLY (entry kept, nothing reported)") {
                 mapOf("blank" to "", "ok" to "7").convertEntriesValueOrNull(
                     "prices",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> entryKey },
                     convertValue = parseOrNull,
                 ) shouldBe mapOf("blank" to null, "ok" to 7)
+                recorder.events shouldBe emptyList()
+            }
+        }
+
+        context("cancellation transparency (CE contract)") {
+            test("CancellationException mid-iteration in absorbing convertEachOrSkip propagates as the SAME instance — element NOT skipped, recorder EMPTY") {
+                val cancellation = CancellationException("scope cancelled")
+                val surfaced = shouldThrow<CancellationException> {
+                    listOf("1", "2").convertEachOrSkip<String, Int>("xs", "String", "Int") { _ -> throw cancellation }
+                }
+                surfaced shouldBeSameInstanceAs cancellation
                 recorder.events shouldBe emptyList()
             }
         }
@@ -312,16 +419,28 @@ class CollectionSeamsTest :
                 emptyList<String?>().convertEachOrFailToSet("xs", "String", "Int", parse) shouldBe emptySet()
                 emptyMap<String, String?>().convertEntriesOrSkip(
                     "m",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> entryKey },
                     convertValue = parseOrNull,
                 ) shouldBe emptyMap()
                 emptyMap<String, String?>().convertEntriesOrFail(
                     "m",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> entryKey },
                     convertValue = parse,
                 ) shouldBe emptyMap()
                 emptyMap<String, String?>().convertEntriesValueOrNull(
                     "m",
+                    keyFrom = "String",
+                    keyTo = "String",
+                    valueFrom = "String",
+                    valueTo = "Int",
                     convertKey = { entryKey -> entryKey },
                     convertValue = parseOrNull,
                 ) shouldBe emptyMap()

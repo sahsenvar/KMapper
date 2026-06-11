@@ -230,6 +230,8 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
 - `OnAbsent` element policy (treat null source elements as errors) — if demanded.
 - Strict-on-collision option for Map keys.
 - Per-mapping summary sink event ("items: 3/100 dropped") + listener throttling guidance.
+- DuplicateKey payload: consider carrying the converged TARGET key alongside the source key —
+  revisit with the summary sink event.
 - Whole-container converter precedence vs element-wise decomposition (exact-pair converter
   wins; detail when first needed).
 - `@FieldMap`-qualified paths (`Data.wireScore → Domain.score`) — single name suffices for now.

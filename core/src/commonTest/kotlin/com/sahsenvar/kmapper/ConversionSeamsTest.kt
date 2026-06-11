@@ -9,6 +9,7 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.int
 import io.kotest.property.checkAll
+import kotlin.coroutines.cancellation.CancellationException
 
 /** Reference-typed fallback so identity (===) assertions are meaningful. */
 private class FallbackMarker
@@ -153,13 +154,13 @@ class ConversionSeamsTest :
 
         context("convertOrElse (defaulted target, Auto — ladder rows 2/4/6/8)") {
             test("ok: returns converted value, ignores fallback, silent") {
-                ("5" as String?).convertOrElse(9, "n", "String", "Int", parseOrNull) shouldBe 5
+                ("5" as String?).convertOrElse("n", "String", "Int", 9, parseOrNull) shouldBe 5
                 recorder.events shouldBe emptyList()
             }
             test("absent: returns the EXACT fallback instance, silent") {
                 val fallback = FallbackMarker()
                 val resolved =
-                    (null as String?).convertOrElse<String, FallbackMarker>(fallback, "n", "String", "FallbackMarker") { _ ->
+                    (null as String?).convertOrElse<String, FallbackMarker>("n", "String", "FallbackMarker", fallback) { _ ->
                         FallbackMarker()
                     }
                 resolved shouldBeSameInstanceAs fallback
@@ -169,7 +170,7 @@ class ConversionSeamsTest :
                 val fallback = FallbackMarker()
                 val originalCause = IllegalStateException("boom")
                 val resolved =
-                    ("x" as String?).convertOrElse<String, FallbackMarker>(fallback, "n", "String", "FallbackMarker") { _ ->
+                    ("x" as String?).convertOrElse<String, FallbackMarker>("n", "String", "FallbackMarker", fallback) { _ ->
                         throw originalCause
                     }
                 resolved shouldBeSameInstanceAs fallback
@@ -183,7 +184,7 @@ class ConversionSeamsTest :
             test("sanctioned null: returns the EXACT fallback instance, silent") {
                 val fallback = FallbackMarker()
                 val resolved =
-                    ("x" as String?).convertOrElse<String, FallbackMarker>(fallback, "n", "String", "FallbackMarker") { _ -> null }
+                    ("x" as String?).convertOrElse<String, FallbackMarker>("n", "String", "FallbackMarker", fallback) { _ -> null }
                 resolved shouldBeSameInstanceAs fallback
                 recorder.events shouldBe emptyList()
             }
@@ -192,10 +193,10 @@ class ConversionSeamsTest :
                 val inner = MappingException.RequiredFieldMissing("zip")
                 val resolved =
                     ("x" as String?).convertOrElse<String, FallbackMarker>(
-                        fallback,
                         "address",
                         "AddressData",
                         "AddressDomain",
+                        fallback,
                     ) { _ -> throw inner }
                 resolved shouldBeSameInstanceAs fallback
                 val event = recorder.events.single().shouldBeInstanceOf<MappingDegradation.AbsorbedConversionError>()
@@ -205,26 +206,26 @@ class ConversionSeamsTest :
             }
             test("no listener registered: broken still falls back without throwing") {
                 KMapper.removeListener(recorder)
-                ("abc" as String?).convertOrElse(9, "n", "String", "Int", parseOrNull) shouldBe 9
+                ("abc" as String?).convertOrElse("n", "String", "Int", 9, parseOrNull) shouldBe 9
                 recorder.events shouldBe emptyList()
             }
         }
 
         context("convertOrElseStrict (defaulted target, OnFail.Throw)") {
             test("ok / absent / sanctioned stay soft and silent; fallback identity preserved") {
-                ("5" as String?).convertOrElseStrict(9, "n", "String", "Int", parseOrNull) shouldBe 5
+                ("5" as String?).convertOrElseStrict("n", "String", "Int", 9, parseOrNull) shouldBe 5
                 val fallback = FallbackMarker()
-                (null as String?).convertOrElseStrict<String, FallbackMarker>(fallback, "n", "String", "FallbackMarker") { _ ->
+                (null as String?).convertOrElseStrict<String, FallbackMarker>("n", "String", "FallbackMarker", fallback) { _ ->
                     FallbackMarker()
                 } shouldBeSameInstanceAs fallback
-                ("x" as String?).convertOrElseStrict<String, FallbackMarker>(fallback, "n", "String", "FallbackMarker") { _ ->
+                ("x" as String?).convertOrElseStrict<String, FallbackMarker>("n", "String", "FallbackMarker", fallback) { _ ->
                     null
                 } shouldBeSameInstanceAs fallback
                 recorder.events shouldBe emptyList()
             }
             test("broken: rethrows typed, nothing reported") {
                 val failure = shouldThrow<MappingException.TypeConversionFailed> {
-                    ("abc" as String?).convertOrElseStrict(9, "n", "String", "Int", parseOrNull)
+                    ("abc" as String?).convertOrElseStrict("n", "String", "Int", 9, parseOrNull)
                 }
                 failure.path shouldBe "n"
                 recorder.events shouldBe emptyList()
@@ -232,11 +233,38 @@ class ConversionSeamsTest :
             test("inner MappingException rethrown path-prefixed, type preserved") {
                 val inner = MappingException.RequiredFieldMissing("zipCode")
                 val surfaced = shouldThrow<MappingException.RequiredFieldMissing> {
-                    ("x" as String?).convertOrElseStrict<String, Int>(9, "address", "AddressData", "AddressDomain") { _ ->
+                    ("x" as String?).convertOrElseStrict<String, Int>("address", "AddressData", "AddressDomain", 9) { _ ->
                         throw inner
                     }
                 }
                 surfaced.path shouldBe "address.zipCode"
+            }
+        }
+
+        context("cancellation and Error transparency (CE/Error contract)") {
+            test("CancellationException through absorbing convertOrNull propagates as the SAME instance — never absorbed into null, nothing reported") {
+                val cancellation = CancellationException("scope cancelled")
+                val surfaced = shouldThrow<CancellationException> {
+                    ("5" as String?).convertOrNull<String, Int>("n", "String", "Int") { _ -> throw cancellation }
+                }
+                surfaced shouldBeSameInstanceAs cancellation
+                recorder.events shouldBe emptyList()
+            }
+            test("Error subclass through absorbing convertOrNull propagates — never degraded into null, nothing reported") {
+                val underlyingError = NotImplementedError("converter not wired")
+                val surfaced = shouldThrow<NotImplementedError> {
+                    ("5" as String?).convertOrNull<String, Int>("n", "String", "Int") { _ -> throw underlyingError }
+                }
+                surfaced shouldBeSameInstanceAs underlyingError
+                recorder.events shouldBe emptyList()
+            }
+            test("CancellationException through hard convertOrFail propagates UN-WRAPPED (same instance, not TypeConversionFailed)") {
+                val cancellation = CancellationException("scope cancelled")
+                val surfaced = shouldThrow<CancellationException> {
+                    "5".convertOrFail<String, Int>("n", "String", "Int") { _ -> throw cancellation }
+                }
+                surfaced shouldBeSameInstanceAs cancellation
+                recorder.events shouldBe emptyList()
             }
         }
 

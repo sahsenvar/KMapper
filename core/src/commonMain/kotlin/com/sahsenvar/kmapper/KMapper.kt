@@ -25,7 +25,10 @@ interface MappingListener {
         error: MappingException,
     ) {}
 
-    /** Absorbed-leniency tap (skips, broken→null/default absorptions, duplicate keys). Default no-op. */
+    /**
+     * Absorbed-leniency tap (skips, broken→null/default absorptions, duplicate keys). Default no-op.
+     * Do not run mappings inside the tap — a degrading seam inside onDegradation recurses dispatch.
+     */
     fun onDegradation(event: MappingDegradation) {}
 }
 
