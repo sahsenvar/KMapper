@@ -101,9 +101,9 @@ class KMapperTest {
         // Use a unique type-pair not used elsewhere
         val conv =
             object : MapTypeConverter<Char, Byte>(Char::class, Byte::class) {
-                override fun convertToNonNull(value: Char) = value.code.toByte()
+                override fun convertTo(source: Char) = source.code.toByte()
 
-                override fun convertFromNonNull(value: Byte) = value.toInt().toChar()
+                override fun convertFrom(target: Byte) = target.toInt().toChar()
             }
         KMapper.addConverter(conv)
         // If registered, hasListeners is unrelated — we just verify no exception

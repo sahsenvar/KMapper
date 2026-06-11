@@ -3,14 +3,16 @@ package com.sahsenvar.kmapper.converter.builtin
 import com.sahsenvar.kmapper.converter.MapTypeConverter
 import kotlinx.datetime.Instant
 
-object StringInstantConverter : MapTypeConverter<String, Instant>(String::class, Instant::class) {
-    override fun convertToNonNull(value: String): Instant = Instant.parse(value)
+/** [Instant] <-> ISO-8601 [String]: format via toString, parse via [Instant.parse]. */
+object InstantStringConverter : MapTypeConverter<Instant, String>(Instant::class, String::class) {
+    override fun convertTo(source: Instant): String = source.toString()
 
-    override fun convertFromNonNull(value: Instant): String = value.toString()
+    override fun convertFrom(target: String): Instant = Instant.parse(target)
 }
 
-object LongInstantConverter : MapTypeConverter<Long, Instant>(Long::class, Instant::class) {
-    override fun convertToNonNull(value: Long): Instant = Instant.fromEpochMilliseconds(value)
+/** [Instant] <-> epoch-milliseconds [Long]. */
+object InstantLongConverter : MapTypeConverter<Instant, Long>(Instant::class, Long::class) {
+    override fun convertTo(source: Instant): Long = source.toEpochMilliseconds()
 
-    override fun convertFromNonNull(value: Instant): Long = value.toEpochMilliseconds()
+    override fun convertFrom(target: Long): Instant = Instant.fromEpochMilliseconds(target)
 }
