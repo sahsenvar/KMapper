@@ -187,6 +187,22 @@ class ConversionSeamsTest :
                 resolved shouldBeSameInstanceAs fallback
                 recorder.events shouldBe emptyList()
             }
+            test("broken by inner MappingException: fallback returned + absorbed cause IS the path-prefixed typed exception") {
+                val fallback = FallbackMarker()
+                val inner = MappingException.RequiredFieldMissing("zip")
+                val resolved =
+                    ("x" as String?).convertOrElse<String, FallbackMarker>(
+                        fallback,
+                        "address",
+                        "AddressData",
+                        "AddressDomain",
+                    ) { _ -> throw inner }
+                resolved shouldBeSameInstanceAs fallback
+                val event = recorder.events.single().shouldBeInstanceOf<MappingDegradation.AbsorbedConversionError>()
+                event.path shouldBe "address"
+                val typedCause = event.cause.shouldBeInstanceOf<MappingException.RequiredFieldMissing>()
+                typedCause.path shouldBe "address.zip"
+            }
             test("no listener registered: broken still falls back without throwing") {
                 KMapper.removeListener(recorder)
                 ("abc" as String?).convertOrElse(9, "n", "String", "Int", parseOrNull) shouldBe 9

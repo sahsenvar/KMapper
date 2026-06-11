@@ -74,6 +74,11 @@ class CollectionSeamsTest :
                 event.to shouldBe "Int"
                 event.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>()
             }
+            test("sanctioned null goes null-in-place SILENTLY (alignment preserved, nothing reported)") {
+                listOf("1", "", "3").convertEachOrNull("xs", "String", "Int", parseOrNull) shouldBe
+                    listOf(1, null, 3)
+                recorder.events shouldBe emptyList()
+            }
         }
 
         context("convertEachOrFail — OnFail.Throw on List<T>") {
@@ -109,6 +114,11 @@ class CollectionSeamsTest :
                 listOf("1", null).convertEachOrNullStrict("xs", "String", "Int", parseOrNull) shouldBe listOf(1, null)
                 recorder.events shouldBe emptyList()
             }
+            test("sanctioned null goes null-in-place SILENTLY even under Throw (nothing thrown, nothing reported)") {
+                listOf("1", "", "3").convertEachOrNullStrict("xs", "String", "Int", parseOrNull) shouldBe
+                    listOf(1, null, 3)
+                recorder.events shouldBe emptyList()
+            }
         }
 
         context("convertEachOrSkipToSet — Set always skips") {
@@ -124,6 +134,23 @@ class CollectionSeamsTest :
                     "DroppedNullElement" to "ids[1]",
                     "DroppedBrokenElement" to "ids[2]",
                 )
+            }
+            test("sanctioned null element is skipped SILENTLY (absent from the set, nothing reported)") {
+                listOf("1", "", "3").convertEachOrSkipToSet("ids", "String", "Int", parseOrNull) shouldBe setOf(1, 3)
+                recorder.events shouldBe emptyList()
+            }
+            test("broken element's event cause is the TYPED TypeConversionFailed carrying the pair (pair-visible metrics)") {
+                val originalCause = IllegalStateException("boom")
+                listOf("1", "x").convertEachOrSkipToSet<String, Int>("ids", "String", "Int") { element ->
+                    if (element == "x") throw originalCause else element.toInt()
+                } shouldBe setOf(1)
+                val event = recorder.events.single().shouldBeInstanceOf<MappingDegradation.DroppedBrokenElement>()
+                event.path shouldBe "ids[1]"
+                val typedCause = event.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>()
+                typedCause.path shouldBe "ids[1]"
+                typedCause.from shouldBe "String"
+                typedCause.to shouldBe "Int"
+                typedCause.cause shouldBeSameInstanceAs originalCause
             }
         }
 
@@ -256,6 +283,22 @@ class CollectionSeamsTest :
                 val event = recorder.events.single().shouldBeInstanceOf<MappingDegradation.DuplicateKey>()
                 event.path shouldBe """byKey["X"]"""
                 event.key shouldBe "X"
+            }
+            test("sanctioned-null key converter silently drops the entry") {
+                mapOf("keep" to "1", "drop" to "2").convertEntriesValueOrNull(
+                    "byKey",
+                    convertKey = { entryKey -> if (entryKey == "drop") null else entryKey },
+                    convertValue = parseOrNull,
+                ) shouldBe mapOf("keep" to 1)
+                recorder.events shouldBe emptyList()
+            }
+            test("sanctioned-null value converter goes null-in-place SILENTLY (entry kept, nothing reported)") {
+                mapOf("blank" to "", "ok" to "7").convertEntriesValueOrNull(
+                    "prices",
+                    convertKey = { entryKey -> entryKey },
+                    convertValue = parseOrNull,
+                ) shouldBe mapOf("blank" to null, "ok" to 7)
+                recorder.events shouldBe emptyList()
             }
         }
 
