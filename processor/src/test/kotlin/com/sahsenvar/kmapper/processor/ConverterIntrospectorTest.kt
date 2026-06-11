@@ -48,6 +48,7 @@ class ConverterShapeProbeProcessor(
                     "SHAPE:$probedFqn=" +
                         "source=${shape.sourceFqn};target=${shape.targetFqn};" +
                         "providesTo=${shape.providesTo};providesFrom=${shape.providesFrom};" +
+                        "orNullOnlyTo=${shape.orNullOnlyTo};orNullOnlyFrom=${shape.orNullOnlyFrom};" +
                         "reasonTo=${shape.unsupportedToReason};reasonFrom=${shape.unsupportedFromReason};" +
                         "orNullAnnotated=${shape.orNullAnnotated}",
                 )
@@ -64,6 +65,7 @@ class ConverterShapeProbeProcessor(
             "fixtures.BothDirectionsUnsupportedConverter",
             "fixtures.OrNullOnlyConverter",
             "fixtures.OrNullAnnotatedConverter",
+            "fixtures.TotalPlusOrNullConverter",
             "fixtures.BilateralConverter",
             "fixtures.DataModel",
             "fixtures.DoesNotExist",
@@ -131,7 +133,7 @@ class ConverterIntrospectorTest :
                 override fun convertFrom(target: Boolean): Float = unsupported()
             }
 
-            /** Declares the forward direction ONLY via its OrNull variant. */
+            /** OrNull without its total — does NOT provide the direction; flagged orNullOnlyTo. */
             object OrNullOnlyConverter : MapTypeConverter<String, Long>(String::class, Long::class) {
                 override fun convertToOrNull(source: String): Long? = source.toLongOrNull()
             }
@@ -142,6 +144,13 @@ class ConverterIntrospectorTest :
 
                 @UnsupportedDirection("Misplaced on the OrNull variant on purpose.")
                 override fun convertToOrNull(source: Int): Boolean? = unsupported()
+            }
+
+            /** Correct sanctioned-null style: OrNull declared IN ADDITION to its total. */
+            object TotalPlusOrNullConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
+                override fun convertTo(source: String): Int = source.toInt()
+
+                override fun convertToOrNull(source: String): Int? = source.toIntOrNull()
             }
 
             /** Plain bilateral converter providing both totals. */
@@ -166,6 +175,7 @@ class ConverterIntrospectorTest :
                         "SHAPE:fixtures.ForwardOnlyConverter=" +
                         "source=kotlin.String;target=kotlin.Int;" +
                         "providesTo=true;providesFrom=false;" +
+                        "orNullOnlyTo=false;orNullOnlyFrom=false;" +
                         "reasonTo=null;reasonFrom=null;" +
                         "orNullAnnotated=false"
                 }
@@ -175,6 +185,7 @@ class ConverterIntrospectorTest :
                         "SHAPE:fixtures.AnnotatedStubConverter=" +
                         "source=kotlin.Long;target=kotlin.Int;" +
                         "providesTo=false;providesFrom=true;" +
+                        "orNullOnlyTo=false;orNullOnlyFrom=false;" +
                         "reasonTo=Long to Int narrows and can truncate.;reasonFrom=null;" +
                         "orNullAnnotated=false"
                 }
@@ -184,16 +195,18 @@ class ConverterIntrospectorTest :
                         "SHAPE:fixtures.BothDirectionsUnsupportedConverter=" +
                         "source=kotlin.Float;target=kotlin.Boolean;" +
                         "providesTo=false;providesFrom=false;" +
+                        "orNullOnlyTo=false;orNullOnlyFrom=false;" +
                         "reasonTo=Float to Boolean has no meaningful interpretation.;" +
                         "reasonFrom=Boolean to Float has no meaningful interpretation.;" +
                         "orNullAnnotated=false"
                 }
 
-                then("an OrNull-only override still DECLARES its direction — the direction counts as provided") {
+                then("an OrNull-only override does NOT provide its direction and is flagged orNullOnly") {
                     compilationResult.messages shouldContain
                         "SHAPE:fixtures.OrNullOnlyConverter=" +
                         "source=kotlin.String;target=kotlin.Long;" +
-                        "providesTo=true;providesFrom=false;" +
+                        "providesTo=false;providesFrom=false;" +
+                        "orNullOnlyTo=true;orNullOnlyFrom=false;" +
                         "reasonTo=null;reasonFrom=null;" +
                         "orNullAnnotated=false"
                 }
@@ -203,8 +216,19 @@ class ConverterIntrospectorTest :
                         "SHAPE:fixtures.OrNullAnnotatedConverter=" +
                         "source=kotlin.Int;target=kotlin.Boolean;" +
                         "providesTo=true;providesFrom=false;" +
+                        "orNullOnlyTo=false;orNullOnlyFrom=false;" +
                         "reasonTo=null;reasonFrom=null;" +
                         "orNullAnnotated=true"
+                }
+
+                then("total plus OrNull together provide the direction with no orNullOnly flag") {
+                    compilationResult.messages shouldContain
+                        "SHAPE:fixtures.TotalPlusOrNullConverter=" +
+                        "source=kotlin.String;target=kotlin.Int;" +
+                        "providesTo=true;providesFrom=false;" +
+                        "orNullOnlyTo=false;orNullOnlyFrom=false;" +
+                        "reasonTo=null;reasonFrom=null;" +
+                        "orNullAnnotated=false"
                 }
 
                 then("a bilateral converter provides both directions") {
@@ -212,6 +236,7 @@ class ConverterIntrospectorTest :
                         "SHAPE:fixtures.BilateralConverter=" +
                         "source=kotlin.String;target=kotlin.Double;" +
                         "providesTo=true;providesFrom=true;" +
+                        "orNullOnlyTo=false;orNullOnlyFrom=false;" +
                         "reasonTo=null;reasonFrom=null;" +
                         "orNullAnnotated=false"
                 }
@@ -222,6 +247,86 @@ class ConverterIntrospectorTest :
 
                 then("an unresolvable FQN yields no shape") {
                     compilationResult.messages shouldContain "SHAPE:fixtures.DoesNotExist=null"
+                }
+            }
+        }
+
+        // Resolution-level coverage (real MappingProcessor via compile()): an OrNull-only
+        // override at a NEEDED direction is a guided compile error — a hard landing site
+        // would otherwise call the throwing total at runtime, breaking the compile-time
+        // guarantee. Total + OrNull together is the sanctioned-null style and resolves fine.
+        given("a mapping whose needed direction the converter declares ONLY via its OrNull variant") {
+            val orNullOnlyMappingSource =
+                SourceFile.kotlin(
+                    "OrNullOnlyMapping.kt",
+                    """
+                package fixtures
+
+                import com.sahsenvar.kmapper.annotations.KMapperConfig
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.converter.MapTypeConverter
+
+                /** Needed String -> Long direction declared ONLY as convertToOrNull. */
+                object OrNullOnlyAmountConverter : MapTypeConverter<String, Long>(String::class, Long::class) {
+                    override fun convertToOrNull(source: String): Long? = source.toLongOrNull()
+                }
+
+                @KMapperConfig(converters = [OrNullOnlyAmountConverter::class])
+                object MappingConfig
+
+                data class DomainModel(val amount: Long)
+
+                @MapTo(DomainModel::class)
+                data class DataModel(val amount: String)
+                    """.trimIndent(),
+                )
+
+            `when`("the mapping is compiled with the real processor") {
+                val (compilationResult, _) = compile(orNullOnlyMappingSource)
+
+                then("compilation fails") {
+                    compilationResult.exitCode shouldBe KotlinCompilation.ExitCode.COMPILATION_ERROR
+                }
+
+                then("the error guides the author to also override the total method") {
+                    compilationResult.messages shouldContain "override the total method too"
+                }
+            }
+        }
+
+        given("a converter declaring both the total and its OrNull variant for the needed direction") {
+            val totalPlusOrNullMappingSource =
+                SourceFile.kotlin(
+                    "TotalPlusOrNullMapping.kt",
+                    """
+                package fixtures
+
+                import com.sahsenvar.kmapper.annotations.KMapperConfig
+                import com.sahsenvar.kmapper.annotations.MapTo
+                import com.sahsenvar.kmapper.converter.MapTypeConverter
+
+                /** Sanctioned-null style: OrNull in ADDITION to the total. */
+                object TotalPlusOrNullAmountConverter : MapTypeConverter<String, Long>(String::class, Long::class) {
+                    override fun convertTo(source: String): Long = source.toLong()
+
+                    override fun convertToOrNull(source: String): Long? = source.toLongOrNull()
+                }
+
+                @KMapperConfig(converters = [TotalPlusOrNullAmountConverter::class])
+                object MappingConfig
+
+                data class DomainModel(val amount: Long)
+
+                @MapTo(DomainModel::class)
+                data class DataModel(val amount: String)
+                    """.trimIndent(),
+                )
+
+            `when`("the mapping is compiled with the real processor") {
+                val (compilationResult, _) = compile(totalPlusOrNullMappingSource)
+
+                then("compilation succeeds — total plus OrNull is the sanctioned-null style") {
+                    compilationResult.exitCode shouldBe KotlinCompilation.ExitCode.OK
                 }
             }
         }

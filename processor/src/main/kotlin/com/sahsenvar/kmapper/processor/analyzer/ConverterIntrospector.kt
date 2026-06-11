@@ -8,26 +8,44 @@ import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 /**
  * Which directions a converter provides, and any declared @UnsupportedDirection reasons.
  *
- * A direction is PROVIDED iff it is declared (total or OrNull override) AND its total
- * method is not annotated `@UnsupportedDirection` — the annotation wins, because KSP
- * cannot inspect function bodies (documented contract: the stub body is `= unsupported()`).
+ * A direction is PROVIDED iff its TOTAL method is declared AND not annotated
+ * `@UnsupportedDirection` — the annotation wins, because KSP cannot inspect function
+ * bodies (documented contract: the stub body is `= unsupported()`). An OrNull variant
+ * never provides a direction on its own: a hard landing site would call the throwing
+ * total at runtime, so an OrNull-only override is a guided compile error at resolution.
  */
 data class ConverterShape(
     /** FQN of the converter's source type S in MapTypeConverter<S, T>. */
     val sourceFqn: String,
     /** FQN of the converter's target type T in MapTypeConverter<S, T>. */
     val targetFqn: String,
-    /** True when the S -> T direction (convertTo) is declared and not annotated unsupported. */
-    val providesTo: Boolean,
-    /** True when the T -> S direction (convertFrom) is declared and not annotated unsupported. */
-    val providesFrom: Boolean,
+    /** True when the total convertTo is declared. */
+    val declaredToTotal: Boolean,
+    /** True when the convertToOrNull variant is declared. */
+    val declaredToOrNull: Boolean,
+    /** True when the total convertFrom is declared. */
+    val declaredFromTotal: Boolean,
+    /** True when the convertFromOrNull variant is declared. */
+    val declaredFromOrNull: Boolean,
     /** Reason from @UnsupportedDirection on convertTo, or null when not annotated. */
     val unsupportedToReason: String?,
     /** Reason from @UnsupportedDirection on convertFrom, or null when not annotated. */
     val unsupportedFromReason: String?,
     /** @UnsupportedDirection found on an OrNull variant — compile error at resolution. */
     val orNullAnnotated: Boolean,
-)
+) {
+    /** True when the S -> T direction is provided: total convertTo declared, not annotated. */
+    val providesTo: Boolean get() = declaredToTotal && unsupportedToReason == null
+
+    /** True when the T -> S direction is provided: total convertFrom declared, not annotated. */
+    val providesFrom: Boolean get() = declaredFromTotal && unsupportedFromReason == null
+
+    /** convertToOrNull declared without its total — compile error when S -> T is needed. */
+    val orNullOnlyTo: Boolean get() = declaredToOrNull && !declaredToTotal
+
+    /** convertFromOrNull declared without its total — compile error when T -> S is needed. */
+    val orNullOnlyFrom: Boolean get() = declaredFromOrNull && !declaredFromTotal
+}
 
 /**
  * Reads a converter declaration's [ConverterShape] from the KSP [Resolver]:
@@ -51,10 +69,13 @@ class ConverterIntrospector(
         ) ?: return null
         val (sourceFqn, targetFqn) = typeArgumentsOf(declaration) ?: return null
 
-        // Function-level detection: a direction is PROVIDED iff declared AND its total method
-        // is not annotated @UnsupportedDirection (the annotation wins — bodies are opaque to KSP).
-        var declaredTo = false
-        var declaredFrom = false
+        // Function-level detection, totals and OrNull variants tracked separately: only a
+        // declared, un-annotated TOTAL provides its direction (the annotation wins — bodies
+        // are opaque to KSP); an OrNull-only override is flagged for a guided compile error.
+        var declaredToTotal = false
+        var declaredToOrNull = false
+        var declaredFromTotal = false
+        var declaredFromOrNull = false
         var reasonTo: String? = null
         var reasonFrom: String? = null
         var orNullAnnotated = false
@@ -62,19 +83,19 @@ class ConverterIntrospector(
             val reason = unsupportedReasonOf(function)
             when (function.simpleName.asString()) {
                 "convertTo" -> {
-                    declaredTo = true
+                    declaredToTotal = true
                     if (reason != null) reasonTo = reason
                 }
                 "convertFrom" -> {
-                    declaredFrom = true
+                    declaredFromTotal = true
                     if (reason != null) reasonFrom = reason
                 }
                 "convertToOrNull" -> {
-                    declaredTo = true
+                    declaredToOrNull = true
                     if (reason != null) orNullAnnotated = true
                 }
                 "convertFromOrNull" -> {
-                    declaredFrom = true
+                    declaredFromOrNull = true
                     if (reason != null) orNullAnnotated = true
                 }
             }
@@ -82,8 +103,10 @@ class ConverterIntrospector(
         return ConverterShape(
             sourceFqn = sourceFqn,
             targetFqn = targetFqn,
-            providesTo = declaredTo && reasonTo == null,
-            providesFrom = declaredFrom && reasonFrom == null,
+            declaredToTotal = declaredToTotal,
+            declaredToOrNull = declaredToOrNull,
+            declaredFromTotal = declaredFromTotal,
+            declaredFromOrNull = declaredFromOrNull,
             unsupportedToReason = reasonTo,
             unsupportedFromReason = reasonFrom,
             orNullAnnotated = orNullAnnotated,

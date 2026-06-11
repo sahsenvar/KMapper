@@ -264,8 +264,10 @@ class TypeMatcher(
      * matches the field's (source, target) to the converter's (S, T) to pick the call
      * direction, then checks the needed direction is provided. Errors (compile-time):
      * unresolvable/non-converter reference, @UnsupportedDirection on an OrNull variant,
-     * neither orientation matching the field pair, or the needed direction not provided
-     * (with the declared @UnsupportedDirection reason when present).
+     * neither orientation matching the field pair, the needed direction declared only
+     * via its OrNull variant (guided: override the total too — a hard landing site would
+     * call the throwing total at runtime), or the needed direction not provided (with
+     * the declared @UnsupportedDirection reason when present).
      */
     private fun resolveConverter(
         converterFqn: String,
@@ -292,6 +294,17 @@ class TypeMatcher(
             logger.error(
                 "${sourceField.name}: converter $converterFqn handles " +
                     "${shape.sourceFqn} <-> ${shape.targetFqn}, not $sourceFqn -> $targetFqn",
+            )
+            return MappingStrategy.Unmappable
+        }
+        val orNullOnly = if (forward) shape.orNullOnlyTo else shape.orNullOnlyFrom
+        if (orNullOnly) {
+            val orNullName = if (forward) "convertToOrNull" else "convertFromOrNull"
+            val totalName = if (forward) "convertTo" else "convertFrom"
+            logger.error(
+                "${sourceField.name}: converter $converterFqn declares $orNullName without " +
+                    "the total $totalName — override the total method too (OrNull is in " +
+                    "addition to the total, never instead of it).",
             )
             return MappingStrategy.Unmappable
         }
