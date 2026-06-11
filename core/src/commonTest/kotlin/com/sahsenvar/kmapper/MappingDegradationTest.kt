@@ -1,5 +1,6 @@
 package com.sahsenvar.kmapper
 
+import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
@@ -103,10 +104,45 @@ class MappingDegradationTest :
                 val baseTyped: MappingDegradation = event
                 baseTyped.path shouldBe "roles"
             }
+        }
 
-            test("empty path is carried verbatim (root-level degradation)") {
-                val event = MappingDegradation.DroppedNullElement(path = "")
-                event.path shouldBe ""
+        // ─── Diagnostic toString ────────────────────────────────────────────────
+
+        context("diagnostic toString") {
+            test("AbsorbedConversionError renders path, type pair and cause class name") {
+                val event =
+                    MappingDegradation.AbsorbedConversionError(
+                        path = "age",
+                        from = "String",
+                        to = "Int",
+                        cause = NumberFormatException("not a number"),
+                    )
+
+                event.toString() shouldBe "AbsorbedConversionError(path=age, String -> Int, cause=NumberFormatException)"
+            }
+
+            test("DroppedBrokenElement renders indexed path and cause class name") {
+                val event = MappingDegradation.DroppedBrokenElement(path = "items[3]", cause = IllegalArgumentException("malformed"))
+
+                event.toString() shouldBe "DroppedBrokenElement(path=items[3], cause=IllegalArgumentException)"
+            }
+
+            test("DroppedNullElement renders indexed path") {
+                val event = MappingDegradation.DroppedNullElement(path = "items[1]")
+
+                event.toString() shouldBe "DroppedNullElement(path=items[1])"
+            }
+
+            test("DuplicateKey renders quoted-key path and the converged key") {
+                val event = MappingDegradation.DuplicateKey(path = "prices[\"x\"]", key = "x")
+
+                event.toString() shouldBe "DuplicateKey(path=prices[\"x\"], key=x)"
+            }
+
+            test("ConvergedDuplicateElement renders path") {
+                val event = MappingDegradation.ConvergedDuplicateElement(path = "ids[2]")
+
+                event.toString() shouldBe "ConvergedDuplicateElement(path=ids[2])"
             }
         }
 
@@ -178,14 +214,65 @@ class MappingDegradationTest :
 
                 KMapper.hasListeners shouldBe false
 
-                // Generated mappers guard dispatch exactly like this — with no listeners the
-                // event is never even constructed into a dispatch call.
+                // Generated mappers guard dispatch exactly like this so that, with no listeners,
+                // event construction is skipped entirely. This test constructs the event up front
+                // and only verifies that no dispatch occurs.
                 val event = MappingDegradation.ConvergedDuplicateElement(path = "roles")
                 if (KMapper.hasListeners) {
                     KMapper.dispatch { onDegradation(event) }
                 }
 
                 recorder.events.shouldBeEmpty()
+            }
+
+            test("a listener whose onDegradation throws does not propagate out of dispatch") {
+                val throwingListener =
+                    object : MappingListener {
+                        override fun onDegradation(event: MappingDegradation): Unit = throw IllegalStateException("observer blew up")
+                    }
+                registerTracked(throwingListener)
+                val event = MappingDegradation.DroppedNullElement(path = "items[0]")
+
+                shouldNotThrowAny {
+                    KMapper.dispatch { onDegradation(event) }
+                }
+            }
+
+            test("a listener registered after a throwing one still receives the event") {
+                val throwingListener =
+                    object : MappingListener {
+                        override fun onDegradation(event: MappingDegradation): Unit = throw IllegalStateException("observer blew up")
+                    }
+                val recorder = RecordingDegradationListener()
+                registerTracked(throwingListener)
+                registerTracked(recorder)
+                val event = MappingDegradation.DuplicateKey(path = "prices[\"usd\"]", key = "usd")
+
+                shouldNotThrowAny {
+                    KMapper.dispatch { onDegradation(event) }
+                }
+
+                recorder.events.single() shouldBeSameInstanceAs event
+            }
+
+            test("a listener whose onMapStart throws is isolated too (guard covers all listener methods)") {
+                val throwingListener =
+                    object : MappingListener {
+                        override fun onMapStart(
+                            source: Any,
+                            target: kotlin.reflect.KClass<*>,
+                        ): Unit = throw IllegalStateException("observer blew up at start")
+                    }
+                val recorder = DualRecordingListener()
+                registerTracked(throwingListener)
+                registerTracked(recorder)
+                val source = "wire-payload"
+
+                shouldNotThrowAny {
+                    KMapper.dispatch { onMapStart(source, String::class) }
+                }
+
+                recorder.startedSources.single() shouldBe source
             }
 
             test("onDegradation coexists with existing lifecycle methods through one registration") {

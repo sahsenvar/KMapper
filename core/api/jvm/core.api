@@ -38,28 +38,33 @@ public final class com/sahsenvar/kmapper/MappingDegradation$AbsorbedConversionEr
 	public final fun getFrom ()Ljava/lang/String;
 	public fun getPath ()Ljava/lang/String;
 	public final fun getTo ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/sahsenvar/kmapper/MappingDegradation$ConvergedDuplicateElement : com/sahsenvar/kmapper/MappingDegradation {
 	public fun <init> (Ljava/lang/String;)V
 	public fun getPath ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/sahsenvar/kmapper/MappingDegradation$DroppedBrokenElement : com/sahsenvar/kmapper/MappingDegradation {
 	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
 	public final fun getCause ()Ljava/lang/Throwable;
 	public fun getPath ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/sahsenvar/kmapper/MappingDegradation$DroppedNullElement : com/sahsenvar/kmapper/MappingDegradation {
 	public fun <init> (Ljava/lang/String;)V
 	public fun getPath ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/sahsenvar/kmapper/MappingDegradation$DuplicateKey : com/sahsenvar/kmapper/MappingDegradation {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun getKey ()Ljava/lang/String;
 	public fun getPath ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
 }
 
 public abstract class com/sahsenvar/kmapper/MappingException : java/lang/RuntimeException {

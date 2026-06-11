@@ -64,6 +64,8 @@ sealed class com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper
             final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.path.<get-path>|<get-path>(){}[0]
         final val to // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.to|{}to[0]
             final fun <get-to>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.to.<get-to>|<get-to>(){}[0]
+
+        final fun toString(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.toString|toString(){}[0]
     }
 
     final class ConvergedDuplicateElement : com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper/MappingDegradation.ConvergedDuplicateElement|null[0]
@@ -71,6 +73,8 @@ sealed class com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper
 
         final val path // com.sahsenvar.kmapper/MappingDegradation.ConvergedDuplicateElement.path|{}path[0]
             final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.ConvergedDuplicateElement.path.<get-path>|<get-path>(){}[0]
+
+        final fun toString(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.ConvergedDuplicateElement.toString|toString(){}[0]
     }
 
     final class DroppedBrokenElement : com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper/MappingDegradation.DroppedBrokenElement|null[0]
@@ -80,6 +84,8 @@ sealed class com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper
             final fun <get-cause>(): kotlin/Throwable // com.sahsenvar.kmapper/MappingDegradation.DroppedBrokenElement.cause.<get-cause>|<get-cause>(){}[0]
         final val path // com.sahsenvar.kmapper/MappingDegradation.DroppedBrokenElement.path|{}path[0]
             final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.DroppedBrokenElement.path.<get-path>|<get-path>(){}[0]
+
+        final fun toString(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.DroppedBrokenElement.toString|toString(){}[0]
     }
 
     final class DroppedNullElement : com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper/MappingDegradation.DroppedNullElement|null[0]
@@ -87,6 +93,8 @@ sealed class com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper
 
         final val path // com.sahsenvar.kmapper/MappingDegradation.DroppedNullElement.path|{}path[0]
             final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.DroppedNullElement.path.<get-path>|<get-path>(){}[0]
+
+        final fun toString(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.DroppedNullElement.toString|toString(){}[0]
     }
 
     final class DuplicateKey : com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper/MappingDegradation.DuplicateKey|null[0]
@@ -96,6 +104,8 @@ sealed class com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper
             final fun <get-key>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.DuplicateKey.key.<get-key>|<get-key>(){}[0]
         final val path // com.sahsenvar.kmapper/MappingDegradation.DuplicateKey.path|{}path[0]
             final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.DuplicateKey.path.<get-path>|<get-path>(){}[0]
+
+        final fun toString(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.DuplicateKey.toString|toString(){}[0]
     }
 }
 

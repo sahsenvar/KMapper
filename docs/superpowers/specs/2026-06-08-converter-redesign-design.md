@@ -327,8 +327,8 @@ Two generated functions per mapping direction:
 ## Degradation sink
 
 ```kotlin
-sealed interface MappingDegradation {
-    val path: String
+sealed class MappingDegradation {
+    abstract val path: String
     class AbsorbedConversionError(path, val from: String, val to: String, val cause: Throwable)
     class DroppedBrokenElement(path, val cause: Throwable)
     class DroppedNullElement(path)
@@ -336,13 +336,15 @@ sealed interface MappingDegradation {
     class ConvergedDuplicateElement(path)   // Set dedup after conversion
 }
 
-fun interface MappingDegradationListener { fun onDegradation(event: MappingDegradation) }
-
-object KMapper {
-    /** Process-wide observation tap. Default no-op. Set once at app start. */
-    var degradationListener: MappingDegradationListener = MappingDegradationListener { }
+interface MappingListener {
+    // ...existing lifecycle methods (onMapStart/onMapComplete/onError)...
+    /** Absorbed-leniency tap. Default no-op. */
+    fun onDegradation(event: MappingDegradation) {}
 }
 ```
+
+As built in Task 4: the tap rides the existing KMapper listener registry; dispatch isolates
+listener exceptions by contract.
 
 - Observation only — never changes mapping behavior (visibility principle intact).
 - "Crash in debug, observe in prod" is a listener the app installs, not a library mode.

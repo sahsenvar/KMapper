@@ -5,6 +5,10 @@ import com.sahsenvar.kmapper.converter.TypeConverterRegistry
 import kotlin.concurrent.Volatile
 import kotlin.reflect.KClass
 
+/**
+ * Listeners are observers: an exception thrown by a listener is suppressed and never affects
+ * the mapping or other listeners.
+ */
 interface MappingListener {
     fun onMapStart(
         source: Any,
@@ -52,7 +56,14 @@ object KMapper {
     }
 
     fun dispatch(block: MappingListener.() -> Unit) {
-        listeners.toList().forEach(block)
+        listeners.toList().forEach { listener ->
+            try {
+                listener.block()
+            } catch (_: Throwable) {
+                // Observation must never change mapping behavior: a throwing listener is
+                // isolated and suppressed by contract (see MappingListener KDoc).
+            }
+        }
     }
 
     /** Runtime escape-hatch (NOT compile-time safe; prefer @KMapperConfig). */
