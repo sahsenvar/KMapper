@@ -5,9 +5,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class ValidationFailedExceptionTest {
-    @Test fun `ValidationFailed carries field and reason`() {
+    @Test fun `ValidationFailed carries path and reason`() {
         val ex = MappingException.ValidationFailed("email", "must be a valid email")
-        assertEquals("email", ex.field)
+        assertEquals("email", ex.path)
         assertEquals("must be a valid email", ex.reason)
         assertIs<MappingException>(ex)
     }

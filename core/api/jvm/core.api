@@ -2,6 +2,11 @@ public final class com/sahsenvar/kmapper/ConvertOrFailKt {
 	public static final fun convertOrFail (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 }
 
+public final class com/sahsenvar/kmapper/ConverterErrorsKt {
+	public static final fun missingConverterMessage (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public static final fun unsupportedConversionMessage (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+}
+
 public final class com/sahsenvar/kmapper/KMapper {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/KMapper;
 	public final fun addConverter (Lcom/sahsenvar/kmapper/converter/MapTypeConverter;)V
@@ -25,34 +30,57 @@ public abstract interface class com/sahsenvar/kmapper/MappableEnum {
 public abstract class com/sahsenvar/kmapper/MappingException : java/lang/RuntimeException {
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public abstract fun getPath ()Ljava/lang/String;
+	public abstract fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public final class com/sahsenvar/kmapper/MappingException$EmptyCollection : com/sahsenvar/kmapper/MappingException {
-	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun getDetail ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$EmptyCollection;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public final class com/sahsenvar/kmapper/MappingException$RequiredFieldMissing : com/sahsenvar/kmapper/MappingException {
 	public fun <init> (Ljava/lang/String;)V
-	public final fun getField ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$RequiredFieldMissing;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public final class com/sahsenvar/kmapper/MappingException$TypeConversionFailed : com/sahsenvar/kmapper/MappingException {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun getCause ()Ljava/lang/Throwable;
 	public final fun getFrom ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
 	public final fun getTo ()Ljava/lang/String;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$TypeConversionFailed;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public final class com/sahsenvar/kmapper/MappingException$UnknownEnumValue : com/sahsenvar/kmapper/MappingException {
-	public fun <init> (Ljava/lang/String;Ljava/lang/Object;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V
 	public final fun getEnum ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
 	public final fun getValue ()Ljava/lang/Object;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$UnknownEnumValue;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
+}
+
+public final class com/sahsenvar/kmapper/MappingException$UnsupportedConversion : com/sahsenvar/kmapper/MappingException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun getPath ()Ljava/lang/String;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$UnsupportedConversion;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public final class com/sahsenvar/kmapper/MappingException$ValidationFailed : com/sahsenvar/kmapper/MappingException {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
-	public final fun getField ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
 	public final fun getReason ()Ljava/lang/String;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$ValidationFailed;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public abstract interface class com/sahsenvar/kmapper/MappingListener {

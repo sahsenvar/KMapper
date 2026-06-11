@@ -54,7 +54,7 @@ class ConvertOrFailTest {
 
     @Test
     fun `MappingException TypeConversionFailed is re-thrown unchanged`() {
-        val original = MappingException.TypeConversionFailed("X", "Y", RuntimeException())
+        val original = MappingException.TypeConversionFailed("", "X", "Y", RuntimeException())
         val thrown =
             shouldThrow<MappingException.TypeConversionFailed> {
                 convertOrFail("A", "B") { throw original }
@@ -64,7 +64,7 @@ class ConvertOrFailTest {
 
     @Test
     fun `MappingException EmptyCollection is re-thrown unchanged`() {
-        val original = MappingException.EmptyCollection("detail")
+        val original = MappingException.EmptyCollection("", "detail")
         val thrown =
             shouldThrow<MappingException.EmptyCollection> {
                 convertOrFail("A", "B") { throw original }
@@ -74,7 +74,7 @@ class ConvertOrFailTest {
 
     @Test
     fun `MappingException UnknownEnumValue is re-thrown unchanged`() {
-        val original = MappingException.UnknownEnumValue("Status", "BAD")
+        val original = MappingException.UnknownEnumValue("status", "Status", "BAD")
         val thrown =
             shouldThrow<MappingException.UnknownEnumValue> {
                 convertOrFail("A", "B") { throw original }

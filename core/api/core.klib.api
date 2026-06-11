@@ -49,45 +49,77 @@ final class com.sahsenvar.kmapper/LoggingMappingListener : com.sahsenvar.kmapper
 }
 
 sealed class com.sahsenvar.kmapper/MappingException : kotlin/RuntimeException { // com.sahsenvar.kmapper/MappingException|null[0]
+    abstract val path // com.sahsenvar.kmapper/MappingException.path|{}path[0]
+        abstract fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingException.path.<get-path>|<get-path>(){}[0]
+
+    abstract fun withPathPrefix(kotlin/String): com.sahsenvar.kmapper/MappingException // com.sahsenvar.kmapper/MappingException.withPathPrefix|withPathPrefix(kotlin.String){}[0]
+
     final class EmptyCollection : com.sahsenvar.kmapper/MappingException { // com.sahsenvar.kmapper/MappingException.EmptyCollection|null[0]
-        constructor <init>(kotlin/String) // com.sahsenvar.kmapper/MappingException.EmptyCollection.<init>|<init>(kotlin.String){}[0]
+        constructor <init>(kotlin/String, kotlin/String) // com.sahsenvar.kmapper/MappingException.EmptyCollection.<init>|<init>(kotlin.String;kotlin.String){}[0]
 
         final val detail // com.sahsenvar.kmapper/MappingException.EmptyCollection.detail|{}detail[0]
             final fun <get-detail>(): kotlin/String // com.sahsenvar.kmapper/MappingException.EmptyCollection.detail.<get-detail>|<get-detail>(){}[0]
+        final val path // com.sahsenvar.kmapper/MappingException.EmptyCollection.path|{}path[0]
+            final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingException.EmptyCollection.path.<get-path>|<get-path>(){}[0]
+
+        final fun withPathPrefix(kotlin/String): com.sahsenvar.kmapper/MappingException.EmptyCollection // com.sahsenvar.kmapper/MappingException.EmptyCollection.withPathPrefix|withPathPrefix(kotlin.String){}[0]
     }
 
     final class RequiredFieldMissing : com.sahsenvar.kmapper/MappingException { // com.sahsenvar.kmapper/MappingException.RequiredFieldMissing|null[0]
         constructor <init>(kotlin/String) // com.sahsenvar.kmapper/MappingException.RequiredFieldMissing.<init>|<init>(kotlin.String){}[0]
 
-        final val field // com.sahsenvar.kmapper/MappingException.RequiredFieldMissing.field|{}field[0]
-            final fun <get-field>(): kotlin/String // com.sahsenvar.kmapper/MappingException.RequiredFieldMissing.field.<get-field>|<get-field>(){}[0]
+        final val path // com.sahsenvar.kmapper/MappingException.RequiredFieldMissing.path|{}path[0]
+            final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingException.RequiredFieldMissing.path.<get-path>|<get-path>(){}[0]
+
+        final fun withPathPrefix(kotlin/String): com.sahsenvar.kmapper/MappingException.RequiredFieldMissing // com.sahsenvar.kmapper/MappingException.RequiredFieldMissing.withPathPrefix|withPathPrefix(kotlin.String){}[0]
     }
 
     final class TypeConversionFailed : com.sahsenvar.kmapper/MappingException { // com.sahsenvar.kmapper/MappingException.TypeConversionFailed|null[0]
-        constructor <init>(kotlin/String, kotlin/String, kotlin/Throwable) // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.<init>|<init>(kotlin.String;kotlin.String;kotlin.Throwable){}[0]
+        constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlin/Throwable) // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.Throwable){}[0]
 
+        final val cause // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.cause|{}cause[0]
+            final fun <get-cause>(): kotlin/Throwable // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.cause.<get-cause>|<get-cause>(){}[0]
         final val from // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.from|{}from[0]
             final fun <get-from>(): kotlin/String // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.from.<get-from>|<get-from>(){}[0]
+        final val path // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.path|{}path[0]
+            final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.path.<get-path>|<get-path>(){}[0]
         final val to // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.to|{}to[0]
             final fun <get-to>(): kotlin/String // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.to.<get-to>|<get-to>(){}[0]
+
+        final fun withPathPrefix(kotlin/String): com.sahsenvar.kmapper/MappingException.TypeConversionFailed // com.sahsenvar.kmapper/MappingException.TypeConversionFailed.withPathPrefix|withPathPrefix(kotlin.String){}[0]
     }
 
     final class UnknownEnumValue : com.sahsenvar.kmapper/MappingException { // com.sahsenvar.kmapper/MappingException.UnknownEnumValue|null[0]
-        constructor <init>(kotlin/String, kotlin/Any) // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.<init>|<init>(kotlin.String;kotlin.Any){}[0]
+        constructor <init>(kotlin/String, kotlin/String, kotlin/Any) // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.<init>|<init>(kotlin.String;kotlin.String;kotlin.Any){}[0]
 
         final val enum // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.enum|{}enum[0]
             final fun <get-enum>(): kotlin/String // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.enum.<get-enum>|<get-enum>(){}[0]
+        final val path // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.path|{}path[0]
+            final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.path.<get-path>|<get-path>(){}[0]
         final val value // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.value|{}value[0]
             final fun <get-value>(): kotlin/Any // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.value.<get-value>|<get-value>(){}[0]
+
+        final fun withPathPrefix(kotlin/String): com.sahsenvar.kmapper/MappingException.UnknownEnumValue // com.sahsenvar.kmapper/MappingException.UnknownEnumValue.withPathPrefix|withPathPrefix(kotlin.String){}[0]
+    }
+
+    final class UnsupportedConversion : com.sahsenvar.kmapper/MappingException { // com.sahsenvar.kmapper/MappingException.UnsupportedConversion|null[0]
+        constructor <init>(kotlin/String) // com.sahsenvar.kmapper/MappingException.UnsupportedConversion.<init>|<init>(kotlin.String){}[0]
+
+        final val path // com.sahsenvar.kmapper/MappingException.UnsupportedConversion.path|{}path[0]
+            final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingException.UnsupportedConversion.path.<get-path>|<get-path>(){}[0]
+
+        final fun withPathPrefix(kotlin/String): com.sahsenvar.kmapper/MappingException.UnsupportedConversion // com.sahsenvar.kmapper/MappingException.UnsupportedConversion.withPathPrefix|withPathPrefix(kotlin.String){}[0]
     }
 
     final class ValidationFailed : com.sahsenvar.kmapper/MappingException { // com.sahsenvar.kmapper/MappingException.ValidationFailed|null[0]
         constructor <init>(kotlin/String, kotlin/String) // com.sahsenvar.kmapper/MappingException.ValidationFailed.<init>|<init>(kotlin.String;kotlin.String){}[0]
 
-        final val field // com.sahsenvar.kmapper/MappingException.ValidationFailed.field|{}field[0]
-            final fun <get-field>(): kotlin/String // com.sahsenvar.kmapper/MappingException.ValidationFailed.field.<get-field>|<get-field>(){}[0]
+        final val path // com.sahsenvar.kmapper/MappingException.ValidationFailed.path|{}path[0]
+            final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingException.ValidationFailed.path.<get-path>|<get-path>(){}[0]
         final val reason // com.sahsenvar.kmapper/MappingException.ValidationFailed.reason|{}reason[0]
             final fun <get-reason>(): kotlin/String // com.sahsenvar.kmapper/MappingException.ValidationFailed.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun withPathPrefix(kotlin/String): com.sahsenvar.kmapper/MappingException.ValidationFailed // com.sahsenvar.kmapper/MappingException.ValidationFailed.withPathPrefix|withPathPrefix(kotlin.String){}[0]
     }
 }
 
@@ -159,4 +191,6 @@ final object com.sahsenvar.kmapper/KMapper { // com.sahsenvar.kmapper/KMapper|nu
     final fun removeListener(com.sahsenvar.kmapper/MappingListener) // com.sahsenvar.kmapper/KMapper.removeListener|removeListener(com.sahsenvar.kmapper.MappingListener){}[0]
 }
 
+final fun com.sahsenvar.kmapper/missingConverterMessage(kotlin/String, kotlin/String): kotlin/String // com.sahsenvar.kmapper/missingConverterMessage|missingConverterMessage(kotlin.String;kotlin.String){}[0]
+final fun com.sahsenvar.kmapper/unsupportedConversionMessage(kotlin/String, kotlin/String): kotlin/String // com.sahsenvar.kmapper/unsupportedConversionMessage|unsupportedConversionMessage(kotlin.String;kotlin.String){}[0]
 final inline fun <#A: kotlin/Any?> com.sahsenvar.kmapper/convertOrFail(kotlin/String, kotlin/String, kotlin/Function0<#A>): #A // com.sahsenvar.kmapper/convertOrFail|convertOrFail(kotlin.String;kotlin.String;kotlin.Function0<0:0>){0§<kotlin.Any?>}[0]

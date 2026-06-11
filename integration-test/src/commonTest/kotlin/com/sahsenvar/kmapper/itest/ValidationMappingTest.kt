@@ -21,7 +21,7 @@ class ValidationMappingTest {
             assertFailsWith<MappingException.ValidationFailed> {
                 ContactR(name = "   ", label = "ok").toContactD()
             }
-        ex.field shouldBe "name"
+        ex.path shouldBe "name"
     }
 
     @Test
@@ -30,7 +30,7 @@ class ValidationMappingTest {
             assertFailsWith<MappingException.ValidationFailed> {
                 ContactR(name = "", label = null).toContactD()
             }
-        ex.field shouldBe "name"
+        ex.path shouldBe "name"
     }
 
     // ─── @ValidateTo: validated on produced value AFTER mapping ──────────────
@@ -41,7 +41,7 @@ class ValidationMappingTest {
             assertFailsWith<MappingException.ValidationFailed> {
                 ContactR(name = "Bob", label = "  ").toContactD()
             }
-        ex.field shouldBe "label"
+        ex.path shouldBe "label"
     }
 
     @Test
@@ -60,7 +60,7 @@ class ValidationMappingTest {
             assertFailsWith<MappingException.ValidationFailed> {
                 ContactR(name = "", label = null).toContactD()
             }
-        ex.field shouldBe "name"
+        ex.path shouldBe "name"
         ex.reason shouldBe "must not be blank"
         (ex.message ?: "").contains("name") shouldBe true
     }

@@ -20,5 +20,5 @@ inline fun <T> convertOrFail(
 } catch (e: MappingException) {
     throw e
 } catch (e: Throwable) {
-    throw MappingException.TypeConversionFailed(from, to, e)
+    throw MappingException.TypeConversionFailed("", from, to, e)
 }

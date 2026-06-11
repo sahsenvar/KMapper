@@ -16,6 +16,7 @@ import platform.Foundation.NSURL
 object NsUrlStringConverter : MapTypeConverter<String, NSURL>(String::class, NSURL::class) {
     override fun convertToNonNull(value: String): NSURL = NSURL.URLWithString(value)
         ?: throw MappingException.TypeConversionFailed(
+            "",
             "String",
             "NSURL",
             IllegalArgumentException("NSURL.URLWithString returned null for: $value"),

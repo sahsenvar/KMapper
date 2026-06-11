@@ -188,22 +188,25 @@ class MappingCodeGenerator(
         val enumSimpleName = strategy.enumFqn.substringAfterLast(".")
         val mappingExceptionClass = ClassName("com.sahsenvar.kmapper", "MappingException")
 
+        // Interim path: the source field's name (real path-aware codegen lands in a later task).
         return if (sourceField.isNullable) {
             CodeBlock.of(
                 "%N?.let·{·w·->·%T.entries.firstOrNull·{·it.wireValue·==·w·}" +
-                    "·?:·throw·%T.UnknownEnumValue(%S,·w.toString())·}",
+                    "·?:·throw·%T.UnknownEnumValue(%S,·%S,·w.toString())·}",
                 sourceField.name,
                 enumClassName,
                 mappingExceptionClass,
+                sourceField.name,
                 enumSimpleName,
             )
         } else {
             CodeBlock.of(
                 "%T.entries.firstOrNull·{·it.wireValue·==·%N·}" +
-                    "·?:·throw·%T.UnknownEnumValue(%S,·%N.toString())",
+                    "·?:·throw·%T.UnknownEnumValue(%S,·%S,·%N.toString())",
                 enumClassName,
                 sourceField.name,
                 mappingExceptionClass,
+                sourceField.name,
                 enumSimpleName,
                 sourceField.name,
             )
