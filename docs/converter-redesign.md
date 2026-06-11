@@ -215,10 +215,11 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
 30. **`@MapDefaultValue` is removed.** Defaults are target constructor defaults, applied via
     **omit/copy**: build the target with defaulted fields omitted, then `.copy(field = seam
     result)` — works for any type, requires data class.
-    ⚠️ **Gate: the cross-module `hasDefault` empirical test is Task 1 of the plan** — omit/copy
-    and ladder rows 6/8 depend on KSP reading the default-value *flag* across module boundaries
-    (the flag lives in Kotlin metadata; the value itself is never needed). If the gate fails,
-    default handling is redesigned before anything is built on it.
+    ✅ **GATE PASSED (2026-06-11).** The cross-module `hasDefault` empirical test
+    (`CrossModuleHasDefaultGateTest`, commits e6addaa/077f971) proved all flag shapes — literal,
+    function-call expression, null-on-nullable, const reference, computed expression,
+    middle-position, both polarities — read identically cross-module (classpath/metadata) and
+    in-module. omit/copy and ladder rows 2/4/6/8 are safe to build on.
 
 ## J) Parked (explicitly deferred, not lost)
 
