@@ -46,6 +46,10 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
   published coordinates change to `kmapper-compiler`).
 - Dependency flow: `domain → annotations (→ core)`; `data → annotations + ksp(compiler)`;
   `converters-* / validators → core` (+ `annotations` only where `@CollectionWrapper` is declared).
+- `@CollectionWrapper` is **BINARY**-retention (KSP must read it from compiled add-on artifacts);
+  all other declaration annotations are SOURCE-retention. Wrapper add-ons use
+  `implementation(:annotations)` — safe because any consumer that triggers the compiler also
+  declares `kmapper-annotations` directly (you cannot use `@MapTo` without it).
 - **Core stays standalone**: `@UnsupportedDirection` lives in core because it is part of the
   converter *contract*, not a mapping declaration; without the compiler it is inert metadata —
   the runtime `unsupported()` throw still enforces the direction. Core-only users trade

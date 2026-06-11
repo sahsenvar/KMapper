@@ -49,7 +49,7 @@ mavenPublishing {
     pom {
         name.set("KMapper core")
         description.set(
-            "KMP-friendly compile-time object mapper (KSP). Core module: annotations, MappingException, MapTypeConverter registry, built-in converters, MappableEnum.",
+            "KMP-friendly compile-time object mapper (KSP). Core module: MappingException, MapTypeConverter registry, built-in converters, MappableEnum — standalone runtime, usable without code generation.",
         )
         inceptionYear.set("2026")
         url.set("https://github.com/sahsenvar/KMapper")

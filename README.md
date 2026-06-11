@@ -16,8 +16,9 @@ Group `io.github.sahsenvar`:
 
 | Artifact | Platform | Purpose |
 |----------|----------|---------|
-| `kmapper-core` | KMP | Annotations, `MappingException`, `MapTypeConverter` + registry, built-in primitive converters, `MappableEnum`, `KMapper`/`MappingListener` |
-| `kmapper-processor` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()` extensions) |
+| `kmapper-core` | KMP | Standalone runtime: `MappingException`, `MapTypeConverter` + registry, built-in primitive converters, `MappableEnum`, `KMapper`/`MappingListener` — usable without code generation |
+| `kmapper-annotations` | KMP | Mapping declaration annotations (`@MapTo`/`@MapFrom`/`@FieldMap`/`@KMapperConfig`/…); depends on `kmapper-core` |
+| `kmapper-compiler` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()` extensions) |
 | `kmapper-converters-immutable` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet`/`PersistentSet` wrappers (listed in `@KMapperConfig(wrappers)`) |
 | `kmapper-converters-arrow` | KMP | `List` → `NonEmptyList` wrapper; empty source throws `MappingException.EmptyCollection` (listed in `@KMapperConfig(wrappers)`) |
 | `kmapper-converters-datetime` | KMP (kotlinx) / JVM+Android (java.time, bridges) | Scalar converters: `String`/`Long` ↔ `LocalDate`, `LocalDateTime`, `LocalTime`, `ZonedDateTime`, `OffsetDateTime`, `Instant` |
