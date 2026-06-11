@@ -20,7 +20,9 @@ interface MappingListener {
         source: Any,
         error: MappingException,
     ) {}
-    // forward-compatible (default no-op): onFieldDefaulted / onConversion added in a later round
+
+    /** Absorbed-leniency tap (skips, broken→null/default absorptions, duplicate keys). Default no-op. */
+    fun onDegradation(event: MappingDegradation) {}
 }
 
 object KMapper {

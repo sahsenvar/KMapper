@@ -12,6 +12,7 @@ abstract interface <#A: kotlin/Any> com.sahsenvar.kmapper/MappableEnum { // com.
 }
 
 abstract interface com.sahsenvar.kmapper/MappingListener { // com.sahsenvar.kmapper/MappingListener|null[0]
+    open fun onDegradation(com.sahsenvar.kmapper/MappingDegradation) // com.sahsenvar.kmapper/MappingListener.onDegradation|onDegradation(com.sahsenvar.kmapper.MappingDegradation){}[0]
     open fun onError(kotlin/Any, com.sahsenvar.kmapper/MappingException) // com.sahsenvar.kmapper/MappingListener.onError|onError(kotlin.Any;com.sahsenvar.kmapper.MappingException){}[0]
     open fun onMapComplete(kotlin/Any, kotlin/Any) // com.sahsenvar.kmapper/MappingListener.onMapComplete|onMapComplete(kotlin.Any;kotlin.Any){}[0]
     open fun onMapStart(kotlin/Any, kotlin.reflect/KClass<*>) // com.sahsenvar.kmapper/MappingListener.onMapStart|onMapStart(kotlin.Any;kotlin.reflect.KClass<*>){}[0]
@@ -46,6 +47,56 @@ final class com.sahsenvar.kmapper/LoggingMappingListener : com.sahsenvar.kmapper
     final fun onError(kotlin/Any, com.sahsenvar.kmapper/MappingException) // com.sahsenvar.kmapper/LoggingMappingListener.onError|onError(kotlin.Any;com.sahsenvar.kmapper.MappingException){}[0]
     final fun onMapComplete(kotlin/Any, kotlin/Any) // com.sahsenvar.kmapper/LoggingMappingListener.onMapComplete|onMapComplete(kotlin.Any;kotlin.Any){}[0]
     final fun onMapStart(kotlin/Any, kotlin.reflect/KClass<*>) // com.sahsenvar.kmapper/LoggingMappingListener.onMapStart|onMapStart(kotlin.Any;kotlin.reflect.KClass<*>){}[0]
+}
+
+sealed class com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper/MappingDegradation|null[0]
+    abstract val path // com.sahsenvar.kmapper/MappingDegradation.path|{}path[0]
+        abstract fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.path.<get-path>|<get-path>(){}[0]
+
+    final class AbsorbedConversionError : com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError|null[0]
+        constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlin/Throwable) // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.Throwable){}[0]
+
+        final val cause // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.cause|{}cause[0]
+            final fun <get-cause>(): kotlin/Throwable // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.cause.<get-cause>|<get-cause>(){}[0]
+        final val from // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.from|{}from[0]
+            final fun <get-from>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.from.<get-from>|<get-from>(){}[0]
+        final val path // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.path|{}path[0]
+            final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.path.<get-path>|<get-path>(){}[0]
+        final val to // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.to|{}to[0]
+            final fun <get-to>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.AbsorbedConversionError.to.<get-to>|<get-to>(){}[0]
+    }
+
+    final class ConvergedDuplicateElement : com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper/MappingDegradation.ConvergedDuplicateElement|null[0]
+        constructor <init>(kotlin/String) // com.sahsenvar.kmapper/MappingDegradation.ConvergedDuplicateElement.<init>|<init>(kotlin.String){}[0]
+
+        final val path // com.sahsenvar.kmapper/MappingDegradation.ConvergedDuplicateElement.path|{}path[0]
+            final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.ConvergedDuplicateElement.path.<get-path>|<get-path>(){}[0]
+    }
+
+    final class DroppedBrokenElement : com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper/MappingDegradation.DroppedBrokenElement|null[0]
+        constructor <init>(kotlin/String, kotlin/Throwable) // com.sahsenvar.kmapper/MappingDegradation.DroppedBrokenElement.<init>|<init>(kotlin.String;kotlin.Throwable){}[0]
+
+        final val cause // com.sahsenvar.kmapper/MappingDegradation.DroppedBrokenElement.cause|{}cause[0]
+            final fun <get-cause>(): kotlin/Throwable // com.sahsenvar.kmapper/MappingDegradation.DroppedBrokenElement.cause.<get-cause>|<get-cause>(){}[0]
+        final val path // com.sahsenvar.kmapper/MappingDegradation.DroppedBrokenElement.path|{}path[0]
+            final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.DroppedBrokenElement.path.<get-path>|<get-path>(){}[0]
+    }
+
+    final class DroppedNullElement : com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper/MappingDegradation.DroppedNullElement|null[0]
+        constructor <init>(kotlin/String) // com.sahsenvar.kmapper/MappingDegradation.DroppedNullElement.<init>|<init>(kotlin.String){}[0]
+
+        final val path // com.sahsenvar.kmapper/MappingDegradation.DroppedNullElement.path|{}path[0]
+            final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.DroppedNullElement.path.<get-path>|<get-path>(){}[0]
+    }
+
+    final class DuplicateKey : com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper/MappingDegradation.DuplicateKey|null[0]
+        constructor <init>(kotlin/String, kotlin/String) // com.sahsenvar.kmapper/MappingDegradation.DuplicateKey.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+        final val key // com.sahsenvar.kmapper/MappingDegradation.DuplicateKey.key|{}key[0]
+            final fun <get-key>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.DuplicateKey.key.<get-key>|<get-key>(){}[0]
+        final val path // com.sahsenvar.kmapper/MappingDegradation.DuplicateKey.path|{}path[0]
+            final fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.DuplicateKey.path.<get-path>|<get-path>(){}[0]
+    }
 }
 
 sealed class com.sahsenvar.kmapper/MappingException : kotlin/RuntimeException { // com.sahsenvar.kmapper/MappingException|null[0]

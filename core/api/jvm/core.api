@@ -18,6 +18,7 @@ public final class com/sahsenvar/kmapper/KMapper {
 
 public final class com/sahsenvar/kmapper/LoggingMappingListener : com/sahsenvar/kmapper/MappingListener {
 	public fun <init> (Lkotlin/jvm/functions/Function1;)V
+	public fun onDegradation (Lcom/sahsenvar/kmapper/MappingDegradation;)V
 	public fun onError (Ljava/lang/Object;Lcom/sahsenvar/kmapper/MappingException;)V
 	public fun onMapComplete (Ljava/lang/Object;Ljava/lang/Object;)V
 	public fun onMapStart (Ljava/lang/Object;Lkotlin/reflect/KClass;)V
@@ -25,6 +26,40 @@ public final class com/sahsenvar/kmapper/LoggingMappingListener : com/sahsenvar/
 
 public abstract interface class com/sahsenvar/kmapper/MappableEnum {
 	public abstract fun getWireValue ()Ljava/lang/Object;
+}
+
+public abstract class com/sahsenvar/kmapper/MappingDegradation {
+	public abstract fun getPath ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/MappingDegradation$AbsorbedConversionError : com/sahsenvar/kmapper/MappingDegradation {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+	public final fun getCause ()Ljava/lang/Throwable;
+	public final fun getFrom ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
+	public final fun getTo ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/MappingDegradation$ConvergedDuplicateElement : com/sahsenvar/kmapper/MappingDegradation {
+	public fun <init> (Ljava/lang/String;)V
+	public fun getPath ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/MappingDegradation$DroppedBrokenElement : com/sahsenvar/kmapper/MappingDegradation {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public final fun getCause ()Ljava/lang/Throwable;
+	public fun getPath ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/MappingDegradation$DroppedNullElement : com/sahsenvar/kmapper/MappingDegradation {
+	public fun <init> (Ljava/lang/String;)V
+	public fun getPath ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/MappingDegradation$DuplicateKey : com/sahsenvar/kmapper/MappingDegradation {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getKey ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
 }
 
 public abstract class com/sahsenvar/kmapper/MappingException : java/lang/RuntimeException {
@@ -84,12 +119,14 @@ public final class com/sahsenvar/kmapper/MappingException$ValidationFailed : com
 }
 
 public abstract interface class com/sahsenvar/kmapper/MappingListener {
+	public fun onDegradation (Lcom/sahsenvar/kmapper/MappingDegradation;)V
 	public fun onError (Ljava/lang/Object;Lcom/sahsenvar/kmapper/MappingException;)V
 	public fun onMapComplete (Ljava/lang/Object;Ljava/lang/Object;)V
 	public fun onMapStart (Ljava/lang/Object;Lkotlin/reflect/KClass;)V
 }
 
 public final class com/sahsenvar/kmapper/MappingListener$DefaultImpls {
+	public static fun onDegradation (Lcom/sahsenvar/kmapper/MappingListener;Lcom/sahsenvar/kmapper/MappingDegradation;)V
 	public static fun onError (Lcom/sahsenvar/kmapper/MappingListener;Ljava/lang/Object;Lcom/sahsenvar/kmapper/MappingException;)V
 	public static fun onMapComplete (Lcom/sahsenvar/kmapper/MappingListener;Ljava/lang/Object;Ljava/lang/Object;)V
 	public static fun onMapStart (Lcom/sahsenvar/kmapper/MappingListener;Ljava/lang/Object;Lkotlin/reflect/KClass;)V
