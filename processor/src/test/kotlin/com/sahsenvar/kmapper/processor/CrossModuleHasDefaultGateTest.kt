@@ -13,6 +13,7 @@ import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import com.tschuchort.compiletesting.configureKsp
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
@@ -64,6 +65,7 @@ class HasDefaultProbeProcessor(
             for (constructorParameter in constructorParameters) {
                 val simpleClassName = classDeclaration.simpleName.asString()
                 val parameterName = constructorParameter.name?.asString()
+                // logger.warn is load-bearing: kctfork reliably captures warn-level output in messages; info may be dropped.
                 logger.warn("HASDEFAULT:$simpleClassName.$parameterName=${constructorParameter.hasDefault}")
             }
         }
@@ -71,6 +73,7 @@ class HasDefaultProbeProcessor(
     }
 
     companion object {
+        // Keep in sync with librarySource and expectedFlagLines — unlisted classes are silently skipped.
         val PROBED_CLASS_NAMES = listOf("lib.LibDomainModel", "lib.AllDefaultsModel")
     }
 }
@@ -79,6 +82,21 @@ class HasDefaultProbeProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor =
         HasDefaultProbeProcessor(environment.logger)
 }
+
+private const val GATE_JVM_TARGET = "21" // matches :core's jvm target (see CompileTestSupport)
+
+/** Shared compilation setup for both stages; KSP probe registration stays at the call site that needs it. */
+private fun baseCompilation(
+    sources: List<SourceFile>,
+    classpathEntries: List<File> = emptyList(),
+): KotlinCompilation =
+    KotlinCompilation().apply {
+        this.sources = sources
+        inheritClassPath = true
+        messageOutputStream = System.out
+        jvmTarget = GATE_JVM_TARGET
+        classpaths = classpathEntries
+    }
 
 class CrossModuleHasDefaultGateTest : BehaviorSpec({
 
@@ -142,16 +160,7 @@ class CrossModuleHasDefaultGateTest : BehaviorSpec({
         sources: List<SourceFile>,
         libraryClasspath: List<File>,
     ): JvmCompilationResult {
-        val probeCompilation =
-            KotlinCompilation().apply {
-                this.sources = sources
-                inheritClassPath = true
-                messageOutputStream = System.out
-                jvmTarget = "21"
-                if (libraryClasspath.isNotEmpty()) {
-                    classpaths = libraryClasspath
-                }
-            }
+        val probeCompilation = baseCompilation(sources, classpathEntries = libraryClasspath)
         // configureKsp {} must be called BEFORE compile() to register KSP with the compilation.
         probeCompilation.configureKsp {
             @Suppress("UNCHECKED_CAST")
@@ -161,13 +170,7 @@ class CrossModuleHasDefaultGateTest : BehaviorSpec({
     }
 
     given("a library with defaulted constructor parameters compiled separately (stage 1, no KSP)") {
-        val libraryCompilation =
-            KotlinCompilation().apply {
-                sources = listOf(librarySource)
-                inheritClassPath = true
-                messageOutputStream = System.out
-                jvmTarget = "21"
-            }
+        val libraryCompilation = baseCompilation(sources = listOf(librarySource))
         val libraryResult = libraryCompilation.compile()
 
         `when`("a consumer module compiles against its classes with the hasDefault probe (stage 2)") {
@@ -184,12 +187,16 @@ class CrossModuleHasDefaultGateTest : BehaviorSpec({
 
             then("both library classes are resolvable from the classpath") {
                 consumerResult.messages shouldNotContain "declaration-not-found"
+                consumerResult.messages shouldContain "HASDEFAULT:"
             }
 
             then("every parameter's hasDefault flag is readable cross-module with the correct polarity") {
-                expectedFlagLines.forEach { expectedFlagLine ->
-                    consumerResult.messages shouldContain expectedFlagLine
-                }
+                val probeFlagLines =
+                    consumerResult.messages
+                        .lines()
+                        .filter { "HASDEFAULT:" in it }
+                        .map { probeLine -> probeLine.substring(probeLine.indexOf("HASDEFAULT:")) }
+                probeFlagLines shouldContainAll expectedFlagLines
             }
         }
     }
@@ -208,9 +215,12 @@ class CrossModuleHasDefaultGateTest : BehaviorSpec({
             }
 
             then("the probe reports identical flags from source — isolating cross-module as the only variable") {
-                expectedFlagLines.forEach { expectedFlagLine ->
-                    controlResult.messages shouldContain expectedFlagLine
-                }
+                val probeFlagLines =
+                    controlResult.messages
+                        .lines()
+                        .filter { "HASDEFAULT:" in it }
+                        .map { probeLine -> probeLine.substring(probeLine.indexOf("HASDEFAULT:")) }
+                probeFlagLines shouldContainAll expectedFlagLines
             }
         }
     }
