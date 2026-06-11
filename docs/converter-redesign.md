@@ -73,10 +73,16 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
 8. `@UnsupportedDirection(reason: String)` — **function-level** (sits on the overridden
    `convertTo`/`convertFrom` stub: `@UnsupportedDirection("…") override fun convertTo(…) =
    unsupported()`). No `Direction` enum, no `direction` parameter, no `@Repeatable` — the
-   annotated function IS the direction. Detection rule: a direction is provided iff it is
+   annotated function IS the direction. **BINARY retention** (discovered during Task 11–13:
+   SOURCE-retained annotations are invisible to KSP on classpath-resolved declarations, and
+   built-ins are ALWAYS classpath-resolved in consumer builds — same rationale as
+   `@CollectionWrapper`). Detection rule: a direction is provided iff its **total** method is
    declared AND not annotated; **annotation wins** (KSP cannot inspect bodies). Annotating an
-   `OrNull` variant → compile error ("annotate the total method"). Used identically by built-ins
-   and user converters.
+   `OrNull` variant → compile error ("annotate the total method"). **OrNull-only override
+   (no total declared for that direction) → compile error** with guidance ("override the total
+   method too") — treating it as provided would let generated code reach the throwing total at
+   a hard landing site, breaking the compile-time guarantee. Used identically by built-ins and
+   user converters.
 9. **Discovery is pair-keyed** (built-in registry + `@KMapperConfig`), order-independent.
    `@ConvertWith` is **override-only** with two independent axes: `use` (which converter,
    optional) and `onFail` (policy). `@ConvertWith(onFail = …)` without `use` is legitimate.

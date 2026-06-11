@@ -109,8 +109,8 @@ object IntStringConverter : MapTypeConverter<Int, String>(Int::class, String::cl
 
 ```kotlin
 @Target(AnnotationTarget.FUNCTION)
-@Retention(AnnotationRetention.SOURCE)
-annotation class UnsupportedDirection(val reason: String)
+@Retention(AnnotationRetention.BINARY)   // KSP must read it from classpath-resolved (compiled)
+annotation class UnsupportedDirection(val reason: String)   // converters — built-ins always are.
 ```
 
 ```kotlin
@@ -127,12 +127,15 @@ object LongIntConverter : MapTypeConverter<Long, Int>(Long::class, Int::class) {
   pair-specific reasons. Every primitive pair is an object: it either converts or explains, at
   compile time, why it intentionally will not.
 - A **user** converter uses the same annotation for its own reasons — full parity.
-- **Detection rule:** a direction is *provided* iff it is declared AND not annotated.
-  **The annotation wins** — KSP cannot inspect function bodies, so an annotated function is
-  treated as unsupported regardless of its body (documented contract; the stub body must be
-  `= unsupported()`). The annotation goes on the **total** method only; on an `OrNull` variant
-  → compile error ("annotate the total method"). One annotated total covers its `OrNull`
-  variant too.
+- **Detection rule:** a direction is *provided* iff its **total** method is declared AND not
+  annotated. **The annotation wins** — KSP cannot inspect function bodies, so an annotated
+  function is treated as unsupported regardless of its body (documented contract; the stub body
+  must be `= unsupported()`). The annotation goes on the **total** method only; on an `OrNull`
+  variant → compile error ("annotate the total method"). One annotated total covers its
+  `OrNull` variant too. **OrNull-only override** (OrNull declared, total not) → compile error
+  with guidance ("override the total method too — OrNull is in addition to the total, never
+  instead of it"): treating it as provided would let a hard landing site reach the throwing
+  total at runtime.
 - The processor turns a needed-but-unsupported direction into `UnsupportedConversion(reason)`;
   a needed-and-undeclared direction gets the generic message.
 
