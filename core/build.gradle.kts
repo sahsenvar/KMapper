@@ -27,11 +27,18 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.kotest.assertions)
             implementation(libs.kotest.property)
+            // kotest-framework-engine also provides io.kotest.datatest.withData (merged in Kotest 6.x)
+            implementation(libs.kotest.framework.engine)
         }
         jvmTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.kotest.runner.junit5)
         }
     }
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
 
 mavenPublishing {
