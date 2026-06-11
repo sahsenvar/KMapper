@@ -17,6 +17,8 @@ dependencies {
     testImplementation(libs.compile.testing.core)
     testImplementation(libs.compile.testing.ksp)
     testImplementation(libs.kotlinx.collections.immutable)
+    testImplementation(libs.kotest.runner.junit5)
+    testImplementation(libs.kotest.assertions)
 }
 
 tasks.test { useJUnitPlatform() }
