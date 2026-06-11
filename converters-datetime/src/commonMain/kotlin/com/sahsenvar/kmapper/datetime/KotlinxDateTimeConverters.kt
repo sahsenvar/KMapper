@@ -10,7 +10,10 @@ import kotlinx.datetime.LocalTime
 
 /**
  * Converts between ISO-8601 [String] and [LocalDate].
- * S=String matches the core naming convention (primitive/String side is S).
+ *
+ * S=String is legacy ordering from before core adopted the richer-first convention
+ * (richer-first would put the richer [LocalDate] on the S side). Reordering these
+ * pairs is parked — see docs/converter-redesign.md.
  */
 object StringLocalDateConverter : MapTypeConverter<String, LocalDate>(String::class, LocalDate::class) {
     override fun convertTo(source: String): LocalDate = LocalDate.parse(source)

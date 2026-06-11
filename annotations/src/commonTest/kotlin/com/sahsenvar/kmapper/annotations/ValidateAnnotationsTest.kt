@@ -11,8 +11,10 @@ private data class AnnotationCompileCheck(
     @Validate(NotBlankValidator::class)
     @ConvertWith(onFail = OnFail.Throw)
     @ConvertTo(onFail = OnFail.Auto)
-    @ConvertFrom(onFail = OnFail.Skip)
     val name: String,
+    // OnFail.Skip is collection-elements-only, so its compile-shape check sits on a List field.
+    @ConvertFrom(onFail = OnFail.Skip)
+    val tags: List<String> = emptyList(),
     @IgnoreMap
     val notMapped: String = "",
     @IgnoreDefaultValue

@@ -65,7 +65,7 @@ object LongIntConverter : MapTypeConverter<Long, Int>(Long::class, Int::class) {
 object FloatByteConverter : MapTypeConverter<Float, Byte>(Float::class, Byte::class) {
     override fun convertFrom(target: Byte): Float = target.toFloat()
 
-    @UnsupportedDirection("Float -> Byte loses precision/range.")
+    @UnsupportedDirection("Float -> Byte loses precision/range; convert explicitly if intended.")
     override fun convertTo(source: Float): Byte = unsupported()
 }
 
@@ -73,7 +73,7 @@ object FloatByteConverter : MapTypeConverter<Float, Byte>(Float::class, Byte::cl
 object DoubleByteConverter : MapTypeConverter<Double, Byte>(Double::class, Byte::class) {
     override fun convertFrom(target: Byte): Double = target.toDouble()
 
-    @UnsupportedDirection("Double -> Byte loses precision/range.")
+    @UnsupportedDirection("Double -> Byte loses precision/range; convert explicitly if intended.")
     override fun convertTo(source: Double): Byte = unsupported()
 }
 
@@ -81,7 +81,7 @@ object DoubleByteConverter : MapTypeConverter<Double, Byte>(Double::class, Byte:
 object FloatShortConverter : MapTypeConverter<Float, Short>(Float::class, Short::class) {
     override fun convertFrom(target: Short): Float = target.toFloat()
 
-    @UnsupportedDirection("Float -> Short loses precision/range.")
+    @UnsupportedDirection("Float -> Short loses precision/range; convert explicitly if intended.")
     override fun convertTo(source: Float): Short = unsupported()
 }
 
@@ -89,7 +89,7 @@ object FloatShortConverter : MapTypeConverter<Float, Short>(Float::class, Short:
 object DoubleShortConverter : MapTypeConverter<Double, Short>(Double::class, Short::class) {
     override fun convertFrom(target: Short): Double = target.toDouble()
 
-    @UnsupportedDirection("Double -> Short loses precision/range.")
+    @UnsupportedDirection("Double -> Short loses precision/range; convert explicitly if intended.")
     override fun convertTo(source: Double): Short = unsupported()
 }
 
@@ -97,7 +97,7 @@ object DoubleShortConverter : MapTypeConverter<Double, Short>(Double::class, Sho
 object DoubleIntConverter : MapTypeConverter<Double, Int>(Double::class, Int::class) {
     override fun convertFrom(target: Int): Double = target.toDouble()
 
-    @UnsupportedDirection("Double -> Int loses precision/range.")
+    @UnsupportedDirection("Double -> Int loses precision/range; convert explicitly if intended.")
     override fun convertTo(source: Double): Int = unsupported()
 }
 
@@ -105,7 +105,7 @@ object DoubleIntConverter : MapTypeConverter<Double, Int>(Double::class, Int::cl
 object DoubleFloatConverter : MapTypeConverter<Double, Float>(Double::class, Float::class) {
     override fun convertFrom(target: Float): Double = target.toDouble()
 
-    @UnsupportedDirection("Double -> Float loses precision.")
+    @UnsupportedDirection("Double -> Float loses precision/range; convert explicitly if intended.")
     override fun convertTo(source: Double): Float = unsupported()
 }
 
@@ -125,7 +125,7 @@ object FloatLongConverter : MapTypeConverter<Float, Long>(Float::class, Long::cl
     @UnsupportedDirection("Float -> Long truncates the fraction; decide floor/round/ceil explicitly.")
     override fun convertTo(source: Float): Long = unsupported()
 
-    @UnsupportedDirection("Long -> Float is lossy above 2^24.")
+    @UnsupportedDirection("Long -> Float is lossy above 2^24 (Float has a 24-bit mantissa).")
     override fun convertFrom(target: Long): Float = unsupported()
 }
 
@@ -222,14 +222,22 @@ object LongStringConverter : MapTypeConverter<Long, String>(Long::class, String:
     override fun convertFrom(target: String): Long = target.toLong()
 }
 
-/** [Float] <-> [String]: format via toString, strict parse. */
+/**
+ * [Float] <-> [String]: format via toString; parse via `toFloat()` (platform semantics —
+ * JVM accepts surrounding whitespace, `f`/`d` suffixes, and hex floats; the integer
+ * parses above are strict-decimal).
+ */
 object FloatStringConverter : MapTypeConverter<Float, String>(Float::class, String::class) {
     override fun convertTo(source: Float): String = source.toString()
 
     override fun convertFrom(target: String): Float = target.toFloat()
 }
 
-/** [Double] <-> [String]: format via toString, strict parse. */
+/**
+ * [Double] <-> [String]: format via toString; parse via `toDouble()` (platform semantics —
+ * JVM accepts surrounding whitespace, `f`/`d` suffixes, and hex floats; the integer
+ * parses above are strict-decimal).
+ */
 object DoubleStringConverter : MapTypeConverter<Double, String>(Double::class, String::class) {
     override fun convertTo(source: Double): String = source.toString()
 

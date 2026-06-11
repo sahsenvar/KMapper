@@ -10,41 +10,44 @@ import io.kotest.property.checkAll
 class NumericConvertersTest :
     FunSpec({
         context("widening converters: poorer -> richer via convertFrom, exact at boundaries") {
-            withData(
+            // Rows are pure data (name, deferred conversion, expected); the conversion runs
+            // inside the test lambda so a throwing converter fails its ONE named row instead
+            // of aborting spec construction.
+            withData<Triple<String, () -> Any, Any>>(
                 nameFn = { it.first },
                 // Byte-based pairs
-                Triple("ShortByte MAX", ShortByteConverter.convertFrom(Byte.MAX_VALUE) as Any, 127.toShort() as Any),
-                Triple("ShortByte MIN", ShortByteConverter.convertFrom(Byte.MIN_VALUE), (-128).toShort()),
-                Triple("IntByte MAX", IntByteConverter.convertFrom(Byte.MAX_VALUE), 127),
-                Triple("IntByte MIN", IntByteConverter.convertFrom(Byte.MIN_VALUE), -128),
-                Triple("LongByte MAX", LongByteConverter.convertFrom(Byte.MAX_VALUE), 127L),
-                Triple("LongByte MIN", LongByteConverter.convertFrom(Byte.MIN_VALUE), -128L),
-                Triple("FloatByte MAX", FloatByteConverter.convertFrom(Byte.MAX_VALUE), 127f),
-                Triple("FloatByte MIN", FloatByteConverter.convertFrom(Byte.MIN_VALUE), -128f),
-                Triple("DoubleByte MAX", DoubleByteConverter.convertFrom(Byte.MAX_VALUE), 127.0),
-                Triple("DoubleByte MIN", DoubleByteConverter.convertFrom(Byte.MIN_VALUE), -128.0),
+                Triple("ShortByte MAX", { ShortByteConverter.convertFrom(Byte.MAX_VALUE) }, 127.toShort()),
+                Triple("ShortByte MIN", { ShortByteConverter.convertFrom(Byte.MIN_VALUE) }, (-128).toShort()),
+                Triple("IntByte MAX", { IntByteConverter.convertFrom(Byte.MAX_VALUE) }, 127),
+                Triple("IntByte MIN", { IntByteConverter.convertFrom(Byte.MIN_VALUE) }, -128),
+                Triple("LongByte MAX", { LongByteConverter.convertFrom(Byte.MAX_VALUE) }, 127L),
+                Triple("LongByte MIN", { LongByteConverter.convertFrom(Byte.MIN_VALUE) }, -128L),
+                Triple("FloatByte MAX", { FloatByteConverter.convertFrom(Byte.MAX_VALUE) }, 127f),
+                Triple("FloatByte MIN", { FloatByteConverter.convertFrom(Byte.MIN_VALUE) }, -128f),
+                Triple("DoubleByte MAX", { DoubleByteConverter.convertFrom(Byte.MAX_VALUE) }, 127.0),
+                Triple("DoubleByte MIN", { DoubleByteConverter.convertFrom(Byte.MIN_VALUE) }, -128.0),
                 // Short-based pairs
-                Triple("IntShort MAX", IntShortConverter.convertFrom(Short.MAX_VALUE), Short.MAX_VALUE.toInt()),
-                Triple("IntShort MIN", IntShortConverter.convertFrom(Short.MIN_VALUE), Short.MIN_VALUE.toInt()),
-                Triple("LongShort MAX", LongShortConverter.convertFrom(Short.MAX_VALUE), Short.MAX_VALUE.toLong()),
-                Triple("LongShort MIN", LongShortConverter.convertFrom(Short.MIN_VALUE), Short.MIN_VALUE.toLong()),
-                Triple("FloatShort MAX exact", FloatShortConverter.convertFrom(Short.MAX_VALUE), Short.MAX_VALUE.toFloat()),
-                Triple("FloatShort MIN exact", FloatShortConverter.convertFrom(Short.MIN_VALUE), Short.MIN_VALUE.toFloat()),
-                Triple("DoubleShort MAX exact", DoubleShortConverter.convertFrom(Short.MAX_VALUE), Short.MAX_VALUE.toDouble()),
-                Triple("DoubleShort MIN exact", DoubleShortConverter.convertFrom(Short.MIN_VALUE), Short.MIN_VALUE.toDouble()),
+                Triple("IntShort MAX", { IntShortConverter.convertFrom(Short.MAX_VALUE) }, Short.MAX_VALUE.toInt()),
+                Triple("IntShort MIN", { IntShortConverter.convertFrom(Short.MIN_VALUE) }, Short.MIN_VALUE.toInt()),
+                Triple("LongShort MAX", { LongShortConverter.convertFrom(Short.MAX_VALUE) }, Short.MAX_VALUE.toLong()),
+                Triple("LongShort MIN", { LongShortConverter.convertFrom(Short.MIN_VALUE) }, Short.MIN_VALUE.toLong()),
+                Triple("FloatShort MAX exact", { FloatShortConverter.convertFrom(Short.MAX_VALUE) }, Short.MAX_VALUE.toFloat()),
+                Triple("FloatShort MIN exact", { FloatShortConverter.convertFrom(Short.MIN_VALUE) }, Short.MIN_VALUE.toFloat()),
+                Triple("DoubleShort MAX exact", { DoubleShortConverter.convertFrom(Short.MAX_VALUE) }, Short.MAX_VALUE.toDouble()),
+                Triple("DoubleShort MIN exact", { DoubleShortConverter.convertFrom(Short.MIN_VALUE) }, Short.MIN_VALUE.toDouble()),
                 // Int-based pairs
-                Triple("LongInt MAX", LongIntConverter.convertFrom(Int.MAX_VALUE), Int.MAX_VALUE.toLong()),
-                Triple("LongInt MIN", LongIntConverter.convertFrom(Int.MIN_VALUE), Int.MIN_VALUE.toLong()),
-                Triple("LongInt zero", LongIntConverter.convertFrom(0), 0L),
-                Triple("LongInt minus one", LongIntConverter.convertFrom(-1), -1L),
-                Triple("DoubleInt MAX exact", DoubleIntConverter.convertFrom(Int.MAX_VALUE), 2147483647.0),
-                Triple("DoubleInt MIN exact", DoubleIntConverter.convertFrom(Int.MIN_VALUE), -2147483648.0),
+                Triple("LongInt MAX", { LongIntConverter.convertFrom(Int.MAX_VALUE) }, Int.MAX_VALUE.toLong()),
+                Triple("LongInt MIN", { LongIntConverter.convertFrom(Int.MIN_VALUE) }, Int.MIN_VALUE.toLong()),
+                Triple("LongInt zero", { LongIntConverter.convertFrom(0) }, 0L),
+                Triple("LongInt minus one", { LongIntConverter.convertFrom(-1) }, -1L),
+                Triple("DoubleInt MAX exact", { DoubleIntConverter.convertFrom(Int.MAX_VALUE) }, 2147483647.0),
+                Triple("DoubleInt MIN exact", { DoubleIntConverter.convertFrom(Int.MIN_VALUE) }, -2147483648.0),
                 // Float -> Double pair
-                Triple("DoubleFloat MAX exact", DoubleFloatConverter.convertFrom(Float.MAX_VALUE), Float.MAX_VALUE.toDouble()),
-                Triple("DoubleFloat smallest positive", DoubleFloatConverter.convertFrom(Float.MIN_VALUE), Float.MIN_VALUE.toDouble()),
-                Triple("DoubleFloat +inf", DoubleFloatConverter.convertFrom(Float.POSITIVE_INFINITY), Double.POSITIVE_INFINITY),
-                Triple("DoubleFloat -inf", DoubleFloatConverter.convertFrom(Float.NEGATIVE_INFINITY), Double.NEGATIVE_INFINITY),
-            ) { (_, actual, expected) -> actual shouldBe expected }
+                Triple("DoubleFloat MAX exact", { DoubleFloatConverter.convertFrom(Float.MAX_VALUE) }, Float.MAX_VALUE.toDouble()),
+                Triple("DoubleFloat smallest positive", { DoubleFloatConverter.convertFrom(Float.MIN_VALUE) }, Float.MIN_VALUE.toDouble()),
+                Triple("DoubleFloat +inf", { DoubleFloatConverter.convertFrom(Float.POSITIVE_INFINITY) }, Double.POSITIVE_INFINITY),
+                Triple("DoubleFloat -inf", { DoubleFloatConverter.convertFrom(Float.NEGATIVE_INFINITY) }, Double.NEGATIVE_INFINITY),
+            ) { (_, conversion, expected) -> conversion() shouldBe expected }
 
             test("Float NaN survives DoubleFloat widening") {
                 DoubleFloatConverter.convertFrom(Float.NaN).isNaN() shouldBe true
@@ -95,9 +98,9 @@ class NumericConvertersTest :
         }
 
         context("narrowing direction is UnsupportedConversion for every widening pair") {
-            withData(
+            withData<Pair<String, () -> Any>>(
                 nameFn = { it.first },
-                "Short->Byte" to { ShortByteConverter.convertTo(5.toShort()) as Any },
+                "Short->Byte" to { ShortByteConverter.convertTo(5.toShort()) },
                 "Int->Byte" to { IntByteConverter.convertTo(5) },
                 "Long->Byte" to { LongByteConverter.convertTo(5L) },
                 "Int->Short" to { IntShortConverter.convertTo(5) },
@@ -115,9 +118,9 @@ class NumericConvertersTest :
         }
 
         context("X-pairs refuse BOTH directions") {
-            withData(
+            withData<Triple<String, () -> Any, () -> Any>>(
                 nameFn = { it.first },
-                Triple("FloatInt", { FloatIntConverter.convertTo(1f) as Any }, { FloatIntConverter.convertFrom(1) as Any }),
+                Triple("FloatInt", { FloatIntConverter.convertTo(1f) }, { FloatIntConverter.convertFrom(1) }),
                 Triple("FloatLong", { FloatLongConverter.convertTo(1f) }, { FloatLongConverter.convertFrom(1L) }),
                 Triple("DoubleLong", { DoubleLongConverter.convertTo(1.0) }, { DoubleLongConverter.convertFrom(1L) }),
                 Triple("ByteBoolean", { ByteBooleanConverter.convertTo(1.toByte()) }, { ByteBooleanConverter.convertFrom(true) }),

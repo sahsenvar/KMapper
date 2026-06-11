@@ -9,42 +9,45 @@ import io.kotest.property.checkAll
 class StringConvertersTest :
     FunSpec({
         context("format (convertTo) is total") {
-            withData(
+            // Rows are pure data (name, deferred conversion, expected); the conversion runs
+            // inside the test lambda so a throwing converter fails its ONE named row instead
+            // of aborting spec construction.
+            withData<Triple<String, () -> Any, Any>>(
                 nameFn = { it.first },
-                Triple("Int zero", "0" as Any, IntStringConverter.convertTo(0) as Any),
-                Triple("Int negative", "-123", IntStringConverter.convertTo(-123)),
-                Triple("Int MAX", "2147483647", IntStringConverter.convertTo(Int.MAX_VALUE)),
-                Triple("Int MIN", "-2147483648", IntStringConverter.convertTo(Int.MIN_VALUE)),
-                Triple("Long MAX", "9223372036854775807", LongStringConverter.convertTo(Long.MAX_VALUE)),
-                Triple("Long MIN", "-9223372036854775808", LongStringConverter.convertTo(Long.MIN_VALUE)),
-                Triple("Byte MAX", "127", ByteStringConverter.convertTo(Byte.MAX_VALUE)),
-                Triple("Short MIN", "-32768", ShortStringConverter.convertTo(Short.MIN_VALUE)),
-                Triple("Float decimal", "1.5", FloatStringConverter.convertTo(1.5f)),
-                Triple("Double decimal", "1.5", DoubleStringConverter.convertTo(1.5)),
-                Triple("Double NaN", "NaN", DoubleStringConverter.convertTo(Double.NaN)),
-                Triple("Double +inf", "Infinity", DoubleStringConverter.convertTo(Double.POSITIVE_INFINITY)),
-                Triple("Boolean true", "true", BooleanStringConverter.convertTo(true)),
-                Triple("Boolean false", "false", BooleanStringConverter.convertTo(false)),
-            ) { (_, expected, actual) -> actual shouldBe expected }
+                Triple("Int zero", { IntStringConverter.convertTo(0) }, "0"),
+                Triple("Int negative", { IntStringConverter.convertTo(-123) }, "-123"),
+                Triple("Int MAX", { IntStringConverter.convertTo(Int.MAX_VALUE) }, "2147483647"),
+                Triple("Int MIN", { IntStringConverter.convertTo(Int.MIN_VALUE) }, "-2147483648"),
+                Triple("Long MAX", { LongStringConverter.convertTo(Long.MAX_VALUE) }, "9223372036854775807"),
+                Triple("Long MIN", { LongStringConverter.convertTo(Long.MIN_VALUE) }, "-9223372036854775808"),
+                Triple("Byte MAX", { ByteStringConverter.convertTo(Byte.MAX_VALUE) }, "127"),
+                Triple("Short MIN", { ShortStringConverter.convertTo(Short.MIN_VALUE) }, "-32768"),
+                Triple("Float decimal", { FloatStringConverter.convertTo(1.5f) }, "1.5"),
+                Triple("Double decimal", { DoubleStringConverter.convertTo(1.5) }, "1.5"),
+                Triple("Double NaN", { DoubleStringConverter.convertTo(Double.NaN) }, "NaN"),
+                Triple("Double +inf", { DoubleStringConverter.convertTo(Double.POSITIVE_INFINITY) }, "Infinity"),
+                Triple("Boolean true", { BooleanStringConverter.convertTo(true) }, "true"),
+                Triple("Boolean false", { BooleanStringConverter.convertTo(false) }, "false"),
+            ) { (_, conversion, expected) -> conversion() shouldBe expected }
         }
 
         context("parse (convertFrom) accepts valid input incl. boundaries") {
-            withData(
+            withData<Triple<String, () -> Any, Any>>(
                 nameFn = { it.first },
-                Triple("Int leading zeros", 7 as Any, IntStringConverter.convertFrom("007") as Any),
-                Triple("Int explicit plus", 5, IntStringConverter.convertFrom("+5")),
-                Triple("Int MIN", Int.MIN_VALUE, IntStringConverter.convertFrom("-2147483648")),
-                Triple("Int MAX", Int.MAX_VALUE, IntStringConverter.convertFrom("2147483647")),
-                Triple("Long MAX", Long.MAX_VALUE, LongStringConverter.convertFrom("9223372036854775807")),
-                Triple("Long MIN", Long.MIN_VALUE, LongStringConverter.convertFrom("-9223372036854775808")),
-                Triple("Byte MAX", 127.toByte(), ByteStringConverter.convertFrom("127")),
-                Triple("Byte MIN", (-128).toByte(), ByteStringConverter.convertFrom("-128")),
-                Triple("Short MAX", Short.MAX_VALUE, ShortStringConverter.convertFrom("32767")),
-                Triple("Float decimal", 1.5f, FloatStringConverter.convertFrom("1.5")),
-                Triple("Double decimal", 1.5, DoubleStringConverter.convertFrom("1.5")),
-                Triple("Boolean true", true, BooleanStringConverter.convertFrom("true")),
-                Triple("Boolean false", false, BooleanStringConverter.convertFrom("false")),
-            ) { (_, expected, actual) -> actual shouldBe expected }
+                Triple("Int leading zeros", { IntStringConverter.convertFrom("007") }, 7),
+                Triple("Int explicit plus", { IntStringConverter.convertFrom("+5") }, 5),
+                Triple("Int MIN", { IntStringConverter.convertFrom("-2147483648") }, Int.MIN_VALUE),
+                Triple("Int MAX", { IntStringConverter.convertFrom("2147483647") }, Int.MAX_VALUE),
+                Triple("Long MAX", { LongStringConverter.convertFrom("9223372036854775807") }, Long.MAX_VALUE),
+                Triple("Long MIN", { LongStringConverter.convertFrom("-9223372036854775808") }, Long.MIN_VALUE),
+                Triple("Byte MAX", { ByteStringConverter.convertFrom("127") }, 127.toByte()),
+                Triple("Byte MIN", { ByteStringConverter.convertFrom("-128") }, (-128).toByte()),
+                Triple("Short MAX", { ShortStringConverter.convertFrom("32767") }, Short.MAX_VALUE),
+                Triple("Float decimal", { FloatStringConverter.convertFrom("1.5") }, 1.5f),
+                Triple("Double decimal", { DoubleStringConverter.convertFrom("1.5") }, 1.5),
+                Triple("Boolean true", { BooleanStringConverter.convertFrom("true") }, true),
+                Triple("Boolean false", { BooleanStringConverter.convertFrom("false") }, false),
+            ) { (_, conversion, expected) -> conversion() shouldBe expected }
 
             test("Double NaN parses (IEEE NaN != NaN, so assert via isNaN)") {
                 DoubleStringConverter.convertFrom("NaN").isNaN() shouldBe true
@@ -53,9 +56,9 @@ class StringConvertersTest :
         }
 
         context("parse rejects malformed / out-of-range / wrong case") {
-            withData(
+            withData<Pair<String, () -> Any>>(
                 nameFn = { it.first },
-                "int overflow" to { IntStringConverter.convertFrom("2147483648") as Any },
+                "int overflow" to { IntStringConverter.convertFrom("2147483648") },
                 "int underflow" to { IntStringConverter.convertFrom("-2147483649") },
                 "long overflow" to { LongStringConverter.convertFrom("9223372036854775808") },
                 "byte overflow" to { ByteStringConverter.convertFrom("128") },
