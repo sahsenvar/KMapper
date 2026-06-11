@@ -5,6 +5,7 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
+import com.sahsenvar.kmapper.processor.model.ConverterDirective
 import com.sahsenvar.kmapper.processor.model.FieldInfo
 
 /**
@@ -66,15 +67,20 @@ class FieldAnalyzer(
                     property?.let { putAll(extractFieldMapTargets(it)) }
                 }
 
-            val mapDefaultValue =
-                extractMapDefaultValue(param) ?: property?.let { extractMapDefaultValue(it) }
-            val useConverter =
-                extractUseConverter(param) ?: property?.let { extractUseConverter(it) }
+            val convertWith =
+                extractConverterDirective(param, "ConvertWith")
+                    ?: property?.let { extractConverterDirective(it, "ConvertWith") }
+            val convertToDirective =
+                extractConverterDirective(param, "ConvertTo")
+                    ?: property?.let { extractConverterDirective(it, "ConvertTo") }
+            val convertFromDirective =
+                extractConverterDirective(param, "ConvertFrom")
+                    ?: property?.let { extractConverterDirective(it, "ConvertFrom") }
             val isIgnored = extractIgnore(param) || (property?.let { extractIgnore(it) } == true)
-            val validateFrom =
-                extractValidateFrom(param).ifEmpty { property?.let { extractValidateFrom(it) } ?: emptyList() }
-            val validateTo =
-                extractValidateTo(param).ifEmpty { property?.let { extractValidateTo(it) } ?: emptyList() }
+            val validators =
+                extractValidators(param).ifEmpty { property?.let { extractValidators(it) } ?: emptyList() }
+            val ignoreDefaultValue =
+                extractIgnoreDefaultValue(param) || (property?.let { extractIgnoreDefaultValue(it) } == true)
 
             result.add(
                 FieldInfo(
@@ -82,13 +88,14 @@ class FieldAnalyzer(
                     type = param.type.resolve(),
                     isNullable = param.type.resolve().isMarkedNullable,
                     hasDefault = param.hasDefault,
-                    defaultValue = mapDefaultValue,
                     isComputed = false,
                     fieldMapTargets = fieldMapTargets,
-                    useConverter = useConverter,
                     isIgnored = isIgnored,
-                    validateFrom = validateFrom,
-                    validateTo = validateTo,
+                    convertWith = convertWith,
+                    convertToDirective = convertToDirective,
+                    convertFromDirective = convertFromDirective,
+                    validators = validators,
+                    ignoreDefaultValue = ignoreDefaultValue,
                 ),
             )
         }
@@ -100,11 +107,12 @@ class FieldAnalyzer(
                 if (propertyName !in constructorParamNames) {
                     // This is a computed property (e.g., val fullName get() = ...)
                     val fieldMapTargets = extractFieldMapTargets(property)
-                    val mapDefaultValue = extractMapDefaultValue(property)
-                    val useConverter = extractUseConverter(property)
+                    val convertWith = extractConverterDirective(property, "ConvertWith")
+                    val convertToDirective = extractConverterDirective(property, "ConvertTo")
+                    val convertFromDirective = extractConverterDirective(property, "ConvertFrom")
                     val isIgnored = extractIgnore(property)
-                    val validateFrom = extractValidateFrom(property)
-                    val validateTo = extractValidateTo(property)
+                    val validators = extractValidators(property)
+                    val ignoreDefaultValue = extractIgnoreDefaultValue(property)
 
                     result.add(
                         FieldInfo(
@@ -112,13 +120,14 @@ class FieldAnalyzer(
                             type = property.type.resolve(),
                             isNullable = property.type.resolve().isMarkedNullable,
                             hasDefault = false, // Computed properties don't have constructor defaults
-                            defaultValue = mapDefaultValue,
                             isComputed = true,
                             fieldMapTargets = fieldMapTargets,
-                            useConverter = useConverter,
                             isIgnored = isIgnored,
-                            validateFrom = validateFrom,
-                            validateTo = validateTo,
+                            convertWith = convertWith,
+                            convertToDirective = convertToDirective,
+                            convertFromDirective = convertFromDirective,
+                            validators = validators,
+                            ignoreDefaultValue = ignoreDefaultValue,
                         ),
                     )
                 }
@@ -177,29 +186,43 @@ class FieldAnalyzer(
 
     private fun extractFieldMapTarget(annotated: KSAnnotated): String? = extractFieldMapTargets(annotated).values.firstOrNull()?.firstOrNull()
 
-    private fun extractMapDefaultValue(annotated: KSAnnotated): String? {
+    /**
+     * Extracts a [ConverterDirective] from the @ConvertWith / @ConvertTo / @ConvertFrom
+     * annotation named [shortName], or null when the annotation is absent.
+     *
+     * The `use` parameter's sentinel default (MapTypeConverter::class) means "keep
+     * auto-discovery" and is read as a null [ConverterDirective.converterFqn].
+     */
+    private fun extractConverterDirective(
+        annotated: KSAnnotated,
+        shortName: String,
+    ): ConverterDirective? {
+        val annotationFqn = "com.sahsenvar.kmapper.annotations.$shortName"
         val annotation =
             annotated.annotations.firstOrNull {
-                it.shortName.asString() == "MapDefaultValue"
-            } ?: return null
-
-        return annotation.arguments.first().value as? String
-    }
-
-    private fun extractUseConverter(annotated: KSAnnotated): String? {
-        val annotation =
-            annotated.annotations.firstOrNull {
-                val shortName = it.shortName.asString()
-                val qualifiedName =
+                it.shortName.asString() == shortName ||
                     it.annotationType
                         .resolve()
                         .declaration.qualifiedName
-                        ?.asString()
-                shortName == "UseMapTypeConverter" || qualifiedName == "com.sahsenvar.kmapper.annotations.UseMapTypeConverter"
+                        ?.asString() == annotationFqn
             } ?: return null
 
-        val converterType = annotation.arguments.first().value as? KSType
-        return converterType?.declaration?.qualifiedName?.asString()
+        val useArgument = annotation.arguments.firstOrNull { it.name?.asString() == "use" }?.value as? KSType
+        val useFqn =
+            useArgument
+                ?.declaration
+                ?.qualifiedName
+                ?.asString()
+                ?.takeIf { it != "com.sahsenvar.kmapper.converter.MapTypeConverter" } // sentinel = unset
+
+        val onFail =
+            annotation.arguments
+                .firstOrNull { it.name?.asString() == "onFail" }
+                ?.value
+                ?.toString()
+                ?.substringAfterLast('.') ?: "Auto"
+
+        return ConverterDirective(converterFqn = useFqn, onFail = onFail)
     }
 
     private fun extractIgnore(annotated: KSAnnotated): Boolean = annotated.annotations.any {
@@ -209,12 +232,20 @@ class FieldAnalyzer(
                 .resolve()
                 .declaration.qualifiedName
                 ?.asString()
-        shortName == "Ignore" || qualifiedName == "com.sahsenvar.kmapper.annotations.Ignore"
+        shortName == "IgnoreMap" || qualifiedName == "com.sahsenvar.kmapper.annotations.IgnoreMap"
     }
 
-    private fun extractValidateFrom(annotated: KSAnnotated): List<String> = extractValidatorFqns(annotated, "ValidateFrom", "com.sahsenvar.kmapper.annotations.ValidateFrom")
+    private fun extractIgnoreDefaultValue(annotated: KSAnnotated): Boolean = annotated.annotations.any {
+        val shortName = it.shortName.asString()
+        val qualifiedName =
+            it.annotationType
+                .resolve()
+                .declaration.qualifiedName
+                ?.asString()
+        shortName == "IgnoreDefaultValue" || qualifiedName == "com.sahsenvar.kmapper.annotations.IgnoreDefaultValue"
+    }
 
-    private fun extractValidateTo(annotated: KSAnnotated): List<String> = extractValidatorFqns(annotated, "ValidateTo", "com.sahsenvar.kmapper.annotations.ValidateTo")
+    private fun extractValidators(annotated: KSAnnotated): List<String> = extractValidatorFqns(annotated, "Validate", "com.sahsenvar.kmapper.annotations.Validate")
 
     private fun extractValidatorFqns(
         annotated: KSAnnotated,

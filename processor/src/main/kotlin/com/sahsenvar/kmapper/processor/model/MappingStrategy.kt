@@ -10,10 +10,12 @@ sealed class MappingStrategy {
     data object Direct : MappingStrategy()
 
     /**
-     * Use a TypeConverter.
+     * Converter call resolved orientation-aware.
      */
     data class Convert(
         val converterFqn: String,
+        /** true → field source/target == converter S/T → convertTo; false → reverse → convertFrom. */
+        val forward: Boolean,
     ) : MappingStrategy()
 
     /**

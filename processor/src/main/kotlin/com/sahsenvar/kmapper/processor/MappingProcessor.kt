@@ -10,6 +10,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration // used in generateReverseMappingFunction
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
+import com.sahsenvar.kmapper.processor.analyzer.ConverterIntrospector
 import com.sahsenvar.kmapper.processor.analyzer.CycleDetector
 import com.sahsenvar.kmapper.processor.analyzer.FieldAnalyzer
 import com.sahsenvar.kmapper.processor.analyzer.TypeMatcher
@@ -23,7 +24,6 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.MemberName
-import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.buildCodeBlock
 import com.squareup.kotlinpoet.ksp.toTypeName
 
@@ -69,7 +69,7 @@ class MappingProcessor(
         // STEP 1: Discover custom converters from @KMapperConfig annotations.
         // Returns (typePair → converterFqn) map plus the raw entries list for duplicate-checking.
         val (customConverters, globalConverterEntries) = discoverCustomConverters(resolver)
-        typeMatcher = TypeMatcher(logger, customConverters, collectionWrappers)
+        typeMatcher = TypeMatcher(logger, customConverters, collectionWrappers, ConverterIntrospector(resolver))
 
         // STEP 1b: Validate the global @KMapperConfig list for duplicate (S,T) pairs.
         // Per-field @UseMapTypeConverter converters are exempt — they are never checked here.
@@ -420,19 +420,10 @@ class MappingProcessor(
                 .receiver(sourceClassName)
                 .returns(targetClassName)
                 .apply {
-                    // External parameters
+                    // External parameters — always required (no annotation-supplied defaults;
+                    // @MapDefaultValue is removed in the converter redesign).
                     externalFields.forEach { field ->
-                        val typeName = field.type.toTypeName()
-                        if (field.defaultValue != null) {
-                            addParameter(
-                                ParameterSpec
-                                    .builder(field.name, typeName)
-                                    .defaultValue(field.defaultValue)
-                                    .build(),
-                            )
-                        } else {
-                            addParameter(field.name, typeName)
-                        }
+                        addParameter(field.name, field.type.toTypeName())
                     }
                 }.addCode(
                     buildCodeBlock {
@@ -579,19 +570,10 @@ class MappingProcessor(
                 .receiver(sourceClassName)
                 .returns(targetClassName)
                 .apply {
-                    // External parameters
+                    // External parameters — always required (no annotation-supplied defaults;
+                    // @MapDefaultValue is removed in the converter redesign).
                     externalFields.forEach { field ->
-                        val typeName = field.type.toTypeName()
-                        if (field.defaultValue != null) {
-                            addParameter(
-                                ParameterSpec
-                                    .builder(field.name, typeName)
-                                    .defaultValue(field.defaultValue)
-                                    .build(),
-                            )
-                        } else {
-                            addParameter(field.name, typeName)
-                        }
+                        addParameter(field.name, field.type.toTypeName())
                     }
                 }.addCode(
                     buildCodeBlock {

@@ -33,7 +33,6 @@ class MappingCodeGenerator(
                         sourceField,
                         targetField,
                         strategy,
-                        isReverse,
                     )
 
                 is MappingStrategy.Nested ->
@@ -98,13 +97,15 @@ class MappingCodeGenerator(
     }
 
     /**
-     * Wraps [expr] in a `run { }` block that fires ValidateFrom checks on the source value
-     * and ValidateTo checks on the result value. Returns [expr] unchanged when both lists are empty.
+     * Wraps [expr] in a `run { }` block that fires the SOURCE field's @Validate checks on the
+     * source value and the TARGET field's @Validate checks on the result value (field-anchored
+     * validation: a field's validators fire whenever it enters a mapping, as source BEFORE the
+     * conversion and as target AFTER). Returns [expr] unchanged when both lists are empty.
      *
-     * Emission per spec §2.7:
-     * - ValidateFrom checks fire FIRST on the SOURCE field value (before the expr is evaluated).
+     * Emission:
+     * - Source-field validators fire FIRST on the SOURCE field value (before the expr is evaluated).
      * - `val __result = <expr>` captures the already null-handled expression.
-     * - ValidateTo checks fire on `__result`.
+     * - Target-field validators fire on `__result`.
      * - The block yields `__result`.
      */
     private fun wrapWithValidation(
@@ -112,8 +113,8 @@ class MappingCodeGenerator(
         targetField: FieldInfo,
         expr: CodeBlock,
     ): CodeBlock {
-        val fromValidators = sourceField.validateFrom
-        val toValidators = sourceField.validateTo
+        val fromValidators = sourceField.validators
+        val toValidators = targetField.validators
         if (fromValidators.isEmpty() && toValidators.isEmpty()) return expr
 
         val validationFailed = ClassName("com.sahsenvar.kmapper", "MappingException", "ValidationFailed")
@@ -223,14 +224,9 @@ class MappingCodeGenerator(
             return baseMapping
         }
 
-        // Rule 5: @MapDefaultValue — annotation lives on the SOURCE field (the @MapTo-annotated class)
-        // so we read sourceField.defaultValue, not targetField.defaultValue.
-        val defaultValue = sourceField.defaultValue ?: targetField.defaultValue
-        if (defaultValue != null) {
-            return CodeBlock.of("%L ?: %L", baseMapping, defaultValue)
-        }
-
-        // Rule 2: Throw exception for required field
+        // Nullable source -> non-null target: throw for the missing required field.
+        // (@MapDefaultValue is removed in the converter redesign; constructor-default
+        // omit/copy handling lands with the ladder codegen.)
         return CodeBlock.of(
             "%L ?: throw %T(%S)",
             baseMapping,
@@ -239,36 +235,28 @@ class MappingCodeGenerator(
         )
     }
 
+    /**
+     * Emits the converter call for a [MappingStrategy.Convert]: `convertTo` when the strategy
+     * is forward (field source/target == converter S/T), `convertFrom` when reverse — the
+     * orientation was resolved by TypeMatcher, independent of @MapTo/@MapFrom.
+     *
+     * INTERIM: keeps the legacy `convertOrFail(from, to) { ... }` wrapper emission; the real
+     * fallback-ladder codegen replaces this in the codegen chunk.
+     */
     private fun generateConvertMapping(
         sourceField: FieldInfo,
         targetField: FieldInfo,
         strategy: MappingStrategy.Convert,
-        isReverse: Boolean = false,
     ): CodeBlock {
         val converterClassName = ClassName.bestGuess(strategy.converterFqn)
         val convertOrFail = MemberName("com.sahsenvar.kmapper", "convertOrFail")
 
-        // Choose conversion method based on direction
-        val convertMethod = if (isReverse) "convertFrom" else "convertTo"
-        val convertNonNullMethod = if (isReverse) "convertFromNonNull" else "convertToNonNull"
+        // Orientation-aware method choice resolved by TypeMatcher.
+        val convertMethod = if (strategy.forward) "convertTo" else "convertFrom"
 
         val fromFqn = sourceField.type.fqn()
         val toFqn = targetField.type.fqn()
 
-        // If source is non-nullable and target is non-nullable, use convertToNonNull/convertFromNonNull
-        if (!sourceField.isNullable && !targetField.isNullable) {
-            return CodeBlock.of(
-                "%M(%S,·%S)·{·%T.%N(%N)·}",
-                convertOrFail,
-                fromFqn,
-                toFqn,
-                converterClassName,
-                convertNonNullMethod,
-                sourceField.name,
-            )
-        }
-
-        // Otherwise use convertTo/convertFrom (handles nullable) — still wrap for consistency
         return CodeBlock.of(
             "%M(%S,·%S)·{·%T.%N(%N)·}",
             convertOrFail,

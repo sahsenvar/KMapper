@@ -5,31 +5,73 @@ import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.Modifier
+import com.sahsenvar.kmapper.missingConverterMessage
 import com.sahsenvar.kmapper.processor.model.FieldInfo
 import com.sahsenvar.kmapper.processor.model.MappingStrategy
+import com.sahsenvar.kmapper.unsupportedConversionMessage
 
 /**
  * Determines the appropriate mapping strategy for field transformations.
  *
- * Priority: per-field @UseMapTypeConverter > @KMapperConfig custom registry > built-in table.
- * When no strategy matches for differing types, emits a compile error and returns Unmappable.
+ * Converter resolution is pair-keyed and orientation-aware: per-field `use=` override
+ * (from @ConvertWith / @ConvertTo / @ConvertFrom) > @KMapperConfig custom registry (pair,
+ * either orientation) > built-in registry (pair, either orientation). Policy-only directives
+ * (onFail without use) never short-circuit discovery. A resolved pair whose needed direction
+ * is not provided → UnsupportedConversion compile error; no pair at all → MissingConverter
+ * compile error.
  *
  * @param customConverters Map of (sourceFqn to targetFqn) → converterFqn, populated from @KMapperConfig.
  * @param collectionWrappers Map of target-collection-FQN → wrapper-function-FQN, from @CollectionWrapper descriptors.
+ * @param introspector Reads converter shapes (type pair + provided directions); null disables
+ *   shape-aware resolution (every converter reference then errors as missing — tests only).
  */
 class TypeMatcher(
     private val logger: KSPLogger,
     private val customConverters: Map<Pair<String, String>, String> = emptyMap(),
     private val collectionWrappers: Map<String, String> = emptyMap(),
+    private val introspector: ConverterIntrospector? = null,
 ) {
+    /**
+     * Entry point per (sourceField, targetField) pair: runs field-level compile-time
+     * preconditions once, then resolves the strategy. Element-level recursion (collections,
+     * maps) bypasses the preconditions so they fire once per field, not per recursion step.
+     */
     fun determineMappingStrategy(
         sourceField: FieldInfo,
         targetField: FieldInfo,
         isReverse: Boolean = false,
     ): MappingStrategy {
-        // 1. Check per-field @UseMapTypeConverter (highest priority)
-        if (sourceField.useConverter != null) {
-            return MappingStrategy.Convert(sourceField.useConverter)
+        // Precondition: OnFail.Skip only makes sense for collection-like targets (compaction).
+        val effectiveOnFail = sourceField.onFailFor(isReverse)
+        val targetIsCollectionLike = isCollectionType(targetField.type) || isMapType(targetField.type)
+        if (effectiveOnFail == "Skip" && !targetIsCollectionLike) {
+            logger.error(
+                "${sourceField.name}: OnFail.Skip applies to collection elements only; " +
+                    "use OnFail.Throw or a nullable/defaulted target instead.",
+            )
+            return MappingStrategy.Unmappable
+        }
+
+        // Warning: nullable target fed from a non-null source can never receive null.
+        if (targetField.isNullable && !sourceField.isNullable) {
+            logger.warn(
+                "${sourceField.name}: target is nullable but mapping from a non-null source never produces null " +
+                    "(dead '?'); consider dropping the '?' on the target.",
+            )
+        }
+
+        return resolveStrategy(sourceField, targetField, isReverse)
+    }
+
+    private fun resolveStrategy(
+        sourceField: FieldInfo,
+        targetField: FieldInfo,
+        isReverse: Boolean,
+    ): MappingStrategy {
+        // 1. Per-field directive override (use=…); policy-only directives do NOT short-circuit discovery
+        val directive = sourceField.directiveFor(isReverse)
+        if (directive?.converterFqn != null) {
+            return resolveConverter(directive.converterFqn, sourceField, targetField)
         }
 
         // 2. Check collection types — must come before same-type check because isSameType only
@@ -86,15 +128,22 @@ class TypeMatcher(
                     } else if (isDataClass(srcVal) && isDataClass(tgtVal)) {
                         MappingStrategy.Nested("to${tgtVal.declaration.simpleName.asString()}")
                     } else {
-                        MappingStrategy.Direct // fallback; may emit a type error at Kotlin compile time
+                        // Value conversion: recurse with synthetic value-typed FieldInfos so the
+                        // pair-keyed converter resolution (directive > custom > built-in) applies.
+                        resolveStrategy(
+                            sourceField.copy(type = srcVal, isNullable = srcVal.isMarkedNullable),
+                            targetField.copy(type = tgtVal, isNullable = tgtVal.isMarkedNullable),
+                            isReverse,
+                        )
                     }
                 return MappingStrategy.MapValues(valueStrategy)
             }
             // Key type mismatch (or missing type args) → Unmappable; do NOT fall through
             // to isSameType which only compares outer FQNs and would give a wrong Direct.
+            // Key converters are parked — keys must be the same type on both sides.
             logger.error(
                 "no converter for ${sourceField.type.fqn()} -> ${targetField.type.fqn()}; " +
-                    "Map key types must match; add @UseMapTypeConverter to convert the field manually",
+                    "Map key types must match; add @ConvertWith to convert the field manually",
             )
             return MappingStrategy.Unmappable
         }
@@ -111,7 +160,19 @@ class TypeMatcher(
                         val mapperName = "to${targetElementType.declaration.simpleName.asString()}"
                         MappingStrategy.Nested(mapperName)
                     } else {
-                        MappingStrategy.Direct
+                        // Element conversion: recurse with synthetic element-typed FieldInfos so the
+                        // pair-keyed converter resolution (directive > custom > built-in) applies.
+                        resolveStrategy(
+                            sourceField.copy(
+                                type = sourceElementType,
+                                isNullable = sourceElementType.isMarkedNullable,
+                            ),
+                            targetField.copy(
+                                type = targetElementType,
+                                isNullable = targetElementType.isMarkedNullable,
+                            ),
+                            isReverse,
+                        )
                     }
                 val isSet = isSetCollectionType(targetField.type)
                 return MappingStrategy.Collection(elementStrategy, isSet)
@@ -177,37 +238,71 @@ class TypeMatcher(
             return determineEnumStrategy(sourceField, targetField, sourceDecl, targetDecl)
         }
 
-        // 6. Check custom converters from @KMapperConfig (second priority after per-field)
+        // 6. @KMapperConfig (pair, either orientation)
         val customConverterFqn =
-            if (isReverse) {
-                customConverters[targetField.type.fqn() to sourceField.type.fqn()]
-                    ?: customConverters[sourceField.type.fqn() to targetField.type.fqn()]
-            } else {
-                customConverters[sourceField.type.fqn() to targetField.type.fqn()]
-                    ?: customConverters[targetField.type.fqn() to sourceField.type.fqn()]
-            }
+            customConverters[sourceField.type.fqn() to targetField.type.fqn()]
+                ?: customConverters[targetField.type.fqn() to sourceField.type.fqn()]
         if (customConverterFqn != null) {
-            return MappingStrategy.Convert(customConverterFqn)
+            return resolveConverter(customConverterFqn, sourceField, targetField)
         }
 
-        // 7. Check built-in converters
-        val converterFqn =
-            if (isReverse) {
-                findBuiltInConverter(targetField.type, sourceField.type)
-            } else {
-                findBuiltInConverter(sourceField.type, targetField.type)
-            }
-
-        if (converterFqn != null) {
-            return MappingStrategy.Convert(converterFqn)
+        // 7. Built-in registry (pair, either orientation)
+        val builtInFqn = findBuiltInConverter(sourceField.type, targetField.type)
+        if (builtInFqn != null) {
+            return resolveConverter(builtInFqn, sourceField, targetField)
         }
 
-        // 8. No strategy found — emit a compile error
+        // 8. MissingConverter (compile error)
         logger.error(
-            "no converter for ${sourceField.type.fqn()} -> ${targetField.type.fqn()}; " +
-                "add it to @KMapperConfig(converters=[...]) or annotate the field with @UseMapTypeConverter",
+            "${sourceField.name}: " + missingConverterMessage(sourceField.type.fqn(), targetField.type.fqn()),
         )
         return MappingStrategy.Unmappable
+    }
+
+    /**
+     * Resolves a referenced converter against the field pair, orientation-aware:
+     * matches the field's (source, target) to the converter's (S, T) to pick the call
+     * direction, then checks the needed direction is provided. Errors (compile-time):
+     * unresolvable/non-converter reference, @UnsupportedDirection on an OrNull variant,
+     * neither orientation matching the field pair, or the needed direction not provided
+     * (with the declared @UnsupportedDirection reason when present).
+     */
+    private fun resolveConverter(
+        converterFqn: String,
+        sourceField: FieldInfo,
+        targetField: FieldInfo,
+    ): MappingStrategy {
+        val sourceFqn = sourceField.type.fqn()
+        val targetFqn = targetField.type.fqn()
+        val shape = introspector?.shapeOf(converterFqn)
+        if (shape == null) {
+            logger.error("${sourceField.name}: " + missingConverterMessage(sourceFqn, targetFqn))
+            return MappingStrategy.Unmappable
+        }
+        if (shape.orNullAnnotated) {
+            logger.error(
+                "${sourceField.name}: @UnsupportedDirection must annotate the total method " +
+                    "(convertTo/convertFrom), not an OrNull variant — converter $converterFqn",
+            )
+            return MappingStrategy.Unmappable
+        }
+        val forward = sourceFqn == shape.sourceFqn && targetFqn == shape.targetFqn
+        val reverse = sourceFqn == shape.targetFqn && targetFqn == shape.sourceFqn
+        if (!forward && !reverse) {
+            logger.error(
+                "${sourceField.name}: converter $converterFqn handles " +
+                    "${shape.sourceFqn} <-> ${shape.targetFqn}, not $sourceFqn -> $targetFqn",
+            )
+            return MappingStrategy.Unmappable
+        }
+        val provided = if (forward) shape.providesTo else shape.providesFrom
+        if (!provided) {
+            val declaredReason = if (forward) shape.unsupportedToReason else shape.unsupportedFromReason
+            val message = declaredReason ?: unsupportedConversionMessage(sourceFqn, targetFqn)
+            logger.error("${sourceField.name}: $message")
+            return MappingStrategy.Unmappable
+        }
+        return MappingStrategy.Convert(converterFqn, forward)
     }
 
     private fun determineEnumStrategy(
@@ -224,7 +319,7 @@ class TypeMatcher(
             if (wireFqn == null) {
                 logger.error(
                     "enum '${targetDecl.simpleName.asString()}' must implement MappableEnum<...> " +
-                        "or use @UseMapTypeConverter",
+                        "or use @ConvertWith",
                 )
                 return MappingStrategy.Unmappable
             }
@@ -244,7 +339,7 @@ class TypeMatcher(
             if (wireFqn == null) {
                 logger.error(
                     "enum '${sourceDecl.simpleName.asString()}' must implement MappableEnum<...> " +
-                        "or use @UseMapTypeConverter",
+                        "or use @ConvertWith",
                 )
                 return MappingStrategy.Unmappable
             }
@@ -336,80 +431,65 @@ class TypeMatcher(
     }
 
     /**
-     * Finds a built-in bilateral converter for the given source → target type pair.
-     *
-     * All converters in com.sahsenvar.kmapper.converter.builtin are bilateral (MapTypeConverter<S,T>).
-     * - Forward direction (S→T): emits convertToNonNull / convertTo
-     * - Reverse direction (T→S): the caller passes (target, source) so we still look up the forward key
-     *   and let MappingCodeGenerator emit convertFromNonNull / convertFrom.
+     * Pair-keyed registry of the 30 built-in converters (richer-first naming: the converter's
+     * S is the richer/wider type, T the narrower). Lookup is orientation-INDEPENDENT — the same
+     * entry matches both field orientations; [resolveConverter] decides convertTo vs convertFrom.
+     */
+    private val builtInPairs: List<Triple<String, String, String>> = run {
+        val prefix = "com.sahsenvar.kmapper.converter.builtin."
+        listOf(
+            // numeric widening (12)
+            Triple("kotlin.Short", "kotlin.Byte", prefix + "ShortByteConverter"),
+            Triple("kotlin.Int", "kotlin.Byte", prefix + "IntByteConverter"),
+            Triple("kotlin.Long", "kotlin.Byte", prefix + "LongByteConverter"),
+            Triple("kotlin.Int", "kotlin.Short", prefix + "IntShortConverter"),
+            Triple("kotlin.Long", "kotlin.Short", prefix + "LongShortConverter"),
+            Triple("kotlin.Long", "kotlin.Int", prefix + "LongIntConverter"),
+            Triple("kotlin.Float", "kotlin.Byte", prefix + "FloatByteConverter"),
+            Triple("kotlin.Double", "kotlin.Byte", prefix + "DoubleByteConverter"),
+            Triple("kotlin.Float", "kotlin.Short", prefix + "FloatShortConverter"),
+            Triple("kotlin.Double", "kotlin.Short", prefix + "DoubleShortConverter"),
+            Triple("kotlin.Double", "kotlin.Int", prefix + "DoubleIntConverter"),
+            Triple("kotlin.Double", "kotlin.Float", prefix + "DoubleFloatConverter"),
+            // String pairs (7)
+            Triple("kotlin.Byte", "kotlin.String", prefix + "ByteStringConverter"),
+            Triple("kotlin.Short", "kotlin.String", prefix + "ShortStringConverter"),
+            Triple("kotlin.Int", "kotlin.String", prefix + "IntStringConverter"),
+            Triple("kotlin.Long", "kotlin.String", prefix + "LongStringConverter"),
+            Triple("kotlin.Float", "kotlin.String", prefix + "FloatStringConverter"),
+            Triple("kotlin.Double", "kotlin.String", prefix + "DoubleStringConverter"),
+            Triple("kotlin.Boolean", "kotlin.String", prefix + "BooleanStringConverter"),
+            // X-pairs (9)
+            Triple("kotlin.Float", "kotlin.Int", prefix + "FloatIntConverter"),
+            Triple("kotlin.Float", "kotlin.Long", prefix + "FloatLongConverter"),
+            Triple("kotlin.Double", "kotlin.Long", prefix + "DoubleLongConverter"),
+            Triple("kotlin.Byte", "kotlin.Boolean", prefix + "ByteBooleanConverter"),
+            Triple("kotlin.Short", "kotlin.Boolean", prefix + "ShortBooleanConverter"),
+            Triple("kotlin.Int", "kotlin.Boolean", prefix + "IntBooleanConverter"),
+            Triple("kotlin.Long", "kotlin.Boolean", prefix + "LongBooleanConverter"),
+            Triple("kotlin.Float", "kotlin.Boolean", prefix + "FloatBooleanConverter"),
+            Triple("kotlin.Double", "kotlin.Boolean", prefix + "DoubleBooleanConverter"),
+            // Instant (2)
+            Triple("kotlinx.datetime.Instant", "kotlin.String", prefix + "InstantStringConverter"),
+            Triple("kotlinx.datetime.Instant", "kotlin.Long", prefix + "InstantLongConverter"),
+        )
+    }
+
+    /**
+     * Finds a built-in converter whose (S, T) pair matches the given types in EITHER
+     * orientation; the call direction is decided later by [resolveConverter].
      */
     private fun findBuiltInConverter(
         source: KSType,
         target: KSType,
     ): String? {
-        val sourceFqn = source.declaration.qualifiedName?.asString()
-        val targetFqn = target.declaration.qualifiedName?.asString()
-
-        return when ("$sourceFqn→$targetFqn") {
-            // String ↔ Int  (bilateral: StringIntConverter)
-            "kotlin.String→kotlin.Int" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringIntConverter"
-
-            // String ↔ Long  (bilateral: StringLongConverter)
-            "kotlin.String→kotlin.Long" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringLongConverter"
-
-            // String ↔ Double  (bilateral: StringDoubleConverter)
-            "kotlin.String→kotlin.Double" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringDoubleConverter"
-
-            // String ↔ Float  (bilateral: StringFloatConverter)
-            "kotlin.String→kotlin.Float" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringFloatConverter"
-
-            // String ↔ Boolean  (bilateral: StringBooleanConverter)
-            "kotlin.String→kotlin.Boolean" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringBooleanConverter"
-
-            // Int ↔ Long  (bilateral: IntLongConverter)
-            "kotlin.Int→kotlin.Long" ->
-                "com.sahsenvar.kmapper.converter.builtin.IntLongConverter"
-
-            // String ↔ Instant  (bilateral: StringInstantConverter)
-            "kotlin.String→kotlinx.datetime.Instant" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringInstantConverter"
-
-            // Long ↔ Instant  (bilateral: LongInstantConverter)
-            "kotlin.Long→kotlinx.datetime.Instant" ->
-                "com.sahsenvar.kmapper.converter.builtin.LongInstantConverter"
-
-            // Reverse directions — same bilateral converter, convertFrom will be used by MappingCodeGenerator
-            "kotlin.Int→kotlin.String" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringIntConverter"
-
-            "kotlin.Long→kotlin.String" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringLongConverter"
-
-            "kotlin.Double→kotlin.String" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringDoubleConverter"
-
-            "kotlin.Float→kotlin.String" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringFloatConverter"
-
-            "kotlin.Boolean→kotlin.String" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringBooleanConverter"
-
-            "kotlin.Long→kotlin.Int" ->
-                "com.sahsenvar.kmapper.converter.builtin.IntLongConverter"
-
-            "kotlinx.datetime.Instant→kotlin.String" ->
-                "com.sahsenvar.kmapper.converter.builtin.StringInstantConverter"
-
-            "kotlinx.datetime.Instant→kotlin.Long" ->
-                "com.sahsenvar.kmapper.converter.builtin.LongInstantConverter"
-
-            else -> null
-        }
+        val sourceFqn = source.fqn()
+        val targetFqn = target.fqn()
+        return builtInPairs
+            .firstOrNull { (firstFqn, secondFqn, _) ->
+                (sourceFqn == firstFqn && targetFqn == secondFqn) ||
+                    (sourceFqn == secondFqn && targetFqn == firstFqn)
+            }?.third
     }
 }
 

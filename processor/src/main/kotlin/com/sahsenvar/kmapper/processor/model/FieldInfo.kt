@@ -3,25 +3,48 @@ package com.sahsenvar.kmapper.processor.model
 import com.google.devtools.ksp.symbol.KSType
 
 /**
- * Information about a field (constructor parameter) in a class.
+ * Per-field converter/policy override read from @ConvertWith / @ConvertTo / @ConvertFrom.
+ */
+data class ConverterDirective(
+    /** null = keep auto-discovery (the `use` parameter was left at its sentinel). */
+    val converterFqn: String?,
+    /** "Auto" | "Throw" | "Skip" — mirror of com.sahsenvar.kmapper.annotations.OnFail. */
+    val onFail: String,
+)
+
+/**
+ * Information about a field (constructor parameter or computed property) in a class.
  */
 data class FieldInfo(
     val name: String,
     val type: KSType,
     val isNullable: Boolean,
     val hasDefault: Boolean,
-    val defaultValue: String?,
     val isComputed: Boolean,
     /** Map of target class FQN to list of target field names (supports multiple @FieldMap per targetClass) */
     val fieldMapTargets: Map<String, List<String>>,
-    val useConverter: String?,
     /** If true, this field will be ignored in automatic mapping (requires external parameter) */
     val isIgnored: Boolean,
-    /** FQNs of Validator<T> object singletons applied to the SOURCE value before mapping */
-    val validateFrom: List<String> = emptyList(),
-    /** FQNs of Validator<T> object singletons applied to the RESULT value after mapping */
-    val validateTo: List<String> = emptyList(),
+    /** Bilateral per-field override from @ConvertWith (both directions). */
+    val convertWith: ConverterDirective? = null,
+    /** Direction-scoped override from @ConvertTo (forward / @MapTo direction); beats [convertWith] there. */
+    val convertToDirective: ConverterDirective? = null,
+    /** Direction-scoped override from @ConvertFrom (reverse / @MapFrom direction); beats [convertWith] there. */
+    val convertFromDirective: ConverterDirective? = null,
+    /** FQNs of Validator<T> objects from @Validate — fire whenever this field enters a mapping. */
+    val validators: List<String> = emptyList(),
+    /** @IgnoreDefaultValue: the constructor default is invisible to mapping. */
+    val ignoreDefaultValue: Boolean = false,
 ) {
     /** Legacy: Returns first FieldMap target name (for single @MapTo scenarios) */
     val fieldMapTarget: String? get() = fieldMapTargets.values.firstOrNull()?.firstOrNull()
+
+    /** The only default flag mapping decisions may consult (omit/copy, external params). */
+    val usesDefaultInMapping: Boolean get() = hasDefault && !ignoreDefaultValue
+
+    /** Effective directive for the requested direction (direction-scoped beats bilateral). */
+    fun directiveFor(isReverse: Boolean): ConverterDirective? = if (isReverse) convertFromDirective ?: convertWith else convertToDirective ?: convertWith
+
+    /** Effective onFail policy for the requested direction; "Auto" when no directive applies. */
+    fun onFailFor(isReverse: Boolean): String = directiveFor(isReverse)?.onFail ?: "Auto"
 }
