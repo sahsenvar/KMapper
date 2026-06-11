@@ -13,6 +13,33 @@ open annotation class com.sahsenvar.kmapper.annotations/CollectionWrapper : kotl
         final fun <get-forType>(): kotlin.reflect/KClass<*> // com.sahsenvar.kmapper.annotations/CollectionWrapper.forType.<get-forType>|<get-forType>(){}[0]
 }
 
+open annotation class com.sahsenvar.kmapper.annotations/ConvertFrom : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/ConvertFrom|null[0]
+    constructor <init>(kotlin.reflect/KClass<out com.sahsenvar.kmapper.converter/MapTypeConverter<*, *>> = ..., com.sahsenvar.kmapper.annotations/OnFail = ...) // com.sahsenvar.kmapper.annotations/ConvertFrom.<init>|<init>(kotlin.reflect.KClass<out|com.sahsenvar.kmapper.converter.MapTypeConverter<*,*>>;com.sahsenvar.kmapper.annotations.OnFail){}[0]
+
+    final val onFail // com.sahsenvar.kmapper.annotations/ConvertFrom.onFail|{}onFail[0]
+        final fun <get-onFail>(): com.sahsenvar.kmapper.annotations/OnFail // com.sahsenvar.kmapper.annotations/ConvertFrom.onFail.<get-onFail>|<get-onFail>(){}[0]
+    final val use // com.sahsenvar.kmapper.annotations/ConvertFrom.use|{}use[0]
+        final fun <get-use>(): kotlin.reflect/KClass<out com.sahsenvar.kmapper.converter/MapTypeConverter<*, *>> // com.sahsenvar.kmapper.annotations/ConvertFrom.use.<get-use>|<get-use>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/ConvertTo : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/ConvertTo|null[0]
+    constructor <init>(kotlin.reflect/KClass<out com.sahsenvar.kmapper.converter/MapTypeConverter<*, *>> = ..., com.sahsenvar.kmapper.annotations/OnFail = ...) // com.sahsenvar.kmapper.annotations/ConvertTo.<init>|<init>(kotlin.reflect.KClass<out|com.sahsenvar.kmapper.converter.MapTypeConverter<*,*>>;com.sahsenvar.kmapper.annotations.OnFail){}[0]
+
+    final val onFail // com.sahsenvar.kmapper.annotations/ConvertTo.onFail|{}onFail[0]
+        final fun <get-onFail>(): com.sahsenvar.kmapper.annotations/OnFail // com.sahsenvar.kmapper.annotations/ConvertTo.onFail.<get-onFail>|<get-onFail>(){}[0]
+    final val use // com.sahsenvar.kmapper.annotations/ConvertTo.use|{}use[0]
+        final fun <get-use>(): kotlin.reflect/KClass<out com.sahsenvar.kmapper.converter/MapTypeConverter<*, *>> // com.sahsenvar.kmapper.annotations/ConvertTo.use.<get-use>|<get-use>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/ConvertWith : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/ConvertWith|null[0]
+    constructor <init>(kotlin.reflect/KClass<out com.sahsenvar.kmapper.converter/MapTypeConverter<*, *>> = ..., com.sahsenvar.kmapper.annotations/OnFail = ...) // com.sahsenvar.kmapper.annotations/ConvertWith.<init>|<init>(kotlin.reflect.KClass<out|com.sahsenvar.kmapper.converter.MapTypeConverter<*,*>>;com.sahsenvar.kmapper.annotations.OnFail){}[0]
+
+    final val onFail // com.sahsenvar.kmapper.annotations/ConvertWith.onFail|{}onFail[0]
+        final fun <get-onFail>(): com.sahsenvar.kmapper.annotations/OnFail // com.sahsenvar.kmapper.annotations/ConvertWith.onFail.<get-onFail>|<get-onFail>(){}[0]
+    final val use // com.sahsenvar.kmapper.annotations/ConvertWith.use|{}use[0]
+        final fun <get-use>(): kotlin.reflect/KClass<out com.sahsenvar.kmapper.converter/MapTypeConverter<*, *>> // com.sahsenvar.kmapper.annotations/ConvertWith.use.<get-use>|<get-use>(){}[0]
+}
+
 open annotation class com.sahsenvar.kmapper.annotations/FieldMap : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/FieldMap|null[0]
     constructor <init>(kotlin/String, kotlin.reflect/KClass<*> = ...) // com.sahsenvar.kmapper.annotations/FieldMap.<init>|<init>(kotlin.String;kotlin.reflect.KClass<*>){}[0]
 
@@ -22,8 +49,12 @@ open annotation class com.sahsenvar.kmapper.annotations/FieldMap : kotlin/Annota
         final fun <get-targetClass>(): kotlin.reflect/KClass<*> // com.sahsenvar.kmapper.annotations/FieldMap.targetClass.<get-targetClass>|<get-targetClass>(){}[0]
 }
 
-open annotation class com.sahsenvar.kmapper.annotations/Ignore : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/Ignore|null[0]
-    constructor <init>() // com.sahsenvar.kmapper.annotations/Ignore.<init>|<init>(){}[0]
+open annotation class com.sahsenvar.kmapper.annotations/IgnoreDefaultValue : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/IgnoreDefaultValue|null[0]
+    constructor <init>() // com.sahsenvar.kmapper.annotations/IgnoreDefaultValue.<init>|<init>(){}[0]
+}
+
+open annotation class com.sahsenvar.kmapper.annotations/IgnoreMap : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/IgnoreMap|null[0]
+    constructor <init>() // com.sahsenvar.kmapper.annotations/IgnoreMap.<init>|<init>(){}[0]
 }
 
 open annotation class com.sahsenvar.kmapper.annotations/KMapperConfig : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/KMapperConfig|null[0]
@@ -33,13 +64,6 @@ open annotation class com.sahsenvar.kmapper.annotations/KMapperConfig : kotlin/A
         final fun <get-converters>(): kotlin/Array<kotlin.reflect/KClass<*>> // com.sahsenvar.kmapper.annotations/KMapperConfig.converters.<get-converters>|<get-converters>(){}[0]
     final val wrappers // com.sahsenvar.kmapper.annotations/KMapperConfig.wrappers|{}wrappers[0]
         final fun <get-wrappers>(): kotlin/Array<kotlin.reflect/KClass<*>> // com.sahsenvar.kmapper.annotations/KMapperConfig.wrappers.<get-wrappers>|<get-wrappers>(){}[0]
-}
-
-open annotation class com.sahsenvar.kmapper.annotations/MapDefaultValue : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/MapDefaultValue|null[0]
-    constructor <init>(kotlin/String) // com.sahsenvar.kmapper.annotations/MapDefaultValue.<init>|<init>(kotlin.String){}[0]
-
-    final val expression // com.sahsenvar.kmapper.annotations/MapDefaultValue.expression|{}expression[0]
-        final fun <get-expression>(): kotlin/String // com.sahsenvar.kmapper.annotations/MapDefaultValue.expression.<get-expression>|<get-expression>(){}[0]
 }
 
 open annotation class com.sahsenvar.kmapper.annotations/MapFrom : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/MapFrom|null[0]
@@ -56,23 +80,21 @@ open annotation class com.sahsenvar.kmapper.annotations/MapTo : kotlin/Annotatio
         final fun <get-target>(): kotlin.reflect/KClass<*> // com.sahsenvar.kmapper.annotations/MapTo.target.<get-target>|<get-target>(){}[0]
 }
 
-open annotation class com.sahsenvar.kmapper.annotations/UseMapTypeConverter : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/UseMapTypeConverter|null[0]
-    constructor <init>(kotlin.reflect/KClass<out com.sahsenvar.kmapper.converter/MapTypeConverter<*, *>>) // com.sahsenvar.kmapper.annotations/UseMapTypeConverter.<init>|<init>(kotlin.reflect.KClass<out|com.sahsenvar.kmapper.converter.MapTypeConverter<*,*>>){}[0]
+open annotation class com.sahsenvar.kmapper.annotations/Validate : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/Validate|null[0]
+    constructor <init>(kotlin/Array<out kotlin.reflect/KClass<out com.sahsenvar.kmapper.validation/Validator<*>>>...) // com.sahsenvar.kmapper.annotations/Validate.<init>|<init>(kotlin.Array<out|kotlin.reflect.KClass<out|com.sahsenvar.kmapper.validation.Validator<*>>>...){}[0]
 
-    final val converter // com.sahsenvar.kmapper.annotations/UseMapTypeConverter.converter|{}converter[0]
-        final fun <get-converter>(): kotlin.reflect/KClass<out com.sahsenvar.kmapper.converter/MapTypeConverter<*, *>> // com.sahsenvar.kmapper.annotations/UseMapTypeConverter.converter.<get-converter>|<get-converter>(){}[0]
+    final val validators // com.sahsenvar.kmapper.annotations/Validate.validators|{}validators[0]
+        final fun <get-validators>(): kotlin/Array<out kotlin.reflect/KClass<out com.sahsenvar.kmapper.validation/Validator<*>>> // com.sahsenvar.kmapper.annotations/Validate.validators.<get-validators>|<get-validators>(){}[0]
 }
 
-open annotation class com.sahsenvar.kmapper.annotations/ValidateFrom : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/ValidateFrom|null[0]
-    constructor <init>(kotlin/Array<out kotlin.reflect/KClass<*>>...) // com.sahsenvar.kmapper.annotations/ValidateFrom.<init>|<init>(kotlin.Array<out|kotlin.reflect.KClass<*>>...){}[0]
+final enum class com.sahsenvar.kmapper.annotations/OnFail : kotlin/Enum<com.sahsenvar.kmapper.annotations/OnFail> { // com.sahsenvar.kmapper.annotations/OnFail|null[0]
+    enum entry Auto // com.sahsenvar.kmapper.annotations/OnFail.Auto|null[0]
+    enum entry Skip // com.sahsenvar.kmapper.annotations/OnFail.Skip|null[0]
+    enum entry Throw // com.sahsenvar.kmapper.annotations/OnFail.Throw|null[0]
 
-    final val validators // com.sahsenvar.kmapper.annotations/ValidateFrom.validators|{}validators[0]
-        final fun <get-validators>(): kotlin/Array<out kotlin.reflect/KClass<*>> // com.sahsenvar.kmapper.annotations/ValidateFrom.validators.<get-validators>|<get-validators>(){}[0]
-}
+    final val entries // com.sahsenvar.kmapper.annotations/OnFail.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<com.sahsenvar.kmapper.annotations/OnFail> // com.sahsenvar.kmapper.annotations/OnFail.entries.<get-entries>|<get-entries>#static(){}[0]
 
-open annotation class com.sahsenvar.kmapper.annotations/ValidateTo : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/ValidateTo|null[0]
-    constructor <init>(kotlin/Array<out kotlin.reflect/KClass<*>>...) // com.sahsenvar.kmapper.annotations/ValidateTo.<init>|<init>(kotlin.Array<out|kotlin.reflect.KClass<*>>...){}[0]
-
-    final val validators // com.sahsenvar.kmapper.annotations/ValidateTo.validators|{}validators[0]
-        final fun <get-validators>(): kotlin/Array<out kotlin.reflect/KClass<*>> // com.sahsenvar.kmapper.annotations/ValidateTo.validators.<get-validators>|<get-validators>(){}[0]
+    final fun valueOf(kotlin/String): com.sahsenvar.kmapper.annotations/OnFail // com.sahsenvar.kmapper.annotations/OnFail.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<com.sahsenvar.kmapper.annotations/OnFail> // com.sahsenvar.kmapper.annotations/OnFail.values|values#static(){}[0]
 }
