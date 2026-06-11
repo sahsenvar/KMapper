@@ -16,6 +16,7 @@ dependencyResolutionManagement {
 
 include(
     ":core",
+    ":annotations",
     ":processor",
     ":converters-immutable",
     ":converters-arrow",

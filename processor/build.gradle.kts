@@ -13,6 +13,7 @@ dependencies {
     implementation(libs.kotlinpoet)
     implementation(libs.kotlinpoet.ksp)
     implementation(project(":core"))
+    implementation(project(":annotations"))
     testImplementation(kotlin("test"))
     testImplementation(libs.compile.testing.core)
     testImplementation(libs.compile.testing.ksp)
@@ -27,11 +28,11 @@ mavenPublishing {
     configure(KotlinJvm(javadocJar = JavadocJar.Dokka("dokkaGeneratePublicationHtml")))
     publishToMavenCentral()
     signAllPublications()
-    coordinates("io.github.sahsenvar", "kmapper-processor", version.toString())
+    coordinates("io.github.sahsenvar", "kmapper-compiler", version.toString())
     pom {
-        name.set("KMapper processor")
+        name.set("KMapper compiler")
         description.set(
-            "KMP-friendly compile-time object mapper (KSP). Processor module: KSP code generator for @MapTo/@MapFrom → toX() extension functions.",
+            "KMP-friendly compile-time object mapper (KSP). Compiler module: KSP code generator for @MapTo/@MapFrom → toX() extension functions.",
         )
         inceptionYear.set("2026")
         url.set("https://github.com/sahsenvar/KMapper")

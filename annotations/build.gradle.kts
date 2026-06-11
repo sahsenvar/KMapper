@@ -4,7 +4,6 @@ import com.vanniktech.maven.publish.KotlinMultiplatform
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.vanniktech.publish)
     alias(libs.plugins.dokka)
     alias(libs.plugins.kover)
@@ -12,7 +11,7 @@ plugins {
 
 kotlin {
     android {
-        namespace = "com.sahsenvar.kmapper.immutable"
+        namespace = "com.sahsenvar.kmapper.annotations"
         compileSdk = 36
         minSdk = 30
     }
@@ -23,40 +22,31 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":core"))
-            implementation(project(":annotations"))
-            implementation(libs.kotlinx.collections.immutable)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotest.assertions)
+            implementation(libs.kotest.framework.engine)
+        }
+        jvmTest.dependencies {
+            implementation(libs.kotest.runner.junit5)
         }
     }
 }
 
-dependencies {
-    add("kspCommonMainMetadata", project(":processor"))
-    // Also run KSP for JVM target so @CollectionWrapperDescriptor objects are compiled into the
-    // JVM jar and discoverable by consumers via resolver.getDeclarationsFromPackage.
-    add("kspJvm", project(":processor"))
-}
-
-// Standard KMP-KSP wiring: every Kotlin compile task (except the KSP metadata task itself)
-// depends on kspCommonMainKotlinMetadata so generated sources are available during compilation.
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
-    if (name != "kspCommonMainKotlinMetadata") {
-        dependsOn("kspCommonMainKotlinMetadata")
-    }
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
 
 mavenPublishing {
     configure(KotlinMultiplatform(javadocJar = JavadocJar.Dokka("dokkaGeneratePublicationHtml")))
     publishToMavenCentral()
     signAllPublications()
-    coordinates("io.github.sahsenvar", "kmapper-converters-immutable", version.toString())
+    coordinates("io.github.sahsenvar", "kmapper-annotations", version.toString())
     pom {
-        name.set("KMapper converters-immutable")
+        name.set("KMapper annotations")
         description.set(
-            "KMP-friendly compile-time object mapper (KSP). Converters-immutable module: List → PersistentList/ImmutableList/ImmutableSet collection wrappers.",
+            "KMP-friendly compile-time object mapper (KSP). Annotations module: mapping declaration annotations (@MapTo/@MapFrom/@FieldMap/...).",
         )
         inceptionYear.set("2026")
         url.set("https://github.com/sahsenvar/KMapper")

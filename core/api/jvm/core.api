@@ -67,59 +67,6 @@ public final class com/sahsenvar/kmapper/MappingListener$DefaultImpls {
 	public static fun onMapStart (Lcom/sahsenvar/kmapper/MappingListener;Ljava/lang/Object;Lkotlin/reflect/KClass;)V
 }
 
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/CollectionWrapper : java/lang/annotation/Annotation {
-	public abstract fun forType ()Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/FieldMap : java/lang/annotation/Annotation {
-	public abstract fun fieldName ()Ljava/lang/String;
-	public abstract fun targetClass ()Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/FieldMap$Container : java/lang/annotation/Annotation {
-	public abstract fun value ()[Lcom/sahsenvar/kmapper/annotations/FieldMap;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/Ignore : java/lang/annotation/Annotation {
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/KMapperConfig : java/lang/annotation/Annotation {
-	public abstract fun converters ()[Ljava/lang/Class;
-	public abstract fun wrappers ()[Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapDefaultValue : java/lang/annotation/Annotation {
-	public abstract fun expression ()Ljava/lang/String;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapFrom : java/lang/annotation/Annotation {
-	public abstract fun source ()Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapFrom$Container : java/lang/annotation/Annotation {
-	public abstract fun value ()[Lcom/sahsenvar/kmapper/annotations/MapFrom;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapTo : java/lang/annotation/Annotation {
-	public abstract fun target ()Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapTo$Container : java/lang/annotation/Annotation {
-	public abstract fun value ()[Lcom/sahsenvar/kmapper/annotations/MapTo;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/UseMapTypeConverter : java/lang/annotation/Annotation {
-	public abstract fun converter ()Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/ValidateFrom : java/lang/annotation/Annotation {
-	public abstract fun validators ()[Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/ValidateTo : java/lang/annotation/Annotation {
-	public abstract fun validators ()[Ljava/lang/Class;
-}
-
 public abstract class com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public fun <init> (Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;)V
 	public final fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;

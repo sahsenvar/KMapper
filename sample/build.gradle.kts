@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":annotations"))
     implementation(project(":converters-immutable"))
     implementation(project(":converters-arrow"))
     ksp(project(":processor"))
