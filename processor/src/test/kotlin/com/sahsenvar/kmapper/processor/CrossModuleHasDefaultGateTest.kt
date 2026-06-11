@@ -79,8 +79,7 @@ class HasDefaultProbeProcessor(
 }
 
 class HasDefaultProbeProvider : SymbolProcessorProvider {
-    override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor =
-        HasDefaultProbeProcessor(environment.logger)
+    override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor = HasDefaultProbeProcessor(environment.logger)
 }
 
 private const val GATE_JVM_TARGET = "21" // matches :core's jvm target (see CompileTestSupport)
@@ -89,22 +88,22 @@ private const val GATE_JVM_TARGET = "21" // matches :core's jvm target (see Comp
 private fun baseCompilation(
     sources: List<SourceFile>,
     classpathEntries: List<File> = emptyList(),
-): KotlinCompilation =
-    KotlinCompilation().apply {
-        this.sources = sources
-        inheritClassPath = true
-        messageOutputStream = System.out
-        jvmTarget = GATE_JVM_TARGET
-        classpaths = classpathEntries
-    }
+): KotlinCompilation = KotlinCompilation().apply {
+    this.sources = sources
+    inheritClassPath = true
+    messageOutputStream = System.out
+    jvmTarget = GATE_JVM_TARGET
+    classpaths = classpathEntries
+}
 
-class CrossModuleHasDefaultGateTest : BehaviorSpec({
+class CrossModuleHasDefaultGateTest :
+    BehaviorSpec({
 
-    // "Library module" sources — every default shape + both hasDefault polarities.
-    val librarySource =
-        SourceFile.kotlin(
-            "LibModels.kt",
-            """
+        // "Library module" sources — every default shape + both hasDefault polarities.
+        val librarySource =
+            SourceFile.kotlin(
+                "LibModels.kt",
+                """
             package lib
 
             const val DEFAULT_RETRIES = 3
@@ -123,105 +122,105 @@ class CrossModuleHasDefaultGateTest : BehaviorSpec({
                 val limit: Long = 60_000L * 2,                 // computed expression default
                 val label: String = "x"
             )
-            """.trimIndent(),
-        )
+                """.trimIndent(),
+            )
 
-    // "Consumer module" source — actually uses the library type so the classpath dependency is real.
-    val consumerSource =
-        SourceFile.kotlin(
-            "Consumer.kt",
-            """
+        // "Consumer module" source — actually uses the library type so the classpath dependency is real.
+        val consumerSource =
+            SourceFile.kotlin(
+                "Consumer.kt",
+                """
             package consumer
 
             val marker = lib.LibDomainModel(1L, trailing = true)
-            """.trimIndent(),
-        )
+                """.trimIndent(),
+            )
 
-    // One positive assertion per parameter — guards against a vacuous pass on empty messages.
-    val expectedFlagLines =
-        listOf(
-            "HASDEFAULT:LibDomainModel.id=false",
-            "HASDEFAULT:LibDomainModel.plan=true",
-            "HASDEFAULT:LibDomainModel.tags=true",
-            "HASDEFAULT:LibDomainModel.note=true",
-            "HASDEFAULT:LibDomainModel.retries=true",
-            "HASDEFAULT:LibDomainModel.middle=true",
-            "HASDEFAULT:LibDomainModel.trailing=false",
-            "HASDEFAULT:AllDefaultsModel.limit=true",
-            "HASDEFAULT:AllDefaultsModel.label=true",
-        )
+        // One positive assertion per parameter — guards against a vacuous pass on empty messages.
+        val expectedFlagLines =
+            listOf(
+                "HASDEFAULT:LibDomainModel.id=false",
+                "HASDEFAULT:LibDomainModel.plan=true",
+                "HASDEFAULT:LibDomainModel.tags=true",
+                "HASDEFAULT:LibDomainModel.note=true",
+                "HASDEFAULT:LibDomainModel.retries=true",
+                "HASDEFAULT:LibDomainModel.middle=true",
+                "HASDEFAULT:LibDomainModel.trailing=false",
+                "HASDEFAULT:AllDefaultsModel.limit=true",
+                "HASDEFAULT:AllDefaultsModel.label=true",
+            )
 
-    /**
-     * Compiles [sources] with the probe processor attached, mirroring the KSP wiring of
-     * [compile] in CompileTestSupport.kt. [libraryClasspath] holds the stage 1 classes for the
-     * cross-module case and is empty for the same-module control group.
-     */
-    fun compileWithProbe(
-        sources: List<SourceFile>,
-        libraryClasspath: List<File>,
-    ): JvmCompilationResult {
-        val probeCompilation = baseCompilation(sources, classpathEntries = libraryClasspath)
-        // configureKsp {} must be called BEFORE compile() to register KSP with the compilation.
-        probeCompilation.configureKsp {
-            @Suppress("UNCHECKED_CAST")
-            (symbolProcessorProviders as MutableList).add(HasDefaultProbeProvider())
+        /**
+         * Compiles [sources] with the probe processor attached, mirroring the KSP wiring of
+         * [compile] in CompileTestSupport.kt. [libraryClasspath] holds the stage 1 classes for the
+         * cross-module case and is empty for the same-module control group.
+         */
+        fun compileWithProbe(
+            sources: List<SourceFile>,
+            libraryClasspath: List<File>,
+        ): JvmCompilationResult {
+            val probeCompilation = baseCompilation(sources, classpathEntries = libraryClasspath)
+            // configureKsp {} must be called BEFORE compile() to register KSP with the compilation.
+            probeCompilation.configureKsp {
+                @Suppress("UNCHECKED_CAST")
+                (symbolProcessorProviders as MutableList).add(HasDefaultProbeProvider())
+            }
+            return probeCompilation.compile()
         }
-        return probeCompilation.compile()
-    }
 
-    given("a library with defaulted constructor parameters compiled separately (stage 1, no KSP)") {
-        val libraryCompilation = baseCompilation(sources = listOf(librarySource))
-        val libraryResult = libraryCompilation.compile()
+        given("a library with defaulted constructor parameters compiled separately (stage 1, no KSP)") {
+            val libraryCompilation = baseCompilation(sources = listOf(librarySource))
+            val libraryResult = libraryCompilation.compile()
 
-        `when`("a consumer module compiles against its classes with the hasDefault probe (stage 2)") {
-            val consumerResult =
-                compileWithProbe(
-                    sources = listOf(consumerSource),
-                    libraryClasspath = listOf(libraryCompilation.classesDir),
-                )
+            `when`("a consumer module compiles against its classes with the hasDefault probe (stage 2)") {
+                val consumerResult =
+                    compileWithProbe(
+                        sources = listOf(consumerSource),
+                        libraryClasspath = listOf(libraryCompilation.classesDir),
+                    )
 
-            then("both stages compile successfully") {
-                libraryResult.exitCode shouldBe KotlinCompilation.ExitCode.OK
-                consumerResult.exitCode shouldBe KotlinCompilation.ExitCode.OK
-            }
+                then("both stages compile successfully") {
+                    libraryResult.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                    consumerResult.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                }
 
-            then("both library classes are resolvable from the classpath") {
-                consumerResult.messages shouldNotContain "declaration-not-found"
-                consumerResult.messages shouldContain "HASDEFAULT:"
-            }
+                then("both library classes are resolvable from the classpath") {
+                    consumerResult.messages shouldNotContain "declaration-not-found"
+                    consumerResult.messages shouldContain "HASDEFAULT:"
+                }
 
-            then("every parameter's hasDefault flag is readable cross-module with the correct polarity") {
-                val probeFlagLines =
-                    consumerResult.messages
-                        .lines()
-                        .filter { "HASDEFAULT:" in it }
-                        .map { probeLine -> probeLine.substring(probeLine.indexOf("HASDEFAULT:")) }
-                probeFlagLines shouldContainAll expectedFlagLines
-            }
-        }
-    }
-
-    given("same-module control group (library and consumer sources in ONE compilation)") {
-        `when`("the identical sources compile together with the same probe") {
-            val controlResult =
-                compileWithProbe(
-                    sources = listOf(librarySource, consumerSource),
-                    libraryClasspath = emptyList(),
-                )
-
-            then("the compilation succeeds and both classes are found") {
-                controlResult.exitCode shouldBe KotlinCompilation.ExitCode.OK
-                controlResult.messages shouldNotContain "declaration-not-found"
-            }
-
-            then("the probe reports identical flags from source — isolating cross-module as the only variable") {
-                val probeFlagLines =
-                    controlResult.messages
-                        .lines()
-                        .filter { "HASDEFAULT:" in it }
-                        .map { probeLine -> probeLine.substring(probeLine.indexOf("HASDEFAULT:")) }
-                probeFlagLines shouldContainAll expectedFlagLines
+                then("every parameter's hasDefault flag is readable cross-module with the correct polarity") {
+                    val probeFlagLines =
+                        consumerResult.messages
+                            .lines()
+                            .filter { "HASDEFAULT:" in it }
+                            .map { probeLine -> probeLine.substring(probeLine.indexOf("HASDEFAULT:")) }
+                    probeFlagLines shouldContainAll expectedFlagLines
+                }
             }
         }
-    }
-})
+
+        given("same-module control group (library and consumer sources in ONE compilation)") {
+            `when`("the identical sources compile together with the same probe") {
+                val controlResult =
+                    compileWithProbe(
+                        sources = listOf(librarySource, consumerSource),
+                        libraryClasspath = emptyList(),
+                    )
+
+                then("the compilation succeeds and both classes are found") {
+                    controlResult.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                    controlResult.messages shouldNotContain "declaration-not-found"
+                }
+
+                then("the probe reports identical flags from source — isolating cross-module as the only variable") {
+                    val probeFlagLines =
+                        controlResult.messages
+                            .lines()
+                            .filter { "HASDEFAULT:" in it }
+                            .map { probeLine -> probeLine.substring(probeLine.indexOf("HASDEFAULT:")) }
+                    probeFlagLines shouldContainAll expectedFlagLines
+                }
+            }
+        }
+    })

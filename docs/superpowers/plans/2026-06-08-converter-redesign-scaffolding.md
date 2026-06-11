@@ -602,7 +602,7 @@ class NumericConvertersTest : FunSpec({
 })
 ```
 
-(Add `kotest-framework-datatest` to the catalog/commonTest if `withData` is unresolved: `kotest-framework-datatest = { module = "io.kotest:kotest-framework-datatest", version.ref = "kotest" }`.)
+(`io.kotest.datatest.withData` ships inside `kotest-framework-engine` in Kotest 6.x — already wired in Task 2; the standalone datatest artifact stopped at 5.9.1 and must NOT be added.)
 
 - [ ] **Step 2: Run → fail.** **Step 3: Rewrite `PrimitiveConverters.kt` numeric section** — richer-first; widening overrides `convertFrom`; lossy `convertTo` carries the annotation:
 
