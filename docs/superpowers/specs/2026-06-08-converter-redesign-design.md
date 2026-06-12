@@ -555,10 +555,15 @@ class name = type-parameter order; widening converters override `convertFrom`):
   `FloatIntConverter`, `FloatLongConverter`, `DoubleLongConverter`,
   `ByteBooleanConverter`, `ShortBooleanConverter`, `IntBooleanConverter`,
   `LongBooleanConverter`, `FloatBooleanConverter`, `DoubleBooleanConverter`.
-- **2 Instant** (kotlinx-datetime): `InstantStringConverter` (ISO-8601),
-  `InstantLongConverter` (epoch millis).
+- **5 kotlinx-datetime** (core `api`-exposes the dependency): `InstantStringConverter`
+  (ISO-8601), `InstantLongConverter` (epoch millis), `LocalDateStringConverter`,
+  `LocalDateTimeStringConverter`, `LocalTimeStringConverter`.
+- **2 kotlin.time**: `DurationStringConverter` (strict ISO-8601 — Kotlin's lenient "1h 30m"
+  rejected), `DurationLongConverter` (whole millis).
 
-**28 primitive pairs + 2 Instant = 30 objects** — every pair either converts or explains why not.
+**28 primitive pairs + 7 stdlib/kotlinx = 35 objects** — every pair either converts or explains
+why not. (`kotlin.uuid.Uuid` stays in `kmapper-converters-uuid` until `@ExperimentalUuidApi`
+graduates — a registry-linked built-in would leak the opt-in into consumers' generated code.)
 
 ## Generated code (golden examples)
 

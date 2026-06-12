@@ -21,7 +21,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.kotlinx.datetime)
+            // api, not implementation: built-in converter signatures expose Instant/LocalDate/...
+            api(libs.kotlinx.datetime)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

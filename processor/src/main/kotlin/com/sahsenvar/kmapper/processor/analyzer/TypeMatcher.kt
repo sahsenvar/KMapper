@@ -573,7 +573,7 @@ class TypeMatcher(
     }
 
     /**
-     * Pair-keyed registry of the 30 built-in converters (richer-first naming: the converter's
+     * Pair-keyed registry of the 35 built-in converters (richer-first naming: the converter's
      * S is the richer/wider type, T the narrower). Lookup is orientation-INDEPENDENT — the same
      * entry matches both field orientations; [resolveConverter] decides convertTo vs convertFrom.
      */
@@ -611,9 +611,15 @@ class TypeMatcher(
             Triple("kotlin.Long", "kotlin.Boolean", prefix + "LongBooleanConverter"),
             Triple("kotlin.Float", "kotlin.Boolean", prefix + "FloatBooleanConverter"),
             Triple("kotlin.Double", "kotlin.Boolean", prefix + "DoubleBooleanConverter"),
-            // Instant (2)
+            // kotlinx-datetime (5)
             Triple("kotlinx.datetime.Instant", "kotlin.String", prefix + "InstantStringConverter"),
             Triple("kotlinx.datetime.Instant", "kotlin.Long", prefix + "InstantLongConverter"),
+            Triple("kotlinx.datetime.LocalDate", "kotlin.String", prefix + "LocalDateStringConverter"),
+            Triple("kotlinx.datetime.LocalDateTime", "kotlin.String", prefix + "LocalDateTimeStringConverter"),
+            Triple("kotlinx.datetime.LocalTime", "kotlin.String", prefix + "LocalTimeStringConverter"),
+            // kotlin.time (2)
+            Triple("kotlin.time.Duration", "kotlin.String", prefix + "DurationStringConverter"),
+            Triple("kotlin.time.Duration", "kotlin.Long", prefix + "DurationLongConverter"),
         )
     }
 

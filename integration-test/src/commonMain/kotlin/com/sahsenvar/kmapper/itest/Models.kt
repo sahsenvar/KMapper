@@ -8,7 +8,6 @@ import com.sahsenvar.kmapper.annotations.MapTo
 import com.sahsenvar.kmapper.annotations.Validate
 import com.sahsenvar.kmapper.arrow.NonEmptyListWrapper
 import com.sahsenvar.kmapper.arrow.NonEmptySetWrapper
-import com.sahsenvar.kmapper.datetime.StringLocalDateConverter
 import com.sahsenvar.kmapper.immutable.PersistentListWrapper
 import com.sahsenvar.kmapper.validation.builtin.NotBlankValidator
 import kotlinx.collections.immutable.PersistentList
@@ -48,8 +47,8 @@ data class UserD(
     val roles: NonEmptyList<String>,
 )
 
+// LocalDate <-> String is a core built-in since the converter audit — no registration needed.
 @KMapperConfig(
-    converters = [StringLocalDateConverter::class],
     wrappers = [PersistentListWrapper::class, NonEmptyListWrapper::class, NonEmptySetWrapper::class],
 )
 object ItestMapperConfig

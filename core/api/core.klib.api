@@ -243,6 +243,16 @@ final object com.sahsenvar.kmapper.converter.builtin/DoubleStringConverter : com
     final fun convertTo(kotlin/Double): kotlin/String // com.sahsenvar.kmapper.converter.builtin/DoubleStringConverter.convertTo|convertTo(kotlin.Double){}[0]
 }
 
+final object com.sahsenvar.kmapper.converter.builtin/DurationLongConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin.time/Duration, kotlin/Long> { // com.sahsenvar.kmapper.converter.builtin/DurationLongConverter|null[0]
+    final fun convertFrom(kotlin/Long): kotlin.time/Duration // com.sahsenvar.kmapper.converter.builtin/DurationLongConverter.convertFrom|convertFrom(kotlin.Long){}[0]
+    final fun convertTo(kotlin.time/Duration): kotlin/Long // com.sahsenvar.kmapper.converter.builtin/DurationLongConverter.convertTo|convertTo(kotlin.time.Duration){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/DurationStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin.time/Duration, kotlin/String> { // com.sahsenvar.kmapper.converter.builtin/DurationStringConverter|null[0]
+    final fun convertFrom(kotlin/String): kotlin.time/Duration // com.sahsenvar.kmapper.converter.builtin/DurationStringConverter.convertFrom|convertFrom(kotlin.String){}[0]
+    final fun convertTo(kotlin.time/Duration): kotlin/String // com.sahsenvar.kmapper.converter.builtin/DurationStringConverter.convertTo|convertTo(kotlin.time.Duration){}[0]
+}
+
 final object com.sahsenvar.kmapper.converter.builtin/FloatBooleanConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/Float, kotlin/Boolean> { // com.sahsenvar.kmapper.converter.builtin/FloatBooleanConverter|null[0]
     final fun convertFrom(kotlin/Boolean): kotlin/Float // com.sahsenvar.kmapper.converter.builtin/FloatBooleanConverter.convertFrom|convertFrom(kotlin.Boolean){}[0]
     final fun convertTo(kotlin/Float): kotlin/Boolean // com.sahsenvar.kmapper.converter.builtin/FloatBooleanConverter.convertTo|convertTo(kotlin.Float){}[0]
@@ -301,6 +311,21 @@ final object com.sahsenvar.kmapper.converter.builtin/IntShortConverter : com.sah
 final object com.sahsenvar.kmapper.converter.builtin/IntStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/Int, kotlin/String> { // com.sahsenvar.kmapper.converter.builtin/IntStringConverter|null[0]
     final fun convertFrom(kotlin/String): kotlin/Int // com.sahsenvar.kmapper.converter.builtin/IntStringConverter.convertFrom|convertFrom(kotlin.String){}[0]
     final fun convertTo(kotlin/Int): kotlin/String // com.sahsenvar.kmapper.converter.builtin/IntStringConverter.convertTo|convertTo(kotlin.Int){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/LocalDateStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlinx.datetime/LocalDate, kotlin/String> { // com.sahsenvar.kmapper.converter.builtin/LocalDateStringConverter|null[0]
+    final fun convertFrom(kotlin/String): kotlinx.datetime/LocalDate // com.sahsenvar.kmapper.converter.builtin/LocalDateStringConverter.convertFrom|convertFrom(kotlin.String){}[0]
+    final fun convertTo(kotlinx.datetime/LocalDate): kotlin/String // com.sahsenvar.kmapper.converter.builtin/LocalDateStringConverter.convertTo|convertTo(kotlinx.datetime.LocalDate){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/LocalDateTimeStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlinx.datetime/LocalDateTime, kotlin/String> { // com.sahsenvar.kmapper.converter.builtin/LocalDateTimeStringConverter|null[0]
+    final fun convertFrom(kotlin/String): kotlinx.datetime/LocalDateTime // com.sahsenvar.kmapper.converter.builtin/LocalDateTimeStringConverter.convertFrom|convertFrom(kotlin.String){}[0]
+    final fun convertTo(kotlinx.datetime/LocalDateTime): kotlin/String // com.sahsenvar.kmapper.converter.builtin/LocalDateTimeStringConverter.convertTo|convertTo(kotlinx.datetime.LocalDateTime){}[0]
+}
+
+final object com.sahsenvar.kmapper.converter.builtin/LocalTimeStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlinx.datetime/LocalTime, kotlin/String> { // com.sahsenvar.kmapper.converter.builtin/LocalTimeStringConverter|null[0]
+    final fun convertFrom(kotlin/String): kotlinx.datetime/LocalTime // com.sahsenvar.kmapper.converter.builtin/LocalTimeStringConverter.convertFrom|convertFrom(kotlin.String){}[0]
+    final fun convertTo(kotlinx.datetime/LocalTime): kotlin/String // com.sahsenvar.kmapper.converter.builtin/LocalTimeStringConverter.convertTo|convertTo(kotlinx.datetime.LocalTime){}[0]
 }
 
 final object com.sahsenvar.kmapper.converter.builtin/LongBooleanConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/Long, kotlin/Boolean> { // com.sahsenvar.kmapper.converter.builtin/LongBooleanConverter|null[0]

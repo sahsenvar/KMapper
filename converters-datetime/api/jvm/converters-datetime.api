@@ -70,27 +70,3 @@ public final class com/sahsenvar/kmapper/datetime/StringJavaZonedDateTimeConvert
 	public fun convertTo (Ljava/lang/String;)Ljava/time/ZonedDateTime;
 }
 
-public final class com/sahsenvar/kmapper/datetime/StringLocalDateConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
-	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringLocalDateConverter;
-	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFrom (Lkotlinx/datetime/LocalDate;)Ljava/lang/String;
-	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertTo (Ljava/lang/String;)Lkotlinx/datetime/LocalDate;
-}
-
-public final class com/sahsenvar/kmapper/datetime/StringLocalDateTimeConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
-	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringLocalDateTimeConverter;
-	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFrom (Lkotlinx/datetime/LocalDateTime;)Ljava/lang/String;
-	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertTo (Ljava/lang/String;)Lkotlinx/datetime/LocalDateTime;
-}
-
-public final class com/sahsenvar/kmapper/datetime/StringLocalTimeConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
-	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringLocalTimeConverter;
-	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFrom (Lkotlinx/datetime/LocalTime;)Ljava/lang/String;
-	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertTo (Ljava/lang/String;)Lkotlinx/datetime/LocalTime;
-}
-

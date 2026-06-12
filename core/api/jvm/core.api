@@ -260,6 +260,22 @@ public final class com/sahsenvar/kmapper/converter/builtin/DoubleStringConverter
 	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
 }
 
+public final class com/sahsenvar/kmapper/converter/builtin/DurationLongConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/DurationLongConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom-5sfh64U (J)J
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo-LRDsOJo (J)Ljava/lang/Long;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/DurationStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/DurationStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom-5sfh64U (Ljava/lang/String;)J
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo-LRDsOJo (J)Ljava/lang/String;
+}
+
 public final class com/sahsenvar/kmapper/converter/builtin/FloatBooleanConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/FloatBooleanConverter;
 	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
@@ -354,6 +370,30 @@ public final class com/sahsenvar/kmapper/converter/builtin/IntStringConverter : 
 	public fun convertFrom (Ljava/lang/String;)Ljava/lang/Integer;
 	public fun convertTo (I)Ljava/lang/String;
 	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/LocalDateStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LocalDateStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Lkotlinx/datetime/LocalDate;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Lkotlinx/datetime/LocalDate;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/LocalDateTimeStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LocalDateTimeStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Lkotlinx/datetime/LocalDateTime;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Lkotlinx/datetime/LocalDateTime;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/LocalTimeStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LocalTimeStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Lkotlinx/datetime/LocalTime;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Lkotlinx/datetime/LocalTime;)Ljava/lang/String;
 }
 
 public final class com/sahsenvar/kmapper/converter/builtin/LongBooleanConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {

@@ -123,9 +123,17 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
 - **9 X-pairs** (both totals are annotated `unsupported()` stubs with pair-specific reasons):
   FloatInt, FloatLong, DoubleLong, ByteBoolean, ShortBoolean, IntBoolean, LongBoolean,
   FloatBoolean, DoubleBoolean.
-- **2 Instant** (kotlinx-datetime): InstantString (ISO-8601), InstantLong (epoch millis).
-- Total: **28 primitive pair objects + 2 Instant = 30** — every pair either converts or explains
-  at compile time why it will not.
+- **5 kotlinx-datetime** (core ships the dep as `api`): InstantString (ISO-8601), InstantLong
+  (epoch millis), LocalDateString, LocalDateTimeString, LocalTimeString — promoted from
+  `converters-datetime` in the converter audit (2026-06-12); the add-on keeps only the
+  java.time platform bridges.
+- **2 kotlin.time**: DurationString (strict ISO-8601), DurationLong (whole millis — same
+  sub-ms truncation trade-off as InstantLong).
+- Total: **28 primitive pair objects + 7 stdlib/kotlinx = 35** — every pair either converts or
+  explains at compile time why it will not.
+- **`kotlin.uuid.Uuid` deliberately stays in the add-on** (audit decision): the type is still
+  `@ExperimentalUuidApi` in Kotlin 2.3.10, and a registry-linked built-in would leak the opt-in
+  requirement into every consumer's generated code. Promote when the API graduates.
 
 ## E) Default behavior — scalar ladder
 
@@ -265,9 +273,8 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
 - Migration typealias `@Deprecated UseMapTypeConverter = ConvertWith`.
 - GitBook docs task: add-ons page + public custom-converter page → replace the two
   "coming soon" placeholders in the error messages.
-- Stdlib add-ons: `String ↔ kotlin.uuid.Uuid` (needs `@ExperimentalUuidApi`),
-  `String ↔ kotlin.time.Duration`; kotlinx-datetime boundary cleanup (promote
-  LocalDate/LocalDateTime/LocalTime or demote Instant — make it consistent).
+- Stdlib Uuid promotion to core — blocked on `@ExperimentalUuidApi` graduating (see §D).
+  (Duration built-ins + kotlinx-datetime boundary cleanup: DONE in the 2026-06-12 audit.)
 - **Map-shaped custom containers** (`MultiMap<K,V>`-style, two type params) — outside the
   v1 `@CollectionWrapper` convention.
 - **Absorbable validation** (a `@Validate` failure riding the ladder instead of always-hard).
