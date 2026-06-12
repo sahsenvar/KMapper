@@ -4,6 +4,7 @@ package com.sahsenvar.kmapper.processor
 
 import com.sahsenvar.kmapper.MappingDegradation
 import com.sahsenvar.kmapper.MappingException
+import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -66,6 +67,22 @@ class CollectionLadderCodegenTest :
                         val event = listener.events.single().shouldBeInstanceOf<MappingDegradation.DroppedBrokenElement>()
                         event.path shouldBe "tags[1]"
                         event.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>()
+                    }
+                }
+            }
+
+            `when`("the source list is empty at runtime") {
+                then("an empty list maps to an empty list with zero events") {
+                    withRecordingListener { listener ->
+                        val outcome =
+                            result.invokeResultMapper(
+                                "OrderDataModelMappersKt",
+                                "toOrderDomainModelResult",
+                                result.newInstance("OrderDataModel", emptyList<String>()),
+                            )
+                        outcome.isSuccess.shouldBeTrue()
+                        (outcome.getOrNull()!!.prop("tags") as List<*>).shouldBeEmpty()
+                        listener.events.shouldBeEmpty()
                     }
                 }
             }
@@ -469,6 +486,65 @@ class CollectionLadderCodegenTest :
             }
         }
 
+        given("OnFail.Skip on a custom-wrapper target: List<String> -> Box<Long>") {
+            val source =
+                SourceFile.kotlin(
+                    "WrapperSkip.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.CollectionWrapper
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.KMapperConfig
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+
+                    class Box<T>(val values: List<T>)
+
+                    @CollectionWrapper(forType = Box::class)
+                    object BoxWrapper {
+                        fun <T> wrap(source: List<T>): Box<T> = Box(source)
+                    }
+
+                    @KMapperConfig(wrappers = [BoxWrapper::class])
+                    object MappingConfig
+
+                    data class LotDomainModel(val ids: Box<Long>)
+
+                    @MapTo(LotDomainModel::class)
+                    data class LotDataModel(@ConvertWith(onFail = OnFail.Skip) val ids: List<String>)
+                    """.trimIndent(),
+                )
+            val (result, compilation) = compile(source)
+
+            `when`("the processor runs") {
+                then("the Skip gate accepts the wrapper target; convertEachOrSkip runs inside wrap()") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                    val generated = compilation.generatedFile("LotDataModelMappers.kt")
+                    generated shouldContain "BoxWrapper.wrap("
+                    generated shouldContain "convertEachOrSkip(\"ids\", \"kotlin.String\", \"kotlin.Long\")"
+                    generated shouldContain "LongStringConverter.convertFromOrNull(it)"
+                }
+            }
+
+            `when`("one element of three is broken at runtime") {
+                then("the broken element skips with its event; the survivors wrap into the Box") {
+                    withRecordingListener { listener ->
+                        val outcome =
+                            result.invokeResultMapper(
+                                "LotDataModelMappersKt",
+                                "toLotDomainModelResult",
+                                result.newInstance("LotDataModel", listOf("1", "broken", "3")),
+                            )
+                        outcome.isSuccess.shouldBeTrue()
+                        outcome.getOrNull()!!.prop("ids")!!.prop("values") shouldBe listOf(1L, 3L)
+                        listener.events.shouldHaveSize(1)
+                        val event = listener.events.single().shouldBeInstanceOf<MappingDegradation.DroppedBrokenElement>()
+                        event.path shouldBe "ids[1]"
+                        event.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>()
+                    }
+                }
+            }
+        }
+
         given("a @CollectionWrapper whose wrap() returns a type other than forType") {
             val source =
                 SourceFile.kotlin(
@@ -492,6 +568,362 @@ class CollectionLadderCodegenTest :
             `when`("the processor runs") {
                 then("the signature error names the expected shape") {
                     errMessages(source) shouldContain "wrap(source: List<T>): Box<T>"
+                }
+            }
+        }
+
+        // ── Seam-table golden pins: one given/then per (target element shape × onFail) cell ──
+        // Each pin asserts the exact seam name AND the converter-method variant the seam
+        // receives (OrNull for absorbing/skipping seams, the TOTAL method for OrFail seams).
+
+        given("seam cell List T x Skip: explicit OnFail.Skip on a non-null-element list target") {
+            val source =
+                SourceFile.kotlin(
+                    "CellListSkip.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+
+                    data class ListSkipDomainModel(val tags: List<Long>)
+
+                    @MapTo(ListSkipDomainModel::class)
+                    data class ListSkipDataModel(@ConvertWith(onFail = OnFail.Skip) val tags: List<String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("convertEachOrSkip is selected and the converter rides its OrNull method") {
+                    val generated = okAndReadGenerated(source, "ListSkipDataModelMappers.kt")
+                    generated shouldContain "convertEachOrSkip(\"tags\", \"kotlin.String\", \"kotlin.Long\")"
+                    generated shouldContain "LongStringConverter.convertFromOrNull(it)"
+                }
+            }
+        }
+
+        given("seam cell List T? x Skip: Skip compacts even on a nullable-element target") {
+            val source =
+                SourceFile.kotlin(
+                    "CellListNullableSkip.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+
+                    data class NullableSkipDomainModel(val tags: List<Long?>)
+
+                    @MapTo(NullableSkipDomainModel::class)
+                    data class NullableSkipDataModel(@ConvertWith(onFail = OnFail.Skip) val tags: List<String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("convertEachOrSkip is selected (compaction beats null-in-place) with the OrNull method") {
+                    val generated = okAndReadGenerated(source, "NullableSkipDataModelMappers.kt")
+                    generated shouldContain "convertEachOrSkip(\"tags\", \"kotlin.String\", \"kotlin.Long\")"
+                    generated shouldContain "LongStringConverter.convertFromOrNull(it)"
+                }
+            }
+        }
+
+        given("seam cell List T? x Throw: strict alignment-preserving seam on a nullable-element target") {
+            val source =
+                SourceFile.kotlin(
+                    "CellListNullableThrow.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+
+                    data class NullableThrowDomainModel(val tags: List<Long?>)
+
+                    @MapTo(NullableThrowDomainModel::class)
+                    data class NullableThrowDataModel(@ConvertWith(onFail = OnFail.Throw) val tags: List<String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("convertEachOrNullStrict is selected and STILL rides the OrNull method (sanctioned null survives Throw)") {
+                    val generated = okAndReadGenerated(source, "NullableThrowDataModelMappers.kt")
+                    generated shouldContain "convertEachOrNullStrict(\"tags\", \"kotlin.String\", \"kotlin.Long\")"
+                    generated shouldContain "LongStringConverter.convertFromOrNull(it)"
+                }
+            }
+        }
+
+        given("seam cell Set x Skip: explicit OnFail.Skip on a Set target") {
+            val source =
+                SourceFile.kotlin(
+                    "CellSetSkip.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+
+                    data class SetSkipDomainModel(val codes: Set<Long>)
+
+                    @MapTo(SetSkipDomainModel::class)
+                    data class SetSkipDataModel(@ConvertWith(onFail = OnFail.Skip) val codes: Set<String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("convertEachOrSkipToSet is selected with the OrNull method") {
+                    val generated = okAndReadGenerated(source, "SetSkipDataModelMappers.kt")
+                    generated shouldContain "convertEachOrSkipToSet(\"codes\", \"kotlin.String\", \"kotlin.Long\")"
+                    generated shouldContain "LongStringConverter.convertFromOrNull(it)"
+                }
+            }
+        }
+
+        given("seam cell Set x Throw: hard element failures on a Set target") {
+            val source =
+                SourceFile.kotlin(
+                    "CellSetThrow.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+
+                    data class SetThrowDomainModel(val codes: Set<Long>)
+
+                    @MapTo(SetThrowDomainModel::class)
+                    data class SetThrowDataModel(@ConvertWith(onFail = OnFail.Throw) val codes: Set<String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("convertEachOrFailToSet is selected with the converter's TOTAL method") {
+                    val generated = okAndReadGenerated(source, "SetThrowDataModelMappers.kt")
+                    generated shouldContain "convertEachOrFailToSet(\"codes\", \"kotlin.String\", \"kotlin.Long\")"
+                    generated shouldContain "LongStringConverter.convertFrom(it)"
+                }
+            }
+        }
+
+        given("seam cell Map VT x Skip: explicit OnFail.Skip on a non-null-value map target") {
+            val source =
+                SourceFile.kotlin(
+                    "CellMapSkip.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+
+                    data class MapSkipDomainModel(val prices: Map<String, Long>)
+
+                    @MapTo(MapSkipDomainModel::class)
+                    data class MapSkipDataModel(@ConvertWith(onFail = OnFail.Skip) val prices: Map<String, String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("convertEntriesOrSkip is selected with the OrNull method") {
+                    val generated = okAndReadGenerated(source, "MapSkipDataModelMappers.kt")
+                    generated shouldContain
+                        "convertEntriesOrSkip(\"prices\", \"kotlin.String\", \"kotlin.String\", \"kotlin.String\", \"kotlin.Long\""
+                    generated shouldContain "LongStringConverter.convertFromOrNull(it)"
+                }
+            }
+        }
+
+        given("seam cell Map VT x Throw: hard entry failures on a non-null-value map target") {
+            val source =
+                SourceFile.kotlin(
+                    "CellMapThrow.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+
+                    data class MapThrowDomainModel(val prices: Map<String, Long>)
+
+                    @MapTo(MapThrowDomainModel::class)
+                    data class MapThrowDataModel(@ConvertWith(onFail = OnFail.Throw) val prices: Map<String, String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("convertEntriesOrFail is selected with the converter's TOTAL method") {
+                    val generated = okAndReadGenerated(source, "MapThrowDataModelMappers.kt")
+                    generated shouldContain
+                        "convertEntriesOrFail(\"prices\", \"kotlin.String\", \"kotlin.String\", \"kotlin.String\", \"kotlin.Long\""
+                    generated shouldContain "LongStringConverter.convertFrom(it)"
+                }
+            }
+        }
+
+        given("seam cell Map VT? x Auto: nullable-value map target with no directive") {
+            val source =
+                SourceFile.kotlin(
+                    "CellMapNullableAuto.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+
+                    data class MapNullAutoDomainModel(val prices: Map<String, Long?>)
+
+                    @MapTo(MapNullAutoDomainModel::class)
+                    data class MapNullAutoDataModel(val prices: Map<String, String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("convertEntriesValueOrNull is selected (null-in-place) with the OrNull method") {
+                    val generated = okAndReadGenerated(source, "MapNullAutoDataModelMappers.kt")
+                    generated shouldContain
+                        "convertEntriesValueOrNull(\"prices\", \"kotlin.String\", \"kotlin.String\", \"kotlin.String\", \"kotlin.Long\""
+                    generated shouldContain "LongStringConverter.convertFromOrNull(it)"
+                }
+            }
+        }
+
+        given("seam cell Map VT? x Skip: Skip compacts even on a nullable-value map target") {
+            val source =
+                SourceFile.kotlin(
+                    "CellMapNullableSkip.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+
+                    data class MapNullSkipDomainModel(val prices: Map<String, Long?>)
+
+                    @MapTo(MapNullSkipDomainModel::class)
+                    data class MapNullSkipDataModel(@ConvertWith(onFail = OnFail.Skip) val prices: Map<String, String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("convertEntriesOrSkip is selected (entry drop beats null-in-place) with the OrNull method") {
+                    val generated = okAndReadGenerated(source, "MapNullSkipDataModelMappers.kt")
+                    generated shouldContain
+                        "convertEntriesOrSkip(\"prices\", \"kotlin.String\", \"kotlin.String\", \"kotlin.String\", \"kotlin.Long\""
+                    generated shouldContain "LongStringConverter.convertFromOrNull(it)"
+                }
+            }
+        }
+
+        given("seam cell Map VT? x Throw: hard entry failures on a nullable-value map target") {
+            val source =
+                SourceFile.kotlin(
+                    "CellMapNullableThrow.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+
+                    data class MapNullThrowDomainModel(val prices: Map<String, Long?>)
+
+                    @MapTo(MapNullThrowDomainModel::class)
+                    data class MapNullThrowDataModel(@ConvertWith(onFail = OnFail.Throw) val prices: Map<String, String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("convertEntriesOrFail is selected with the converter's TOTAL method") {
+                    val generated = okAndReadGenerated(source, "MapNullThrowDataModelMappers.kt")
+                    generated shouldContain
+                        "convertEntriesOrFail(\"prices\", \"kotlin.String\", \"kotlin.String\", \"kotlin.String\", \"kotlin.Long\""
+                    generated shouldContain "LongStringConverter.convertFrom(it)"
+                }
+            }
+        }
+
+        // ── Diagnostic pins: Skip scope, wrapper direction/contract errors ──────────────
+
+        given("OnFail.Skip on a field that resolves to a WHOLE-VALUE conversion into a list target") {
+            val source =
+                SourceFile.kotlin(
+                    "WholeValueSkip.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+                    import com.sahsenvar.kmapper.converter.MapTypeConverter
+                    import kotlin.reflect.KClass
+
+                    @Suppress("UNCHECKED_CAST")
+                    object CsvConverter : MapTypeConverter<String, List<Long>>(
+                        String::class,
+                        List::class as KClass<List<Long>>,
+                    ) {
+                        override fun convertTo(source: String): List<Long> = source.split(",").map { it.toLong() }
+
+                        override fun convertFrom(target: List<Long>): String = target.joinToString(",")
+                    }
+
+                    data class CsvDomainModel(val ids: List<Long>)
+
+                    @MapTo(CsvDomainModel::class)
+                    data class CsvDataModel(
+                        @ConvertWith(use = CsvConverter::class, onFail = OnFail.Skip) val ids: String,
+                    )
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("compilation fails: Skip has no element scope on a whole-value conversion") {
+                    errMessages(source) shouldContain "resolves to a whole-value conversion"
+                }
+            }
+        }
+
+        given("a wrapper declaring only unwrap, used by a mapping that needs wrap") {
+            val source =
+                SourceFile.kotlin(
+                    "MissingWrap.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.CollectionWrapper
+                    import com.sahsenvar.kmapper.annotations.KMapperConfig
+                    import com.sahsenvar.kmapper.annotations.MapTo
+
+                    class Box<T>(val values: List<T>)
+
+                    @CollectionWrapper(forType = Box::class)
+                    object BoxWrapper {
+                        fun <T> unwrap(source: Box<T>): List<T> = source.values
+                    }
+
+                    @KMapperConfig(wrappers = [BoxWrapper::class])
+                    object MappingConfig
+
+                    data class StockDomainModel(val items: Box<String>)
+
+                    @MapTo(StockDomainModel::class)
+                    data class StockDataModel(val items: List<String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("the guided missing-direction error names the wrapper and the wrap signature") {
+                    val messages = errMessages(source)
+                    messages shouldContain "BoxWrapper"
+                    messages shouldContain "declares no wrap"
+                }
+            }
+        }
+
+        given("a @CollectionWrapper object declaring neither wrap nor unwrap") {
+            val source =
+                SourceFile.kotlin(
+                    "EmptyWrapper.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.CollectionWrapper
+                    import com.sahsenvar.kmapper.annotations.KMapperConfig
+
+                    class Box<T>(val values: List<T>)
+
+                    @CollectionWrapper(forType = Box::class)
+                    object EmptyBoxWrapper
+
+                    @KMapperConfig(wrappers = [EmptyBoxWrapper::class])
+                    object MappingConfig
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("the contract error requires at least one direction") {
+                    errMessages(source) shouldContain "declares neither wrap nor unwrap"
                 }
             }
         }

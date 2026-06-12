@@ -378,6 +378,62 @@ class ScalarLadderCodegenTest :
             }
         }
 
+        given("a MappableEnum landing on a NULLABLE enum target (absorbing cell)") {
+            val source =
+                SourceFile.kotlin(
+                    "EnumAbsorb.kt",
+                    """
+                    import com.sahsenvar.kmapper.MappableEnum
+                    import com.sahsenvar.kmapper.annotations.MapTo
+
+                    enum class Tier(override val wireValue: String) : MappableEnum<String> {
+                        GOLD("gold"),
+                    }
+
+                    data class MemberDomainModel(val tier: Tier?)
+
+                    @MapTo(MemberDomainModel::class)
+                    data class MemberDataModel(val tier: String)
+                    """.trimIndent(),
+                )
+            val (result, _) = compile(source)
+
+            `when`("an unknown wire value arrives at runtime") {
+                then("the enum lands as null and an AbsorbedConversionError carries the UnknownEnumValue cause") {
+                    withRecordingListener { listener ->
+                        val outcome =
+                            result.invokeResultMapper(
+                                "MemberDataModelMappersKt",
+                                "toMemberDomainModelResult",
+                                result.newInstance("MemberDataModel", "silver"),
+                            )
+                        outcome.isSuccess.shouldBeTrue()
+                        outcome.getOrNull()!!.prop("tier").shouldBeNull()
+                        listener.events.shouldHaveSize(1)
+                        val event = listener.events.single().shouldBeInstanceOf<MappingDegradation.AbsorbedConversionError>()
+                        event.path shouldBe "tier"
+                        event.cause.shouldBeInstanceOf<MappingException.UnknownEnumValue>()
+                    }
+                }
+            }
+
+            `when`("a known wire value arrives at runtime") {
+                then("the enum lands silently — no degradation event") {
+                    withRecordingListener { listener ->
+                        val outcome =
+                            result.invokeResultMapper(
+                                "MemberDataModelMappersKt",
+                                "toMemberDomainModelResult",
+                                result.newInstance("MemberDataModel", "gold"),
+                            )
+                        outcome.isSuccess.shouldBeTrue()
+                        outcome.getOrNull()!!.prop("tier").toString() shouldBe "GOLD"
+                        listener.events.shouldBeEmpty()
+                    }
+                }
+            }
+        }
+
         given("OnFail.Skip on a scalar field") {
             val source =
                 SourceFile.kotlin(

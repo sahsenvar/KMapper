@@ -44,8 +44,13 @@ class TypeMatcher(
         isReverse: Boolean = false,
     ): MappingStrategy {
         // Precondition: OnFail.Skip only makes sense for collection-like targets (compaction).
+        // A registered @CollectionWrapper target (e.g. Box<T>) is collection-like too — its
+        // element conversion (incl. onFail) runs on the normal seam rails inside wrap().
         val effectiveOnFail = sourceField.onFailFor(isReverse)
-        val targetIsCollectionLike = isCollectionType(targetField.type) || isMapType(targetField.type)
+        val targetIsCollectionLike = isCollectionType(targetField.type) ||
+            isMapType(targetField.type) ||
+            targetField.type.declaration.qualifiedName
+                ?.asString() in collectionWrappers
         if (effectiveOnFail == OnFailPolicy.Skip && !targetIsCollectionLike) {
             logger.error(
                 "${sourceField.name}: OnFail.Skip applies to collection elements only; " +
