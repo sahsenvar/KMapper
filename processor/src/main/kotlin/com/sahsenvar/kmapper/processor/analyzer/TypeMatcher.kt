@@ -195,7 +195,7 @@ class TypeMatcher(
                     ?.resolve()
             val innerMapperFn =
                 if (innerType != null && isDataClass(innerType)) {
-                    "to${innerType.declaration.simpleName.asString()}"
+                    nestedMapperFunctionName(innerType)
                 } else {
                     null
                 }
@@ -209,7 +209,7 @@ class TypeMatcher(
                     ?.resolve()
             val innerMapperFn =
                 if (innerType != null && isDataClass(innerType)) {
-                    "to${innerType.declaration.simpleName.asString()}"
+                    nestedMapperFunctionName(innerType)
                 } else {
                     null
                 }
@@ -223,8 +223,7 @@ class TypeMatcher(
 
         // 4. Check nested object mapping
         if (isDataClass(sourceField.type) && isDataClass(targetField.type)) {
-            val mapperName = "to${targetField.type.declaration.simpleName.asString()}"
-            return MappingStrategy.Nested(mapperName)
+            return MappingStrategy.Nested(nestedMapperFunctionName(targetField.type))
         }
 
         // 5. Check enum mapping via MappableEnum
@@ -271,7 +270,7 @@ class TypeMatcher(
         isSameType(sourceElementType, targetElementType) -> MappingStrategy.Direct
 
         isDataClass(sourceElementType) && isDataClass(targetElementType) ->
-            MappingStrategy.Nested("to${targetElementType.declaration.simpleName.asString()}")
+            MappingStrategy.Nested(nestedMapperFunctionName(targetElementType))
 
         else ->
             resolveStrategy(
@@ -304,8 +303,9 @@ class TypeMatcher(
             // converter": the latter gets a precise message instead of the generic missing one.
             if (introspector != null && introspector.declarationExists(converterFqn)) {
                 logger.error(
-                    "${sourceField.name}: $converterFqn is not a direct MapTypeConverter subtype — " +
-                        "converters must extend MapTypeConverter<S, T> directly.",
+                    "${sourceField.name}: $converterFqn is not a MapTypeConverter — " +
+                        "converters must extend MapTypeConverter<S, T> (directly or through " +
+                        "a superclass chain that binds S/T to concrete types).",
                 )
             } else {
                 logger.error("${sourceField.name}: " + missingConverterMessage(sourceFqn, targetFqn))
@@ -426,6 +426,12 @@ class TypeMatcher(
         }
         return null
     }
+
+    /**
+     * Generated-mapper call name for a nested target type — mirrors
+     * FunctionNameGenerator.generateMapperFunctionName atomically (`to{Simple}Result`).
+     */
+    private fun nestedMapperFunctionName(targetType: KSType): String = "to${targetType.declaration.simpleName.asString()}Result"
 
     private fun isSameType(
         source: KSType,

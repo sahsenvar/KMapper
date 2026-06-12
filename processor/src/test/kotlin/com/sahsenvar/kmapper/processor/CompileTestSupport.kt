@@ -36,6 +36,39 @@ fun compile(vararg sources: SourceFile): Pair<JvmCompilationResult, KotlinCompil
 }
 
 /**
+ * Compiles [sources], asserts the compilation succeeds, and returns the text of the
+ * KSP-generated file named [generatedFileName] (e.g. "UserDataModelMappers.kt").
+ */
+fun okAndReadGenerated(
+    sources: List<SourceFile>,
+    generatedFileName: String,
+): String {
+    val (result, compilation) = compile(*sources.toTypedArray())
+    check(result.exitCode == KotlinCompilation.ExitCode.OK) {
+        "Expected OK compilation but got ${result.exitCode}:\n${result.messages}"
+    }
+    return compilation.generatedFile(generatedFileName)
+}
+
+/** Single-source convenience overload of [okAndReadGenerated]. */
+fun okAndReadGenerated(
+    source: SourceFile,
+    generatedFileName: String,
+): String = okAndReadGenerated(listOf(source), generatedFileName)
+
+/**
+ * Compiles [sources], asserts the compilation FAILS with COMPILATION_ERROR, and returns the
+ * captured compiler/KSP messages for assertion.
+ */
+fun errMessages(vararg sources: SourceFile): String {
+    val (result, _) = compile(*sources)
+    check(result.exitCode == KotlinCompilation.ExitCode.COMPILATION_ERROR) {
+        "Expected COMPILATION_ERROR but got ${result.exitCode}:\n${result.messages}"
+    }
+    return result.messages
+}
+
+/**
  * Reads the text of a KSP-generated file by simple name (e.g. "UserRemoteMappers.kt").
  * Walks the kspSourcesDir of this compilation.
  */

@@ -1,9 +1,13 @@
 package com.sahsenvar.kmapper.processor.analyzer
 
 import com.google.devtools.ksp.getDeclaredFunctions
+import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.KSTypeParameter
 import com.google.devtools.ksp.symbol.Modifier
 
 /**
@@ -57,12 +61,23 @@ data class ConverterShape(
 
 /**
  * Reads a converter declaration's [ConverterShape] from the KSP [Resolver]:
- * its (S, T) type pair from the MapTypeConverter supertype and which directions it
- * provides, via function-level detection of the declared overrides and their
- * `@UnsupportedDirection` annotations.
+ * its (S, T) type pair from the MapTypeConverter supertype — found by walking UP the
+ * superclass chain, so parameterized-converter bases (the ledger's official recipe:
+ * `object PriceFormatConverter : FormattedDoubleStringConverter(digits = 2)` where the
+ * abstract base extends `MapTypeConverter<Double, String>`) resolve too — and which
+ * directions it provides, via function-level detection of the declared overrides (most
+ * derived wins) and their `@UnsupportedDirection` annotations.
+ *
+ * Generic-passthrough bases (`Base<X> : MapTypeConverter<X, String>`) are OUT OF SCOPE:
+ * resolving them would require type-argument substitution through arbitrary chains; they
+ * produce a guided compile error via [logger] instead.
+ *
+ * @param logger optional diagnostics sink; null disables the generic-passthrough error
+ *   (introspection-probe tests construct the introspector without a logger).
  */
 class ConverterIntrospector(
     private val resolver: Resolver,
+    private val logger: KSPLogger? = null,
 ) {
     private val converterBaseFqn = "com.sahsenvar.kmapper.converter.MapTypeConverter"
     private val unsupportedDirectionFqn = "com.sahsenvar.kmapper.converter.UnsupportedDirection"
@@ -102,11 +117,14 @@ class ConverterIntrospector(
         val declaration = resolver.getClassDeclarationByName(
             resolver.getKSNameFromString(converterFqn),
         ) ?: return null
-        val (sourceFqn, targetFqn) = typeArgumentsOf(declaration) ?: return null
+        val chainToBase = superclassChainToConverterBase(declaration) ?: return null
+        val (sourceFqn, targetFqn) = concreteTypeArguments(chainToBase.baseReference, declaration) ?: return null
 
         // Function-level detection, totals and OrNull variants tracked separately: only a
         // declared, un-annotated TOTAL provides its direction (the annotation wins — bodies
         // are opaque to KSP); an OrNull-only override is flagged for a guided compile error.
+        // The whole superclass chain contributes (an abstract base may hold the overrides);
+        // the MOST-DERIVED override of each direction method wins, including its annotation.
         var declaredToTotal = false
         var declaredToOrNull = false
         var declaredFromTotal = false
@@ -114,28 +132,34 @@ class ConverterIntrospector(
         var reasonTo: String? = null
         var reasonFrom: String? = null
         var orNullAnnotatedFunction: String? = null
-        declaration.getDeclaredFunctions().forEach { function ->
-            // Only a REAL override of the single-parameter base method counts: same-named
-            // helper overloads (extra parameters) or non-override declarations never
-            // declare a direction.
-            if (!isRealDirectionOverride(function)) return@forEach
-            val reason = unsupportedReasonOf(function)
-            when (val functionName = function.simpleName.asString()) {
-                "convertTo" -> {
-                    declaredToTotal = true
-                    if (reason != null) reasonTo = reason
-                }
-                "convertFrom" -> {
-                    declaredFromTotal = true
-                    if (reason != null) reasonFrom = reason
-                }
-                "convertToOrNull" -> {
-                    declaredToOrNull = true
-                    if (reason != null) orNullAnnotatedFunction = functionName
-                }
-                "convertFromOrNull" -> {
-                    declaredFromOrNull = true
-                    if (reason != null) orNullAnnotatedFunction = functionName
+        val claimedFunctionNames = mutableSetOf<String>()
+        for (chainClass in chainToBase.chain) {
+            chainClass.getDeclaredFunctions().forEach { function ->
+                // Only a REAL override of the single-parameter base method counts: same-named
+                // helper overloads (extra parameters) or non-override declarations never
+                // declare a direction.
+                if (!isRealDirectionOverride(function)) return@forEach
+                val functionName = function.simpleName.asString()
+                // A more-derived class in the chain already claimed this direction method.
+                if (!claimedFunctionNames.add(functionName)) return@forEach
+                val reason = unsupportedReasonOf(function)
+                when (functionName) {
+                    "convertTo" -> {
+                        declaredToTotal = true
+                        if (reason != null) reasonTo = reason
+                    }
+                    "convertFrom" -> {
+                        declaredFromTotal = true
+                        if (reason != null) reasonFrom = reason
+                    }
+                    "convertToOrNull" -> {
+                        declaredToOrNull = true
+                        if (reason != null) orNullAnnotatedFunction = functionName
+                    }
+                    "convertFromOrNull" -> {
+                        declaredFromOrNull = true
+                        if (reason != null) orNullAnnotatedFunction = functionName
+                    }
                 }
             }
         }
@@ -178,27 +202,80 @@ class ConverterIntrospector(
         ?.firstOrNull { it.name?.asString() == "reason" }
         ?.value as? String
 
-    /** Extracts (S-FQN, T-FQN) from the declaration's direct MapTypeConverter<S, T> supertype. */
-    private fun typeArgumentsOf(declaration: KSClassDeclaration): Pair<String, String>? {
-        for (supertype in declaration.superTypes) {
-            val resolved = supertype.resolve()
-            if (resolved.declaration.qualifiedName?.asString() != converterBaseFqn) continue
-            val source = resolved.arguments
-                .getOrNull(0)
-                ?.type
-                ?.resolve()
-                ?.declaration
-                ?.qualifiedName
-                ?.asString()
-            val target = resolved.arguments
-                .getOrNull(1)
-                ?.type
-                ?.resolve()
-                ?.declaration
-                ?.qualifiedName
-                ?.asString()
-            if (source != null && target != null) return source to target
+    /**
+     * Returns the (S-FQN, T-FQN) pair of [declaration]'s `MapTypeConverter<S, T>` ancestry,
+     * walking up the superclass chain, or null when the declaration never reaches the base
+     * (or binds it through an out-of-scope generic passthrough — diagnostic via [logger]).
+     * Public so @KMapperConfig discovery shares the exact same pair resolution.
+     */
+    fun typePairOf(declaration: KSClassDeclaration): Pair<String, String>? {
+        val chainToBase = superclassChainToConverterBase(declaration) ?: return null
+        return concreteTypeArguments(chainToBase.baseReference, declaration)
+    }
+
+    /**
+     * The superclass chain from the converter declaration (inclusive, most-derived first) up
+     * to — but excluding — MapTypeConverter, plus the resolved `MapTypeConverter<S, T>`
+     * supertype reference found at the chain's end.
+     */
+    private data class ChainToConverterBase(
+        val chain: List<KSClassDeclaration>,
+        val baseReference: KSType,
+    )
+
+    /**
+     * Walks the superclass chain (classes only — Kotlin has single class inheritance, so the
+     * walk is linear; interfaces can never reach the abstract base) until MapTypeConverter is
+     * found. A visited set guards against malformed cyclic hierarchies in broken sources.
+     * Returns null when the chain ends (kotlin.Any) without meeting MapTypeConverter.
+     */
+    private fun superclassChainToConverterBase(declaration: KSClassDeclaration): ChainToConverterBase? {
+        val chain = mutableListOf<KSClassDeclaration>()
+        val visitedFqns = mutableSetOf<String>()
+        var current = declaration
+        while (true) {
+            val currentFqn = current.qualifiedName?.asString() ?: return null
+            if (!visitedFqns.add(currentFqn)) return null
+            chain.add(current)
+            var nextSuperclass: KSClassDeclaration? = null
+            for (supertype in current.superTypes) {
+                val resolved = supertype.resolve()
+                val superDeclaration = resolved.declaration as? KSClassDeclaration ?: continue
+                if (superDeclaration.classKind != ClassKind.CLASS) continue
+                if (superDeclaration.qualifiedName?.asString() == converterBaseFqn) {
+                    return ChainToConverterBase(chain, resolved)
+                }
+                nextSuperclass = superDeclaration
+            }
+            current = nextSuperclass ?: return null
         }
-        return null
+    }
+
+    /**
+     * Extracts the concrete (S-FQN, T-FQN) from a resolved `MapTypeConverter<S, T>` supertype
+     * reference. When the intermediate base binds S/T to its OWN type parameters (generic
+     * passthrough, e.g. `Base<X> : MapTypeConverter<X, String>`) the pair cannot be resolved
+     * without substitution machinery — out of scope, reported as a guided compile error.
+     */
+    private fun concreteTypeArguments(
+        baseReference: KSType,
+        declaration: KSClassDeclaration,
+    ): Pair<String, String>? {
+        val sourceType = baseReference.arguments.getOrNull(0)?.type?.resolve()
+        val targetType = baseReference.arguments.getOrNull(1)?.type?.resolve()
+        if (sourceType?.declaration is KSTypeParameter || targetType?.declaration is KSTypeParameter) {
+            logger?.error(
+                "${declaration.qualifiedName?.asString()}: reaches MapTypeConverter through a " +
+                    "generic-passthrough base (its S/T are bound to the base's own type parameters). " +
+                    "Bind the pair with concrete types in the base instead — e.g. " +
+                    "`abstract class FormattedDoubleStringConverter(digits: Int) : " +
+                    "MapTypeConverter<Double, String>(Double::class, String::class)` — " +
+                    "generic-passthrough bases are not supported.",
+            )
+            return null
+        }
+        val sourceFqn = sourceType?.declaration?.qualifiedName?.asString() ?: return null
+        val targetFqn = targetType?.declaration?.qualifiedName?.asString() ?: return null
+        return sourceFqn to targetFqn
     }
 }
