@@ -66,4 +66,4 @@ Yerleşim kuralı: alan direktifleri **üretilen yönün kaynak alanından** oku
 
 `@Ignore` → `@IgnoreMap` · `@MapDefaultValue` → constructor default'ları ·
 `@UseMapTypeConverter` → `@ConvertWith` · `@ValidateFrom`/`@ValidateTo` → `@Validate`.
-Geçiş rehberi için deponun `CHANGELOG.md` dosyasına bakın.
+Eksiksiz harita: [1.x'ten Geçiş](gecis-1x.md).

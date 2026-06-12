@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed — converter subsystem redesign (BREAKING; next major release)
+## [2.0.0] - 2026-06-12
+
+Migration guide: [docs/guide-en/reference/migration-1x.md](docs/guide-en/reference/migration-1x.md)
+(Türkçe: [docs/guide/referans/gecis-1x.md](docs/guide/referans/gecis-1x.md)).
+
+### Changed — converter subsystem redesign (BREAKING)
 
 - **Result boundary:** generated mappers are now `toXResult(): Result<X>` — failures arrive as
   values, never surprise exceptions (`.getOrThrow()` is the caller's explicit choice).
@@ -170,5 +175,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/sahsenvar/KMapper/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/sahsenvar/KMapper/releases/tag/v1.0.0

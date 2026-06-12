@@ -77,10 +77,12 @@ Group `io.github.sahsenvar`:
 kotlinx-datetime (`LocalDate`, `Instant`, …) and `kotlin.time.Duration` converters are
 **core built-ins** — no add-on needed.
 
-**Latest release:** `1.0.0` (10 modules) — on
-[Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core). The
-converter redesign on `main` adds `kmapper-annotations` (11 artifacts) and ships as the next
-major release; see [CHANGELOG.md](CHANGELOG.md) for the migration summary.
+**Latest published release:** `1.0.0` (10 modules) — on
+[Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core).
+`main` carries `2.0.0`, the converter redesign (11 artifacts, adds `kmapper-annotations`),
+pending release. Upgrading from 1.x?
+[Migration guide](docs/guide-en/reference/migration-1x.md) ·
+[CHANGELOG](CHANGELOG.md).
 
 Design ledger & implementation plans live in [`docs/superpowers/`](docs/superpowers/) and
 [`docs/converter-redesign.md`](docs/converter-redesign.md).

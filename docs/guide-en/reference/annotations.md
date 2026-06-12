@@ -65,4 +65,4 @@ direction** ([details](../type-conversion/convert-with.md#the-placement-rule-wor
 
 `@Ignore` → `@IgnoreMap` · `@MapDefaultValue` → constructor defaults ·
 `@UseMapTypeConverter` → `@ConvertWith` · `@ValidateFrom`/`@ValidateTo` → `@Validate`.
-See the migration guide in the repository's `CHANGELOG.md`.
+Full mapping: [Migrating from 1.x](migration-1x.md).

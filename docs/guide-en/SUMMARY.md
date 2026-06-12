@@ -56,5 +56,6 @@
 ## Reference
 
 * [Annotation Reference](reference/annotations.md)
+* [Migrating from 1.x](reference/migration-1x.md)
 * [Limitations & Roadmap](reference/limitations.md)
 * [FAQ](reference/faq.md)

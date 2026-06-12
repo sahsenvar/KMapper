@@ -56,5 +56,6 @@
 ## Referans
 
 * [Annotation Referansı](referans/anotasyonlar.md)
+* [1.x'ten Geçiş](referans/gecis-1x.md)
 * [Sınırlamalar ve Yol Haritası](referans/sinirlamalar.md)
 * [SSS](referans/sss.md)
