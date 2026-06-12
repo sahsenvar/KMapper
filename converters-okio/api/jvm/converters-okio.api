@@ -1,9 +1,33 @@
+public final class com/sahsenvar/kmapper/okio/Base64ByteStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/okio/Base64ByteStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Lokio/ByteString;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Lokio/ByteString;
+}
+
+public final class com/sahsenvar/kmapper/okio/Base64UrlByteStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/okio/Base64UrlByteStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Lokio/ByteString;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Lokio/ByteString;
+}
+
 public final class com/sahsenvar/kmapper/okio/ByteArrayByteStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/okio/ByteArrayByteStringConverter;
 	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
 	public fun convertFrom (Lokio/ByteString;)[B
 	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
 	public fun convertTo ([B)Lokio/ByteString;
+}
+
+public final class com/sahsenvar/kmapper/okio/HexByteStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/okio/HexByteStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Lokio/ByteString;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Lokio/ByteString;
 }
 
 public final class com/sahsenvar/kmapper/okio/StringByteStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {

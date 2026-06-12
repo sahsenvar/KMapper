@@ -2,8 +2,10 @@ package com.sahsenvar.kmapper.bignumber
 
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.ionspin.kotlin.bignum.integer.BigInteger
+import com.sahsenvar.kmapper.MappingException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class IonspinConvertersTest {
@@ -56,16 +58,19 @@ class IonspinConvertersTest {
     }
 
     @Test
-    fun doubleBigDecimal_toDouble() {
-        val bd = BigDecimal.fromDouble(3.14)
-        val result = DoubleBigDecimalConverter.convertFrom(bd)
-        assertEquals(3.14, result, 0.0001)
+    fun doubleBigDecimal_narrowingToDoubleIsRefused() {
+        // BigDecimal -> Double can silently lose precision, so the direction is @UnsupportedDirection.
+        val failure =
+            assertFailsWith<MappingException.UnsupportedConversion> {
+                DoubleBigDecimalConverter.convertFrom(BigDecimal.fromDouble(3.14))
+            }
+        assertTrue("unsupported" in failure.message.orEmpty(), "Expected guidance in '${failure.message}'")
     }
 
     @Test
-    fun doubleBigDecimal_roundTrip() {
-        val d = 42.0
-        assertEquals(d, DoubleBigDecimalConverter.convertFrom(DoubleBigDecimalConverter.convertTo(d)), 0.0001)
+    fun doubleBigDecimal_wideningHandlesExtremes() {
+        assertEquals(BigDecimal.fromDouble(Double.MAX_VALUE), DoubleBigDecimalConverter.convertTo(Double.MAX_VALUE))
+        assertEquals(BigDecimal.fromDouble(-Double.MAX_VALUE), DoubleBigDecimalConverter.convertTo(-Double.MAX_VALUE))
     }
 
     // LongBigIntegerConverter
@@ -75,15 +80,17 @@ class IonspinConvertersTest {
     }
 
     @Test
-    fun longBigInteger_toLong() {
-        val bi = BigInteger.fromLong(1_000_000_000L)
-        assertEquals(1_000_000_000L, LongBigIntegerConverter.convertFrom(bi))
+    fun longBigInteger_narrowingToLongIsRefused() {
+        // BigInteger -> Long can overflow (previously truncated SILENTLY), so the direction is refused.
+        assertFailsWith<MappingException.UnsupportedConversion> {
+            LongBigIntegerConverter.convertFrom(BigInteger.fromLong(1_000_000_000L))
+        }
     }
 
     @Test
-    fun longBigInteger_roundTrip() {
-        val v = 123456789L
-        assertEquals(v, LongBigIntegerConverter.convertFrom(LongBigIntegerConverter.convertTo(v)))
+    fun longBigInteger_wideningHandlesBoundaries() {
+        assertEquals(BigInteger.fromLong(Long.MIN_VALUE), LongBigIntegerConverter.convertTo(Long.MIN_VALUE))
+        assertEquals(BigInteger.fromLong(0L), LongBigIntegerConverter.convertTo(0L))
     }
 
     // IntBigIntegerConverter
@@ -93,15 +100,17 @@ class IonspinConvertersTest {
     }
 
     @Test
-    fun intBigInteger_toInt() {
-        val bi = BigInteger.fromInt(42)
-        assertEquals(42, IntBigIntegerConverter.convertFrom(bi))
+    fun intBigInteger_narrowingToIntIsRefused() {
+        // BigInteger -> Int can overflow (previously truncated SILENTLY), so the direction is refused.
+        assertFailsWith<MappingException.UnsupportedConversion> {
+            IntBigIntegerConverter.convertFrom(BigInteger.fromInt(42))
+        }
     }
 
     @Test
-    fun intBigInteger_roundTrip() {
-        val v = -12345
-        assertEquals(v, IntBigIntegerConverter.convertFrom(IntBigIntegerConverter.convertTo(v)))
+    fun intBigInteger_wideningHandlesBoundaries() {
+        assertEquals(BigInteger.fromInt(Int.MIN_VALUE), IntBigIntegerConverter.convertTo(Int.MIN_VALUE))
+        assertEquals(BigInteger.fromInt(-1), IntBigIntegerConverter.convertTo(-1))
     }
 
     // BigIntegerBigDecimalConverter
@@ -113,15 +122,16 @@ class IonspinConvertersTest {
     }
 
     @Test
-    fun bigIntegerBigDecimal_toBigInteger() {
-        val bi = BigInteger.fromLong(100L)
-        val bd = BigDecimal.fromBigInteger(bi)
-        assertEquals(bi, BigIntegerBigDecimalConverter.convertFrom(bd))
+    fun bigIntegerBigDecimal_narrowingToBigIntegerIsRefused() {
+        // BigDecimal -> BigInteger silently drops any fractional part, so the direction is refused.
+        assertFailsWith<MappingException.UnsupportedConversion> {
+            BigIntegerBigDecimalConverter.convertFrom(BigDecimal.fromBigInteger(BigInteger.fromLong(100L)))
+        }
     }
 
     @Test
-    fun bigIntegerBigDecimal_roundTrip() {
+    fun bigIntegerBigDecimal_wideningPreservesHugeValues() {
         val bi = BigInteger.parseString("123456789012345678901234567890", 10)
-        assertEquals(bi, BigIntegerBigDecimalConverter.convertFrom(BigIntegerBigDecimalConverter.convertTo(bi)))
+        assertEquals(BigDecimal.fromBigInteger(bi), BigIntegerBigDecimalConverter.convertTo(bi))
     }
 }

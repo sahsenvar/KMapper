@@ -1,6 +1,7 @@
 package com.sahsenvar.kmapper.bignumber
 
 import com.sahsenvar.kmapper.converter.MapTypeConverter
+import com.sahsenvar.kmapper.converter.UnsupportedDirection
 import java.math.BigDecimal as JBigDecimal
 import java.math.BigInteger as JBigInteger
 
@@ -23,23 +24,26 @@ object StringJavaBigIntegerConverter : MapTypeConverter<String, JBigInteger>(Str
     override fun convertFrom(target: JBigInteger): String = target.toString()
 }
 
-/** [Double] ↔ [java.math.BigDecimal]. Uses valueOf for reliable decimal representation. */
+/** [Double] -> [java.math.BigDecimal] via valueOf (widening only; lossy reverse unsupported). */
 object DoubleJavaBigDecimalConverter : MapTypeConverter<Double, JBigDecimal>(Double::class, JBigDecimal::class) {
     override fun convertTo(source: Double): JBigDecimal = JBigDecimal.valueOf(source)
 
-    override fun convertFrom(target: JBigDecimal): Double = target.toDouble()
+    @UnsupportedDirection("BigDecimal -> Double loses precision (binary floating point cannot represent most decimals); convert explicitly if intended.")
+    override fun convertFrom(target: JBigDecimal): Double = unsupported()
 }
 
-/** [Long] ↔ [java.math.BigInteger]. */
+/** [Long] -> [java.math.BigInteger] (widening only; overflowing reverse unsupported). */
 object LongJavaBigIntegerConverter : MapTypeConverter<Long, JBigInteger>(Long::class, JBigInteger::class) {
     override fun convertTo(source: Long): JBigInteger = JBigInteger.valueOf(source)
 
-    override fun convertFrom(target: JBigInteger): Long = target.toLong()
+    @UnsupportedDirection("BigInteger -> Long can overflow and previously truncated SILENTLY; write a custom converter if your domain guarantees the range.")
+    override fun convertFrom(target: JBigInteger): Long = unsupported()
 }
 
-/** [java.math.BigInteger] ↔ [java.math.BigDecimal]. Lossless integer-to-decimal promotion. */
+/** [java.math.BigInteger] -> [java.math.BigDecimal]: lossless promotion (fraction-truncating reverse unsupported). */
 object JavaBigIntegerBigDecimalConverter : MapTypeConverter<JBigInteger, JBigDecimal>(JBigInteger::class, JBigDecimal::class) {
     override fun convertTo(source: JBigInteger): JBigDecimal = JBigDecimal(source)
 
-    override fun convertFrom(target: JBigDecimal): JBigInteger = target.toBigInteger()
+    @UnsupportedDirection("BigDecimal -> BigInteger truncates the fraction; decide floor/round/ceil explicitly.")
+    override fun convertFrom(target: JBigDecimal): JBigInteger = unsupported()
 }

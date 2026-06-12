@@ -5,12 +5,16 @@ import kotlinx.datetime.toJavaInstant
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinInstant
 import kotlinx.datetime.toKotlinLocalDate
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
+import java.time.Duration as JDuration
 import java.time.Instant as JInstant
 import java.time.LocalDate as JLocalDate
 import java.time.LocalDateTime as JLocalDateTime
 import java.time.LocalTime as JLocalTime
 import java.time.OffsetDateTime as JOffsetDateTime
 import java.time.ZonedDateTime as JZonedDateTime
+import kotlin.time.Duration as KDuration
 import kotlinx.datetime.Instant as KInstant
 import kotlinx.datetime.LocalDate as KLocalDate
 
@@ -85,4 +89,29 @@ object KotlinJavaLocalDateConverter : MapTypeConverter<KLocalDate, JLocalDate>(K
     override fun convertTo(source: KLocalDate): JLocalDate = source.toJavaLocalDate()
 
     override fun convertFrom(target: JLocalDate): KLocalDate = target.toKotlinLocalDate()
+}
+
+/**
+ * ISO-8601 [String] ↔ [java.time.Duration] (e.g. `"PT1H30M"`).
+ *
+ * Note: `kotlin.time.Duration` ↔ `String` is a core built-in ([com.sahsenvar.kmapper.converter.builtin.DurationStringConverter]);
+ * this converter covers models that use the java.time type directly.
+ */
+object StringJavaDurationConverter : MapTypeConverter<String, JDuration>(String::class, JDuration::class) {
+    override fun convertTo(source: String): JDuration = JDuration.parse(source)
+
+    override fun convertFrom(target: JDuration): String = target.toString()
+}
+
+/**
+ * [kotlin.time.Duration] ↔ [java.time.Duration] via the stdlib JVM bridges.
+ *
+ * Kotlin → Java is exact for all finite durations. Java → Kotlin is exact up to
+ * nanosecond precision within ±146 years; beyond that range kotlin.time stores
+ * milliseconds, so sub-millisecond detail of extreme java durations is dropped.
+ */
+object KotlinJavaDurationConverter : MapTypeConverter<KDuration, JDuration>(KDuration::class, JDuration::class) {
+    override fun convertTo(source: KDuration): JDuration = source.toJavaDuration()
+
+    override fun convertFrom(target: JDuration): KDuration = target.toKotlinDuration()
 }

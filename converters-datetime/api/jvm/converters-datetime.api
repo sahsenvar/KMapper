@@ -1,3 +1,11 @@
+public final class com/sahsenvar/kmapper/datetime/KotlinJavaDurationConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/KotlinJavaDurationConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom-5sfh64U (Ljava/time/Duration;)J
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo-LRDsOJo (J)Ljava/time/Duration;
+}
+
 public final class com/sahsenvar/kmapper/datetime/KotlinJavaInstantConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/KotlinJavaInstantConverter;
 	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
@@ -20,6 +28,14 @@ public final class com/sahsenvar/kmapper/datetime/LongJavaInstantConverter : com
 	public fun convertFrom (Ljava/time/Instant;)Ljava/lang/Long;
 	public fun convertTo (J)Ljava/time/Instant;
 	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/datetime/StringJavaDurationConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/datetime/StringJavaDurationConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/time/Duration;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Ljava/time/Duration;
 }
 
 public final class com/sahsenvar/kmapper/datetime/StringJavaInstantConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {

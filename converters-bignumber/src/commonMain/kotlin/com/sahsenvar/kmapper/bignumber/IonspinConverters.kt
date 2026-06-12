@@ -3,6 +3,7 @@ package com.sahsenvar.kmapper.bignumber
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.sahsenvar.kmapper.converter.MapTypeConverter
+import com.sahsenvar.kmapper.converter.UnsupportedDirection
 
 // ---------------------------------------------------------------------------
 // ionspin BigDecimal / BigInteger scalar converters (commonMain)
@@ -32,40 +33,34 @@ object StringBigIntegerConverter : MapTypeConverter<String, BigInteger>(String::
     override fun convertFrom(target: BigInteger): String = target.toString()
 }
 
-/**
- * [Double] ↔ ionspin [BigDecimal].
- * convertFrom uses exactRequired=false so values like 1.5 are returned as 1.5 not an error.
- */
+/** [Double] -> ionspin [BigDecimal] (widening only; the reverse is intentionally unsupported). */
 object DoubleBigDecimalConverter : MapTypeConverter<Double, BigDecimal>(Double::class, BigDecimal::class) {
     override fun convertTo(source: Double): BigDecimal = BigDecimal.fromDouble(source)
 
-    override fun convertFrom(target: BigDecimal): Double = target.doubleValue(exactRequired = false)
+    @UnsupportedDirection("BigDecimal -> Double loses precision (binary floating point cannot represent most decimals); convert explicitly if intended.")
+    override fun convertFrom(target: BigDecimal): Double = unsupported()
 }
 
-/**
- * [Long] ↔ ionspin [BigInteger].
- * convertFrom uses exactRequired=false to allow values that do not fit exactly in Long range
- * to be truncated rather than throw, matching lenient conversion semantics.
- */
+/** [Long] -> ionspin [BigInteger] (widening only; the reverse is intentionally unsupported). */
 object LongBigIntegerConverter : MapTypeConverter<Long, BigInteger>(Long::class, BigInteger::class) {
     override fun convertTo(source: Long): BigInteger = BigInteger.fromLong(source)
 
-    override fun convertFrom(target: BigInteger): Long = target.longValue(exactRequired = false)
+    @UnsupportedDirection("BigInteger -> Long can overflow and previously truncated SILENTLY; write a custom converter if your domain guarantees the range.")
+    override fun convertFrom(target: BigInteger): Long = unsupported()
 }
 
-/**
- * [Int] ↔ ionspin [BigInteger].
- * convertFrom uses exactRequired=false for lenient truncation.
- */
+/** [Int] -> ionspin [BigInteger] (widening only; the reverse is intentionally unsupported). */
 object IntBigIntegerConverter : MapTypeConverter<Int, BigInteger>(Int::class, BigInteger::class) {
     override fun convertTo(source: Int): BigInteger = BigInteger.fromInt(source)
 
-    override fun convertFrom(target: BigInteger): Int = target.intValue(exactRequired = false)
+    @UnsupportedDirection("BigInteger -> Int can overflow and previously truncated SILENTLY; write a custom converter if your domain guarantees the range.")
+    override fun convertFrom(target: BigInteger): Int = unsupported()
 }
 
-/** ionspin [BigInteger] ↔ ionspin [BigDecimal]. Lossless integer-to-decimal promotion. */
+/** ionspin [BigInteger] -> ionspin [BigDecimal]: lossless promotion (fraction-truncating reverse unsupported). */
 object BigIntegerBigDecimalConverter : MapTypeConverter<BigInteger, BigDecimal>(BigInteger::class, BigDecimal::class) {
     override fun convertTo(source: BigInteger): BigDecimal = BigDecimal.fromBigInteger(source)
 
-    override fun convertFrom(target: BigDecimal): BigInteger = target.toBigInteger()
+    @UnsupportedDirection("BigDecimal -> BigInteger truncates the fraction; decide floor/round/ceil explicitly.")
+    override fun convertFrom(target: BigDecimal): BigInteger = unsupported()
 }

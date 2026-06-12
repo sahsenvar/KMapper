@@ -1,7 +1,9 @@
 package com.sahsenvar.kmapper.bignumber
 
+import com.sahsenvar.kmapper.MappingException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import java.math.BigDecimal as JBigDecimal
 import java.math.BigInteger as JBigInteger
 
@@ -55,15 +57,17 @@ class JavaMathConvertersTest {
     }
 
     @Test
-    fun doubleJavaBigDecimal_toDouble() {
-        val bd = JBigDecimal.valueOf(3.14)
-        assertEquals(3.14, DoubleJavaBigDecimalConverter.convertFrom(bd), 0.0001)
+    fun doubleJavaBigDecimal_narrowingToDoubleIsRefused() {
+        // BigDecimal -> Double can silently lose precision, so the direction is @UnsupportedDirection.
+        assertFailsWith<MappingException.UnsupportedConversion> {
+            DoubleJavaBigDecimalConverter.convertFrom(JBigDecimal.valueOf(3.14))
+        }
     }
 
     @Test
-    fun doubleJavaBigDecimal_roundTrip() {
-        val d = 42.0
-        assertEquals(d, DoubleJavaBigDecimalConverter.convertFrom(DoubleJavaBigDecimalConverter.convertTo(d)), 0.0001)
+    fun doubleJavaBigDecimal_wideningHandlesExtremes() {
+        assertEquals(JBigDecimal.valueOf(Double.MAX_VALUE), DoubleJavaBigDecimalConverter.convertTo(Double.MAX_VALUE))
+        assertEquals(JBigDecimal.valueOf(-Double.MAX_VALUE), DoubleJavaBigDecimalConverter.convertTo(-Double.MAX_VALUE))
     }
 
     // LongJavaBigIntegerConverter
@@ -73,14 +77,17 @@ class JavaMathConvertersTest {
     }
 
     @Test
-    fun longJavaBigInteger_toLong() {
-        assertEquals(1_000_000_000L, LongJavaBigIntegerConverter.convertFrom(JBigInteger.valueOf(1_000_000_000L)))
+    fun longJavaBigInteger_narrowingToLongIsRefused() {
+        // BigInteger -> Long can overflow (previously truncated SILENTLY), so the direction is refused.
+        assertFailsWith<MappingException.UnsupportedConversion> {
+            LongJavaBigIntegerConverter.convertFrom(JBigInteger.valueOf(1_000_000_000L))
+        }
     }
 
     @Test
-    fun longJavaBigInteger_roundTrip() {
-        val v = 123456789L
-        assertEquals(v, LongJavaBigIntegerConverter.convertFrom(LongJavaBigIntegerConverter.convertTo(v)))
+    fun longJavaBigInteger_wideningHandlesBoundaries() {
+        assertEquals(JBigInteger.valueOf(Long.MIN_VALUE), LongJavaBigIntegerConverter.convertTo(Long.MIN_VALUE))
+        assertEquals(JBigInteger.ZERO, LongJavaBigIntegerConverter.convertTo(0L))
     }
 
     // JavaBigIntegerBigDecimalConverter
@@ -91,15 +98,16 @@ class JavaMathConvertersTest {
     }
 
     @Test
-    fun javaBigIntegerBigDecimal_toBigInteger() {
-        val bi = JBigInteger.valueOf(100L)
-        val bd = JBigDecimal(bi)
-        assertEquals(bi, JavaBigIntegerBigDecimalConverter.convertFrom(bd))
+    fun javaBigIntegerBigDecimal_narrowingToBigIntegerIsRefused() {
+        // BigDecimal -> BigInteger silently drops any fractional part, so the direction is refused.
+        assertFailsWith<MappingException.UnsupportedConversion> {
+            JavaBigIntegerBigDecimalConverter.convertFrom(JBigDecimal(JBigInteger.valueOf(100L)))
+        }
     }
 
     @Test
-    fun javaBigIntegerBigDecimal_roundTrip() {
+    fun javaBigIntegerBigDecimal_wideningPreservesHugeValues() {
         val bi = JBigInteger("123456789012345678901234567890")
-        assertEquals(bi, JavaBigIntegerBigDecimalConverter.convertFrom(JavaBigIntegerBigDecimalConverter.convertTo(bi)))
+        assertEquals(JBigDecimal(bi), JavaBigIntegerBigDecimalConverter.convertTo(bi))
     }
 }

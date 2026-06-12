@@ -280,6 +280,10 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
 - **Absorbable validation** (a `@Validate` failure riding the ladder instead of always-hard).
 - **`converters-format` add-on** (locale-aware number formatting) — the parameterized-converter
   recipe covers it user-side meanwhile.
+- **Add-on legacy poorer-first naming** (`StringBigDecimalConverter`, `StringJavaInstantConverter`,
+  `StringByteStringConverter`, …) — core built-ins are richer-first; renaming every add-on object
+  is a breaking sweep deferred to a dedicated 2.x naming pass so the audit budget went to behavior
+  (lossy-direction refusals) instead.
 
 ## K) Shaped during implementation (behavior locked, form open)
 

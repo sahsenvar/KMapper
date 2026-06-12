@@ -2,6 +2,12 @@ package com.sahsenvar.kmapper.datetime
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Duration.Companion.seconds
+import java.time.Duration as JDuration
 import java.time.Instant as JInstant
 import java.time.LocalDate as JLocalDate
 import java.time.LocalDateTime as JLocalDateTime
@@ -157,5 +163,55 @@ class JavaTimeConvertersTest {
     fun kotlinJavaLocalDate_roundTrip() {
         val kDate = KLocalDate(2026, 1, 31)
         assertEquals(kDate, KotlinJavaLocalDateConverter.convertFrom(KotlinJavaLocalDateConverter.convertTo(kDate)))
+    }
+
+    // StringJavaDurationConverter
+    @Test
+    fun javaDuration_parseFromString() {
+        assertEquals(JDuration.ofMinutes(90), StringJavaDurationConverter.convertTo("PT1H30M"))
+    }
+
+    @Test
+    fun javaDuration_formatToString() {
+        assertEquals("PT1H30M", StringJavaDurationConverter.convertFrom(JDuration.ofMinutes(90)))
+    }
+
+    @Test
+    fun javaDuration_roundTrip_includingNegativeAndZero() {
+        for (durationString in listOf("PT1H30M", "PT-15M", "PT0S", "PT0.000000001S")) {
+            assertEquals(durationString, StringJavaDurationConverter.convertFrom(StringJavaDurationConverter.convertTo(durationString)))
+        }
+    }
+
+    @Test
+    fun javaDuration_rejectsMalformedInput() {
+        assertFailsWith<java.time.format.DateTimeParseException> { StringJavaDurationConverter.convertTo("1h 30m") }
+        assertFailsWith<java.time.format.DateTimeParseException> { StringJavaDurationConverter.convertTo("") }
+    }
+
+    // KotlinJavaDurationConverter (bridge)
+    @Test
+    fun kotlinJavaDuration_toJava() {
+        assertEquals(JDuration.ofMinutes(90), KotlinJavaDurationConverter.convertTo(1.hours + 30.minutes))
+    }
+
+    @Test
+    fun kotlinJavaDuration_toKotlin() {
+        assertEquals(90.seconds, KotlinJavaDurationConverter.convertFrom(JDuration.ofSeconds(90)))
+    }
+
+    @Test
+    fun kotlinJavaDuration_roundTrip_preservesNanosecondPrecision() {
+        val precise = 1.seconds + 500.nanoseconds
+        assertEquals(precise, KotlinJavaDurationConverter.convertFrom(KotlinJavaDurationConverter.convertTo(precise)))
+
+        val javaPrecise = JDuration.ofSeconds(1, 999_999_999)
+        assertEquals(javaPrecise, KotlinJavaDurationConverter.convertTo(KotlinJavaDurationConverter.convertFrom(javaPrecise)))
+    }
+
+    @Test
+    fun kotlinJavaDuration_negativeRoundTrip() {
+        val negative = (-15).minutes
+        assertEquals(negative, KotlinJavaDurationConverter.convertFrom(KotlinJavaDurationConverter.convertTo(negative)))
     }
 }

@@ -23,8 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Converter model:** 4-method `MapTypeConverter` (`convertTo`/`convertFrom` totals +
   sanctioned-null `convertToOrNull`/`convertFromOrNull`); function-level
   `@UnsupportedDirection(reason)` with compile-time enforcement; richer-first built-in naming
-  (e.g. `IntStringConverter`); 28 primitive pair objects + 2 Instant — every pair either
-  converts or explains why not at compile time.
+  (e.g. `IntStringConverter`); 35 built-in pair objects (28 primitive + kotlinx-datetime
+  `Instant`/`LocalDate`/`LocalDateTime`/`LocalTime` + `kotlin.time.Duration`) — every pair
+  either converts or explains why not at compile time.
 - **Annotations:** `@ConvertWith(use, onFail)` (+ direction-scoped `@ConvertTo`/`@ConvertFrom`),
   `OnFail { Auto, Throw, Skip }`, field-anchored `@Validate`, `@IgnoreMap` (was `@Ignore`),
   new `@IgnoreDefaultValue`. REMOVED: `@UseMapTypeConverter`, `@MapDefaultValue` (constructor
@@ -33,6 +34,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reporting; `OnFail.Throw` hardens, `OnFail.Skip` compacts), Map key/value ladders with
   duplicate-key reporting, Set convergence reporting, bidirectional `@CollectionWrapper`
   (`wrap`/`unwrap`, compile-checked signatures).
+- **Add-on converter audit (BREAKING for `kmapper-converters-bignumber` and
+  `kmapper-converters-datetime`):**
+  - kotlinx-datetime `LocalDate`/`LocalDateTime`/`LocalTime` ↔ `String` moved from
+    `kmapper-converters-datetime` into core built-ins (auto-resolved, no registration);
+    the datetime add-on now contains only the `java.time` converters and bridges.
+  - bignumber lossy directions (`BigDecimal → Double`, `BigInteger → Long`/`Int`,
+    `BigDecimal → BigInteger`, and their `java.math` twins) previously truncated or lost
+    precision SILENTLY — they are now `@UnsupportedDirection` and refuse at compile time;
+    write a custom converter if your domain guarantees the range.
+  - New in `kmapper-converters-okio`: `Base64ByteStringConverter`, `Base64UrlByteStringConverter`,
+    `HexByteStringConverter` (same-pair alternates to the UTF-8 converter — select per-field
+    or per-config).
+  - New in `kmapper-converters-datetime`: `StringJavaDurationConverter` and the
+    `KotlinJavaDurationConverter` bridge.
 
 ## [1.0.0] - 2026-06-05
 

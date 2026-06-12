@@ -1,6 +1,7 @@
 package com.sahsenvar.kmapper.bignumber
 
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
+import com.ionspin.kotlin.bignum.integer.BigInteger
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.long
@@ -14,12 +15,24 @@ import kotlin.test.Test
  */
 class BigNumberRoundTripPropertyTest {
     @Test
-    fun longBigInteger_Long_BigInteger_Long_round_trip() {
+    fun longBigInteger_widening_preserves_the_value() {
+        // BigInteger -> Long is refused (@UnsupportedDirection: overflow), so no round-trip exists;
+        // the property that remains is that the widening direction is value-preserving.
         runBlocking {
             checkAll(Arb.long()) { n ->
-                LongBigIntegerConverter.convertFrom(
-                    LongBigIntegerConverter.convertTo(n),
-                ) shouldBe n
+                LongBigIntegerConverter.convertTo(n) shouldBe BigInteger.fromLong(n)
+            }
+        }
+    }
+
+    @Test
+    fun stringBigInteger_String_BigInteger_String_round_trip() {
+        runBlocking {
+            checkAll(Arb.long()) { n ->
+                val decimalString = n.toString()
+                StringBigIntegerConverter.convertFrom(
+                    StringBigIntegerConverter.convertTo(decimalString),
+                ) shouldBe decimalString
             }
         }
     }
