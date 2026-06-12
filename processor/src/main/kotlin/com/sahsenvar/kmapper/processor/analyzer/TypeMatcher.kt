@@ -9,6 +9,8 @@ import com.sahsenvar.kmapper.missingConverterMessage
 import com.sahsenvar.kmapper.processor.model.FieldInfo
 import com.sahsenvar.kmapper.processor.model.MappingStrategy
 import com.sahsenvar.kmapper.processor.model.OnFailPolicy
+import com.sahsenvar.kmapper.processor.model.isStdlibListContainer
+import com.sahsenvar.kmapper.processor.model.isStdlibSetContainer
 import com.sahsenvar.kmapper.unsupportedConversionMessage
 
 /**
@@ -92,14 +94,14 @@ class TypeMatcher(
 
     /**
      * True when [strategy] can never produce null from a non-null source: plain value flows
-     * (Direct, enum bridges, nested mapper, collection/map shapes) and converter calls whose
+     * (Direct, enum→wire reads, nested mapper, collection/map shapes) and converter calls whose
      * resolved direction declares no OrNull variant. NOT true for OptionUnwrap (None becomes
-     * null) or a converter direction WITH a declared OrNull variant (sanctioned null).
+     * null), a converter direction WITH a declared OrNull variant (sanctioned null), or
+     * EnumFromWire (an unknown wire value absorbs to null at a nullable landing).
      */
     private fun neverYieldsNull(strategy: MappingStrategy): Boolean = when (strategy) {
         is MappingStrategy.Direct,
         is MappingStrategy.EnumToWire,
-        is MappingStrategy.EnumFromWire,
         is MappingStrategy.Nested,
         is MappingStrategy.Collection,
         is MappingStrategy.MapValues,
@@ -108,6 +110,9 @@ class TypeMatcher(
 
         is MappingStrategy.Convert -> !resolvedDirectionDeclaresOrNull(strategy)
 
+        // EnumFromWire CAN yield null at a nullable landing: unknown wire values are an
+        // EXPECTED input class (pinned absorption — the entries-lookup throw absorbs to
+        // null on the convertOrNull seam), so the target's '?' is never dead.
         else -> false
     }
 
@@ -140,10 +145,38 @@ class TypeMatcher(
         val targetCollFqn =
             targetField.type.declaration.qualifiedName
                 ?.asString()
+        val sourceCollFqn =
+            sourceField.type.declaration.qualifiedName
+                ?.asString()
         val wrapDescriptor = if (targetCollFqn != null) collectionWrappers[targetCollFqn] else null
 
+        // 2-pre. A registered wrapper type mapped to ITSELF with the same element type is a
+        //        plain Direct passthrough — no pointless rewrap through the wrapper object.
+        //        (Different element types fall through to the wrap gate below.)
+        if (wrapDescriptor != null && sourceCollFqn == targetCollFqn) {
+            val sourceElementType = extractCollectionElementType(sourceField.type)
+            val targetElementType = extractCollectionElementType(targetField.type)
+            if (sourceElementType != null &&
+                targetElementType != null &&
+                isSameType(sourceElementType, targetElementType)
+            ) {
+                return MappingStrategy.Direct
+            }
+        }
+
         if (wrapDescriptor != null && isCollectionType(sourceField.type)) {
-            // Target is a wrapped collection (e.g. PersistentList); source is a plain List/Set.
+            // Target is a wrapped collection (e.g. PersistentList); the wrap contract is
+            // fun <T> wrap(source: List<T>) — only a stdlib List-shaped source is legal.
+            // A Set or another wrapped type feeding wrap() is a GUIDED compile error (no
+            // silent .toList() adapter: the conversion must be readable at the field).
+            if (!sourceField.type.isStdlibListContainer()) {
+                logger.error(
+                    "${sourceField.name}: ${wrapDescriptor.wrapperSimpleName}.wrap takes List<T>, " +
+                        "but the source is ${sourceField.type.fqn()}; use a List source or " +
+                        "convert the field explicitly (e.g. .toList()) via @ConvertWith.",
+                )
+                return MappingStrategy.Unmappable
+            }
             if (!wrapDescriptor.providesWrap) {
                 logger.error(
                     "${sourceField.name}: ${wrapDescriptor.wrapperSimpleName} declares no wrap for " +
@@ -167,9 +200,6 @@ class TypeMatcher(
 
         // 2a. Unwrap direction: the SOURCE is a registered wrapped type and the target is a
         //     plain stdlib collection — Wrapper.unwrap(source) feeds the element seams.
-        val sourceCollFqn =
-            sourceField.type.declaration.qualifiedName
-                ?.asString()
         val unwrapDescriptor = if (sourceCollFqn != null) collectionWrappers[sourceCollFqn] else null
 
         if (unwrapDescriptor != null && isStdlibCollectionType(targetField.type)) {
@@ -228,7 +258,7 @@ class TypeMatcher(
             if (sourceElementType != null && targetElementType != null) {
                 val elementStrategy =
                     resolveElementStrategy(sourceField, targetField, sourceElementType, targetElementType, isReverse)
-                val isSet = isSetCollectionType(targetField.type)
+                val isSet = targetField.type.isStdlibSetContainer()
                 return MappingStrategy.Collection(elementStrategy, isSet)
             }
         }
@@ -514,16 +544,6 @@ class TypeMatcher(
         return fqn.startsWith("kotlin.collections.List") ||
             fqn.startsWith("kotlin.collections.MutableList") ||
             fqn.startsWith("kotlin.collections.Set") ||
-            fqn.startsWith("kotlin.collections.MutableSet")
-    }
-
-    /**
-     * Returns true when the given type is a stdlib Set (kotlin.collections.Set or MutableSet).
-     * Used to select the Set-producing element seams (convertEach…ToSet).
-     */
-    fun isSetCollectionType(type: KSType): Boolean {
-        val fqn = type.declaration.qualifiedName?.asString() ?: return false
-        return fqn.startsWith("kotlin.collections.Set") ||
             fqn.startsWith("kotlin.collections.MutableSet")
     }
 

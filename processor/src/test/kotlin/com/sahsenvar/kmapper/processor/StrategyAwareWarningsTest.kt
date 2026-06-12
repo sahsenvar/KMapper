@@ -136,6 +136,38 @@ class StrategyAwareWarningsTest :
             }
         }
 
+        given("a non-null wire source mapped into a NULLABLE enum target (EnumFromWire)") {
+            val nullableEnumTargetSource =
+                SourceFile.kotlin(
+                    "NullableEnumTargetModels.kt",
+                    """
+                    import com.sahsenvar.kmapper.MappableEnum
+                    import com.sahsenvar.kmapper.annotations.MapTo
+
+                    enum class Status(override val wireValue: String) : MappableEnum<String> {
+                        PENDING("PENDING"), SHIPPED("in_transit");
+                    }
+
+                    data class DomainModel(val status: Status?)
+
+                    @MapTo(DomainModel::class)
+                    data class DataModel(val status: String)
+                    """.trimIndent(),
+                )
+
+            `when`("the mapping is compiled") {
+                val (compilationResult, _) = compile(nullableEnumTargetSource)
+
+                then("compilation succeeds") {
+                    compilationResult.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                }
+
+                then("NO dead-'?' warning fires — an unknown wire value absorbs to null at the nullable landing") {
+                    compilationResult.messages shouldNotContain deadNullableMarker
+                }
+            }
+        }
+
         given("@IgnoreDefaultValue on a field that declares no constructor default") {
             val defaultlessIgnoreSource =
                 SourceFile.kotlin(

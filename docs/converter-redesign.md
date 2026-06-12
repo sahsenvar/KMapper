@@ -219,6 +219,23 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
     processor** (a typed interface is impossible — Kotlin has no higher-kinded types — so the
     convention is duck-typed but validated). Scope: single-type-parameter containers;
     Map-shaped custom containers (two type params) parked.
+    Validation is **partition-then-policy** over overloads: every function named wrap/unwrap
+    is individually checked (matching overload provides the direction; every non-matching
+    same-name overload is a guided error quoting the expected signature — never silently
+    skipped, order-independent). Type-argument **linkage** is part of the shape: the List
+    parameter's element argument and the forType return's element argument must both be the
+    function's own type parameter (`fun <T> wrap(source: List<String>): W<Int>` is rejected).
+29c. **Wrap source gating (decided 2026-06-12):** the wrap direction accepts ONLY stdlib
+    List-shaped sources (kotlin.collections.List/MutableList). A non-List collection source
+    (Set, another wrapped type) into a wrapped target is a **guided compile error** suggesting
+    a List source or an explicit `.toList()` via @ConvertWith — NO silent `.toList()` adapter
+    (visibility principle: the conversion must be readable at the field). A registered wrapper
+    type mapped to itself with the same element type is a plain Direct passthrough (no rewrap).
+29d. **Enum elements in collections (decided 2026-06-12):** enum bridges ride the element
+    seams exactly like converters — wire→enum elements use the MappableEnum entries-lookup
+    lambda (unknown wire value throws into the seam: skip+report under Auto on `List<T>`,
+    hard under Throw), enum→wire elements use the `wireValue` read. Mirrors the scalar
+    EnumFromWire/EnumToWire emissions; no parked gap.
 
 ## I) Defaults
 

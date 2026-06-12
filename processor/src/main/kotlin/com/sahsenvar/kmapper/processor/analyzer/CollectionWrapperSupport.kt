@@ -33,8 +33,9 @@ fun discoverWrappersFromConfig(
 ): Map<String, CollectionWrapperDescriptor> {
     val validator = CollectionWrapperValidator(logger)
 
-    // Accumulate all validated descriptors first, then check duplicates
-    val entries = mutableListOf<CollectionWrapperDescriptor>()
+    // Accumulate all validated descriptors first (with their declarations for
+    // node-anchored duplicate errors), then check duplicates
+    val entries = mutableListOf<Pair<CollectionWrapperDescriptor, KSClassDeclaration>>()
 
     resolver
         .getSymbolsWithAnnotation(KMAPPER_CONFIG_ANNOTATION)
@@ -94,19 +95,20 @@ fun discoverWrappersFromConfig(
                 }
 
                 val descriptor = validator.validate(wrapperDecl, forTypeFqn) ?: continue
-                entries.add(descriptor)
+                entries.add(descriptor to wrapperDecl)
             }
         }
 
     // Detect duplicate forType registrations — same collection type mapped by two wrappers
     val result = mutableMapOf<String, CollectionWrapperDescriptor>()
-    for (descriptor in entries) {
+    for ((descriptor, wrapperDecl) in entries) {
         val existing = result[descriptor.forTypeFqn]
         if (existing != null) {
             logger.error(
                 "Duplicate @CollectionWrapper for forType=${descriptor.forTypeFqn}: " +
                     "both ${existing.wrapperObjectFqn} and ${descriptor.wrapperObjectFqn} are registered. " +
                     "Remove one from @KMapperConfig.wrappers.",
+                wrapperDecl,
             )
         } else {
             result[descriptor.forTypeFqn] = descriptor

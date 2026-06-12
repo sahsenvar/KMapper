@@ -4,6 +4,8 @@ import com.google.devtools.ksp.getDeclaredFunctions
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.KSTypeParameter
 
 /**
  * A validated @CollectionWrapper registration: which container type it serves and which
@@ -73,34 +75,32 @@ class CollectionWrapperValidator(
             return null
         }
 
-        var shapesValid = true
+        // Partition-then-policy: every same-name overload is individually validated — a
+        // matching overload provides the direction, every non-matching one is reported
+        // (never silently skipped), independent of declaration order.
         val providesWrap =
-            wrapFunctions.any { function ->
-                val matches = matchesShape(function, parameterFqn = LIST_FQN, returnFqn = forTypeFqn)
-                if (!matches) {
-                    logger.error(
-                        "$wrapperObjectFqn.wrap has the wrong shape — expected " +
-                            "fun <T> wrap(source: List<T>): $forTypeSimpleName<T>",
-                        function,
-                    )
-                    shapesValid = false
-                }
-                matches
-            }
+            validateDirectionCandidates(
+                candidates = wrapFunctions,
+                parameterFqn = LIST_FQN,
+                returnFqn = forTypeFqn,
+                expectedSignature = "fun <T> wrap(source: List<T>): $forTypeSimpleName<T>",
+                wrapperObjectFqn = wrapperObjectFqn,
+                directionName = "wrap",
+            )
         val providesUnwrap =
-            unwrapFunctions.any { function ->
-                val matches = matchesShape(function, parameterFqn = forTypeFqn, returnFqn = LIST_FQN)
-                if (!matches) {
-                    logger.error(
-                        "$wrapperObjectFqn.unwrap has the wrong shape — expected " +
-                            "fun <T> unwrap(source: $forTypeSimpleName<T>): List<T>",
-                        function,
-                    )
-                    shapesValid = false
-                }
-                matches
-            }
-        if (!shapesValid) return null
+            validateDirectionCandidates(
+                candidates = unwrapFunctions,
+                parameterFqn = forTypeFqn,
+                returnFqn = LIST_FQN,
+                expectedSignature = "fun <T> unwrap(source: $forTypeSimpleName<T>): List<T>",
+                wrapperObjectFqn = wrapperObjectFqn,
+                directionName = "unwrap",
+            )
+
+        // No valid direction at all → no usable descriptor (errors above already failed the
+        // build). A valid direction next to reported bad overloads KEEPS the descriptor so
+        // downstream resolution stays coherent (no cascading missing-direction errors).
+        if (!providesWrap && !providesUnwrap) return null
 
         return CollectionWrapperDescriptor(
             wrapperObjectFqn = wrapperObjectFqn,
@@ -111,30 +111,70 @@ class CollectionWrapperValidator(
     }
 
     /**
+     * Validates all same-name [candidates] for one direction: each candidate either matches
+     * the exact contract shape or is reported as a guided error quoting [expectedSignature].
+     * Returns true when at least one candidate matches (the direction is provided).
+     */
+    private fun validateDirectionCandidates(
+        candidates: List<KSFunctionDeclaration>,
+        parameterFqn: String,
+        returnFqn: String,
+        expectedSignature: String,
+        wrapperObjectFqn: String,
+        directionName: String,
+    ): Boolean {
+        val (matchingCandidates, mismatchedCandidates) =
+            candidates.partition { matchesShape(it, parameterFqn = parameterFqn, returnFqn = returnFqn) }
+        for (mismatched in mismatchedCandidates) {
+            logger.error(
+                "$wrapperObjectFqn.$directionName has the wrong shape — expected $expectedSignature",
+                mismatched,
+            )
+        }
+        return matchingCandidates.isNotEmpty()
+    }
+
+    /**
      * One type parameter, one value parameter whose container declaration is [parameterFqn],
-     * and a return container declaration of [returnFqn]. The element type argument is the
-     * function's own type parameter by construction (single type parameter + generic
-     * container shapes); declaration-level FQN checks keep the validation KSP-cheap.
+     * and a return container declaration of [returnFqn]. Type-argument LINKAGE is enforced:
+     * the parameter container's element argument AND the return container's element argument
+     * must BOTH be the function's own type parameter — `fun <T> wrap(source: List<String>):
+     * ForType<Int>` matches the container declarations but is NOT the contract shape.
+     * Declaration-level comparisons keep the validation KSP-cheap (no full type equality).
      */
     private fun matchesShape(
         function: KSFunctionDeclaration,
         parameterFqn: String,
         returnFqn: String,
     ): Boolean {
-        if (function.typeParameters.size != 1) return false
+        val ownTypeParameter = function.typeParameters.singleOrNull() ?: return false
         val parameter = function.parameters.singleOrNull() ?: return false
-        val parameterDeclarationFqn =
-            parameter.type
-                .resolve()
-                .declaration.qualifiedName
-                ?.asString()
-        if (parameterDeclarationFqn != parameterFqn) return false
-        val returnDeclarationFqn =
-            function.returnType
+        val parameterType = parameter.type.resolve()
+        if (parameterType.declaration.qualifiedName?.asString() != parameterFqn) return false
+        val returnType = function.returnType?.resolve() ?: return false
+        if (returnType.declaration.qualifiedName?.asString() != returnFqn) return false
+        return elementArgumentIsTypeParameter(parameterType, ownTypeParameter, function) &&
+            elementArgumentIsTypeParameter(returnType, ownTypeParameter, function)
+    }
+
+    /**
+     * True when [containerType]'s first type argument resolves to [ownTypeParameter] declared
+     * on [function] — compared by declaration (name + owning function), not by FQN string,
+     * because type parameters have no qualified name.
+     */
+    private fun elementArgumentIsTypeParameter(
+        containerType: KSType,
+        ownTypeParameter: KSTypeParameter,
+        function: KSFunctionDeclaration,
+    ): Boolean {
+        val elementDeclaration =
+            containerType.arguments
+                .firstOrNull()
+                ?.type
                 ?.resolve()
                 ?.declaration
-                ?.qualifiedName
-                ?.asString()
-        return returnDeclarationFqn == returnFqn
+        val elementTypeParameter = elementDeclaration as? KSTypeParameter ?: return false
+        return elementTypeParameter.name.asString() == ownTypeParameter.name.asString() &&
+            elementTypeParameter.parentDeclaration == function
     }
 }

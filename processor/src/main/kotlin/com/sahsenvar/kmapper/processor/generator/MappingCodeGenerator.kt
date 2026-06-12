@@ -5,6 +5,7 @@ import com.google.devtools.ksp.symbol.KSType
 import com.sahsenvar.kmapper.processor.model.FieldInfo
 import com.sahsenvar.kmapper.processor.model.MappingStrategy
 import com.sahsenvar.kmapper.processor.model.OnFailPolicy
+import com.sahsenvar.kmapper.processor.model.isStdlibSetContainer
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.MemberName
@@ -387,26 +388,33 @@ class MappingCodeGenerator(
         strategy: MappingStrategy.EnumFromWire,
         landingShape: LandingShape,
         onFail: OnFailPolicy,
-    ): CodeBlock {
-        val enumClassName = ClassName.bestGuess(strategy.enumFqn)
-        val enumSimpleName = strategy.enumFqn.substringAfterLast(".")
+    ): CodeBlock = emitSeamCall(
+        sourceField = sourceField,
+        targetField = targetField,
+        landingShape = landingShape,
+        onFail = onFail,
+        fromLiteral = sourceField.type.fqn(),
+        toLiteral = strategy.enumFqn.substringAfterLast("."),
+        convertLambda = enumEntriesLookupLambda(strategy.enumFqn),
+    )
+
+    /**
+     * The wire→enum convert lambda — `MappableEnum.entries` lookup throwing
+     * [com.sahsenvar.kmapper.MappingException.UnknownEnumValue] (empty path: the seam
+     * prefixes the landing path). Shared by the scalar EnumFromWire emission and the
+     * element-level collection emission so both ride identical rails.
+     */
+    private fun enumEntriesLookupLambda(enumFqn: String): CodeBlock {
+        val enumClassName = ClassName.bestGuess(enumFqn)
+        val enumSimpleName = enumFqn.substringAfterLast(".")
         val mappingExceptionClass = ClassName(SEAMS_PACKAGE, "MappingException")
-        return emitSeamCall(
-            sourceField = sourceField,
-            targetField = targetField,
-            landingShape = landingShape,
-            onFail = onFail,
-            fromLiteral = sourceField.type.fqn(),
-            toLiteral = enumSimpleName,
-            convertLambda =
-            CodeBlock.of(
-                "{·wire·->·%T.entries.firstOrNull·{·it.wireValue·==·wire·}" +
-                    "·?:·throw·%T.UnknownEnumValue(%S,·%S,·wire.toString())·}",
-                enumClassName,
-                mappingExceptionClass,
-                "",
-                enumSimpleName,
-            ),
+        return CodeBlock.of(
+            "{·wire·->·%T.entries.firstOrNull·{·it.wireValue·==·wire·}" +
+                "·?:·throw·%T.UnknownEnumValue(%S,·%S,·wire.toString())·}",
+            enumClassName,
+            mappingExceptionClass,
+            "",
+            enumSimpleName,
         )
     }
 
@@ -492,7 +500,7 @@ class MappingCodeGenerator(
             val targetElementType = elementTypeOf(targetField.type)
             if (sourceElementType == null || targetElementType == null) return unwrapped
             val seamName =
-                listElementSeamName(targetElementType.isMarkedNullable, isSetType(targetField.type), onFail)
+                listElementSeamName(targetElementType.isMarkedNullable, targetField.type.isStdlibSetContainer(), onFail)
             val convertLambda =
                 elementConvertLambda(strategy.elementStrategy, seamTakesTotalConvert(seamName))
                     ?: return unwrapped
@@ -596,7 +604,13 @@ class MappingCodeGenerator(
         isSetTarget: Boolean,
         onFail: OnFailPolicy,
     ): String = when {
-        isSetTarget -> if (onFail == OnFailPolicy.Throw) "convertEachOrFailToSet" else "convertEachOrSkipToSet"
+        // Every branch enumerates the FULL policy set: a future OnFailPolicy entry must
+        // make each cell's decision explicit instead of inheriting an `else` default.
+        isSetTarget ->
+            when (onFail) {
+                OnFailPolicy.Throw -> "convertEachOrFailToSet"
+                OnFailPolicy.Auto, OnFailPolicy.Skip -> "convertEachOrSkipToSet"
+            }
 
         targetElementNullable ->
             when (onFail) {
@@ -605,7 +619,11 @@ class MappingCodeGenerator(
                 OnFailPolicy.Auto -> "convertEachOrNull"
             }
 
-        else -> if (onFail == OnFailPolicy.Throw) "convertEachOrFail" else "convertEachOrSkip"
+        else ->
+            when (onFail) {
+                OnFailPolicy.Throw -> "convertEachOrFail"
+                OnFailPolicy.Auto, OnFailPolicy.Skip -> "convertEachOrSkip"
+            }
     }
 
     /**
@@ -619,10 +637,11 @@ class MappingCodeGenerator(
     private fun mapEntrySeamName(
         targetValueNullable: Boolean,
         onFail: OnFailPolicy,
-    ): String = when {
-        onFail == OnFailPolicy.Throw -> "convertEntriesOrFail"
-        targetValueNullable && onFail == OnFailPolicy.Auto -> "convertEntriesValueOrNull"
-        else -> "convertEntriesOrSkip"
+    ): String = when (onFail) {
+        // Exhaustive over the policy set — a future OnFailPolicy entry must decide its cell.
+        OnFailPolicy.Throw -> "convertEntriesOrFail"
+        OnFailPolicy.Auto -> if (targetValueNullable) "convertEntriesValueOrNull" else "convertEntriesOrSkip"
+        OnFailPolicy.Skip -> "convertEntriesOrSkip"
     }
 
     /**
@@ -631,13 +650,15 @@ class MappingCodeGenerator(
      * nullable-returning convert, so the converter's OrNull method rides it (sanctioned
      * null lands as skip/null per the seam's own rung).
      */
-    private fun seamTakesTotalConvert(seamName: String): Boolean = seamName == "convertEachOrFail" || seamName == "convertEachOrFailToSet" || seamName == "convertEntriesOrFail"
+    private fun seamTakesTotalConvert(seamName: String): Boolean = seamName in setOf("convertEachOrFail", "convertEachOrFailToSet", "convertEntriesOrFail")
 
     /**
      * Convert lambda for an element-level strategy: converter call (orientation-aware,
-     * total vs OrNull per the seam) or nested sub-mapper through the Result boundary.
-     * Returns null for element strategies with no seam-side conversion (Direct passthrough
-     * stays container-level; deeper recursion is out of scope for v1).
+     * total vs OrNull per the seam), nested sub-mapper through the Result boundary, or the
+     * enum bridges mirroring their scalar emissions (entries lookup for wire→enum — an
+     * unknown wire value throws into the seam and rides its rung; `wireValue` read for
+     * enum→wire). Returns null for element strategies with no seam-side conversion (Direct
+     * passthrough stays container-level; deeper recursion is out of scope for v1).
      */
     private fun elementConvertLambda(
         elementStrategy: MappingStrategy,
@@ -652,6 +673,10 @@ class MappingCodeGenerator(
 
         is MappingStrategy.Nested ->
             CodeBlock.of("{·it.%N().getOrThrow()·}", elementStrategy.mapperFunctionName)
+
+        is MappingStrategy.EnumFromWire -> enumEntriesLookupLambda(elementStrategy.enumFqn)
+
+        is MappingStrategy.EnumToWire -> CodeBlock.of("{·it.wireValue·}")
 
         else -> null
     }
@@ -687,12 +712,6 @@ class MappingCodeGenerator(
         .firstOrNull()
         ?.type
         ?.resolve()
-
-    /** True for stdlib Set/MutableSet targets — selects the Set-producing element seams. */
-    private fun isSetType(type: KSType): Boolean {
-        val fqn = type.declaration.qualifiedName?.asString() ?: return false
-        return fqn.startsWith("kotlin.collections.Set") || fqn.startsWith("kotlin.collections.MutableSet")
-    }
 
     /**
      * Generates: arrow.core.Option.fromNullable(<innerExpr>)
