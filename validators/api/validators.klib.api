@@ -6,10 +6,58 @@
 // - Show declarations: true
 
 // Library unique name: <io.github.sahsenvar:validators>
+final object com.sahsenvar.kmapper.validators/Base64Validator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/Base64Validator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/Base64Validator.validate|validate(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.validators/CreditCardNumberValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/CreditCardNumberValidator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/CreditCardNumberValidator.validate|validate(kotlin.String){}[0]
+}
+
 final object com.sahsenvar.kmapper.validators/EmailValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/EmailValidator|null[0]
     final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/EmailValidator.validate|validate(kotlin.String){}[0]
 }
 
+final object com.sahsenvar.kmapper.validators/HexStringValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/HexStringValidator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/HexStringValidator.validate|validate(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.validators/HostnameValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/HostnameValidator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/HostnameValidator.validate|validate(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.validators/Ipv4Validator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/Ipv4Validator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/Ipv4Validator.validate|validate(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.validators/Ipv6Validator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/Ipv6Validator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/Ipv6Validator.validate|validate(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.validators/LatitudeValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Double> { // com.sahsenvar.kmapper.validators/LatitudeValidator|null[0]
+    final fun validate(kotlin/Double): kotlin/String? // com.sahsenvar.kmapper.validators/LatitudeValidator.validate|validate(kotlin.Double){}[0]
+}
+
+final object com.sahsenvar.kmapper.validators/LongitudeValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Double> { // com.sahsenvar.kmapper.validators/LongitudeValidator|null[0]
+    final fun validate(kotlin/Double): kotlin/String? // com.sahsenvar.kmapper.validators/LongitudeValidator.validate|validate(kotlin.Double){}[0]
+}
+
+final object com.sahsenvar.kmapper.validators/PhoneE164Validator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/PhoneE164Validator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/PhoneE164Validator.validate|validate(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.validators/PortNumberValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Int> { // com.sahsenvar.kmapper.validators/PortNumberValidator|null[0]
+    final fun validate(kotlin/Int): kotlin/String? // com.sahsenvar.kmapper.validators/PortNumberValidator.validate|validate(kotlin.Int){}[0]
+}
+
+final object com.sahsenvar.kmapper.validators/SlugValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/SlugValidator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/SlugValidator.validate|validate(kotlin.String){}[0]
+}
+
 final object com.sahsenvar.kmapper.validators/UrlValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/UrlValidator|null[0]
     final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/UrlValidator.validate|validate(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.validators/UuidStringValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validators/UuidStringValidator|null[0]
+    final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validators/UuidStringValidator.validate|validate(kotlin.String){}[0]
 }

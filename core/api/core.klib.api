@@ -58,6 +58,42 @@ final class com.sahsenvar.kmapper/LoggingMappingListener : com.sahsenvar.kmapper
     final fun onMapStart(kotlin/Any, kotlin.reflect/KClass<*>) // com.sahsenvar.kmapper/LoggingMappingListener.onMapStart|onMapStart(kotlin.Any;kotlin.reflect.KClass<*>){}[0]
 }
 
+open class com.sahsenvar.kmapper.validation.builtin/CollectionSizeValidator : com.sahsenvar.kmapper.validation/Validator<kotlin.collections/Collection<*>> { // com.sahsenvar.kmapper.validation.builtin/CollectionSizeValidator|null[0]
+    constructor <init>(kotlin/Int, kotlin/Int = ...) // com.sahsenvar.kmapper.validation.builtin/CollectionSizeValidator.<init>|<init>(kotlin.Int;kotlin.Int){}[0]
+
+    open fun validate(kotlin.collections/Collection<*>): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/CollectionSizeValidator.validate|validate(kotlin.collections.Collection<*>){}[0]
+}
+
+open class com.sahsenvar.kmapper.validation.builtin/DoubleRangeValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Double> { // com.sahsenvar.kmapper.validation.builtin/DoubleRangeValidator|null[0]
+    constructor <init>(kotlin/Double, kotlin/Double) // com.sahsenvar.kmapper.validation.builtin/DoubleRangeValidator.<init>|<init>(kotlin.Double;kotlin.Double){}[0]
+
+    open fun validate(kotlin/Double): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/DoubleRangeValidator.validate|validate(kotlin.Double){}[0]
+}
+
+open class com.sahsenvar.kmapper.validation.builtin/IntRangeValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Int> { // com.sahsenvar.kmapper.validation.builtin/IntRangeValidator|null[0]
+    constructor <init>(kotlin.ranges/IntRange) // com.sahsenvar.kmapper.validation.builtin/IntRangeValidator.<init>|<init>(kotlin.ranges.IntRange){}[0]
+
+    open fun validate(kotlin/Int): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/IntRangeValidator.validate|validate(kotlin.Int){}[0]
+}
+
+open class com.sahsenvar.kmapper.validation.builtin/LongRangeValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Long> { // com.sahsenvar.kmapper.validation.builtin/LongRangeValidator|null[0]
+    constructor <init>(kotlin.ranges/LongRange) // com.sahsenvar.kmapper.validation.builtin/LongRangeValidator.<init>|<init>(kotlin.ranges.LongRange){}[0]
+
+    open fun validate(kotlin/Long): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/LongRangeValidator.validate|validate(kotlin.Long){}[0]
+}
+
+open class com.sahsenvar.kmapper.validation.builtin/RegexValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validation.builtin/RegexValidator|null[0]
+    constructor <init>(kotlin.text/Regex, kotlin/String) // com.sahsenvar.kmapper.validation.builtin/RegexValidator.<init>|<init>(kotlin.text.Regex;kotlin.String){}[0]
+
+    open fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/RegexValidator.validate|validate(kotlin.String){}[0]
+}
+
+open class com.sahsenvar.kmapper.validation.builtin/StringLengthValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validation.builtin/StringLengthValidator|null[0]
+    constructor <init>(kotlin/Int, kotlin/Int = ...) // com.sahsenvar.kmapper.validation.builtin/StringLengthValidator.<init>|<init>(kotlin.Int;kotlin.Int){}[0]
+
+    open fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/StringLengthValidator.validate|validate(kotlin.String){}[0]
+}
+
 sealed class com.sahsenvar.kmapper/MappingDegradation { // com.sahsenvar.kmapper/MappingDegradation|null[0]
     abstract val path // com.sahsenvar.kmapper/MappingDegradation.path|{}path[0]
         abstract fun <get-path>(): kotlin/String // com.sahsenvar.kmapper/MappingDegradation.path.<get-path>|<get-path>(){}[0]
@@ -374,6 +410,22 @@ final object com.sahsenvar.kmapper.converter/TypeConverterRegistry { // com.sahs
     final fun <#A1: kotlin/Any, #B1: kotlin/Any> register(com.sahsenvar.kmapper.converter/MapTypeConverter<#A1, #B1>) // com.sahsenvar.kmapper.converter/TypeConverterRegistry.register|register(com.sahsenvar.kmapper.converter.MapTypeConverter<0:0,0:1>){0§<kotlin.Any>;1§<kotlin.Any>}[0]
 }
 
+final object com.sahsenvar.kmapper.validation.builtin/FiniteDoubleValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Double> { // com.sahsenvar.kmapper.validation.builtin/FiniteDoubleValidator|null[0]
+    final fun validate(kotlin/Double): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/FiniteDoubleValidator.validate|validate(kotlin.Double){}[0]
+}
+
+final object com.sahsenvar.kmapper.validation.builtin/NonNegativeDoubleValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Double> { // com.sahsenvar.kmapper.validation.builtin/NonNegativeDoubleValidator|null[0]
+    final fun validate(kotlin/Double): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/NonNegativeDoubleValidator.validate|validate(kotlin.Double){}[0]
+}
+
+final object com.sahsenvar.kmapper.validation.builtin/NonNegativeIntValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Int> { // com.sahsenvar.kmapper.validation.builtin/NonNegativeIntValidator|null[0]
+    final fun validate(kotlin/Int): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/NonNegativeIntValidator.validate|validate(kotlin.Int){}[0]
+}
+
+final object com.sahsenvar.kmapper.validation.builtin/NonNegativeLongValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Long> { // com.sahsenvar.kmapper.validation.builtin/NonNegativeLongValidator|null[0]
+    final fun validate(kotlin/Long): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/NonNegativeLongValidator.validate|validate(kotlin.Long){}[0]
+}
+
 final object com.sahsenvar.kmapper.validation.builtin/NotBlankValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validation.builtin/NotBlankValidator|null[0]
     final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/NotBlankValidator.validate|validate(kotlin.String){}[0]
 }
@@ -384,6 +436,18 @@ final object com.sahsenvar.kmapper.validation.builtin/NotEmptyCollectionValidato
 
 final object com.sahsenvar.kmapper.validation.builtin/NotEmptyStringValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/String> { // com.sahsenvar.kmapper.validation.builtin/NotEmptyStringValidator|null[0]
     final fun validate(kotlin/String): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/NotEmptyStringValidator.validate|validate(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.validation.builtin/PositiveDoubleValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Double> { // com.sahsenvar.kmapper.validation.builtin/PositiveDoubleValidator|null[0]
+    final fun validate(kotlin/Double): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/PositiveDoubleValidator.validate|validate(kotlin.Double){}[0]
+}
+
+final object com.sahsenvar.kmapper.validation.builtin/PositiveIntValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Int> { // com.sahsenvar.kmapper.validation.builtin/PositiveIntValidator|null[0]
+    final fun validate(kotlin/Int): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/PositiveIntValidator.validate|validate(kotlin.Int){}[0]
+}
+
+final object com.sahsenvar.kmapper.validation.builtin/PositiveLongValidator : com.sahsenvar.kmapper.validation/Validator<kotlin/Long> { // com.sahsenvar.kmapper.validation.builtin/PositiveLongValidator|null[0]
+    final fun validate(kotlin/Long): kotlin/String? // com.sahsenvar.kmapper.validation.builtin/PositiveLongValidator.validate|validate(kotlin.Long){}[0]
 }
 
 final object com.sahsenvar.kmapper/KMapper { // com.sahsenvar.kmapper/KMapper|null[0]

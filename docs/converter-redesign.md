@@ -181,6 +181,17 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
     Validation fires at **mapping time only** (not on hand construction); failure is always a
     hard `ValidationFailed` (absorbable validation parked).
 
+17e. **Validator library (2026-06-12 audit).** Core ships generic structural validators in
+    `validation.builtin`: NotBlank/NotEmptyString/NotEmptyCollection objects, sign objects
+    (Positive/NonNegative × Int/Long/Double), `FiniteDoubleValidator`, and parameterized
+    **open bases** — `RegexValidator(pattern, reason)`, `StringLengthValidator(min, max)`,
+    `IntRangeValidator`/`LongRangeValidator`/`DoubleRangeValidator`, `CollectionSizeValidator` —
+    that users subclass as `object`s (same parity recipe as parameterized converters; bases
+    `require(...)` their bounds at construction). The `kmapper-validators` add-on carries
+    format/semantic validators: Email, Url, PhoneE164, Ipv4, Ipv6, Hostname, UuidString, Slug,
+    Base64, HexString, Latitude, Longitude, PortNumber, CreditCardNumber (Luhn). Split rule:
+    structural/dependency-free → core; opinionated format knowledge → add-on.
+
 ## F) Boundary API + sink
 
 18. Generated per direction: core **`toXResult(): Result<X>`** (fail-fast on the first hard

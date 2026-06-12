@@ -466,6 +466,55 @@ public abstract class com/sahsenvar/kmapper/validation/Validator {
 	public abstract fun validate (Ljava/lang/Object;)Ljava/lang/String;
 }
 
+public class com/sahsenvar/kmapper/validation/builtin/CollectionSizeValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (II)V
+	public synthetic fun <init> (IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/util/Collection;)Ljava/lang/String;
+}
+
+public class com/sahsenvar/kmapper/validation/builtin/DoubleRangeValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (DD)V
+	public fun validate (D)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/FiniteDoubleValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/FiniteDoubleValidator;
+	public fun validate (D)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public class com/sahsenvar/kmapper/validation/builtin/IntRangeValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (Lkotlin/ranges/IntRange;)V
+	public fun validate (I)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public class com/sahsenvar/kmapper/validation/builtin/LongRangeValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (Lkotlin/ranges/LongRange;)V
+	public fun validate (J)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/NonNegativeDoubleValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/NonNegativeDoubleValidator;
+	public fun validate (D)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/NonNegativeIntValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/NonNegativeIntValidator;
+	public fun validate (I)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/NonNegativeLongValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/NonNegativeLongValidator;
+	public fun validate (J)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
 public final class com/sahsenvar/kmapper/validation/builtin/NotBlankValidator : com/sahsenvar/kmapper/validation/Validator {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/NotBlankValidator;
 	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
@@ -480,6 +529,37 @@ public final class com/sahsenvar/kmapper/validation/builtin/NotEmptyCollectionVa
 
 public final class com/sahsenvar/kmapper/validation/builtin/NotEmptyStringValidator : com/sahsenvar/kmapper/validation/Validator {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/NotEmptyStringValidator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/PositiveDoubleValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/PositiveDoubleValidator;
+	public fun validate (D)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/PositiveIntValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/PositiveIntValidator;
+	public fun validate (I)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/PositiveLongValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/PositiveLongValidator;
+	public fun validate (J)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public class com/sahsenvar/kmapper/validation/builtin/RegexValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (Lkotlin/text/Regex;Ljava/lang/String;)V
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public class com/sahsenvar/kmapper/validation/builtin/StringLengthValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (II)V
+	public synthetic fun <init> (IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
 	public fun validate (Ljava/lang/String;)Ljava/lang/String;
 }

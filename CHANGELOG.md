@@ -48,6 +48,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     or per-config).
   - New in `kmapper-converters-datetime`: `StringJavaDurationConverter` and the
     `KotlinJavaDurationConverter` bridge.
+- **Validator library:**
+  - Core `validation.builtin` grows from 3 to 16 entries: `Positive`/`NonNegative` ×
+    `Int`/`Long`/`Double`, `FiniteDoubleValidator`, and parameterized open bases
+    (`RegexValidator`, `StringLengthValidator`, `IntRangeValidator`/`LongRangeValidator`/
+    `DoubleRangeValidator`, `CollectionSizeValidator`) that you subclass as `object`s with
+    your own bounds — the same recipe as parameterized converters.
+  - `kmapper-validators` add-on grows from 2 to 16: `PhoneE164Validator`, `Ipv4Validator`,
+    `Ipv6Validator`, `HostnameValidator`, `UuidStringValidator`, `SlugValidator`,
+    `Base64Validator`, `HexStringValidator`, `LatitudeValidator`, `LongitudeValidator`,
+    `PortNumberValidator`, `CreditCardNumberValidator` (Luhn), alongside the existing
+    `EmailValidator`/`UrlValidator`.
 
 ## [1.0.0] - 2026-06-05
 
