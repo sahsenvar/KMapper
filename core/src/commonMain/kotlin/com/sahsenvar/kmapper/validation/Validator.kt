@@ -8,8 +8,8 @@ import kotlin.reflect.KClass
  * Implementations MUST be `object` singletons — the processor emits direct FQN calls
  * (e.g. `NotBlankValidator.validate(x)`) with no reflection.
  *
- * The [validate] method receives a NON-NULL value. Null handling is owned by the existing
- * nullability machinery in MappingCodeGenerator.applyNullableHandling; validators only fire
+ * The [validate] method receives a NON-NULL value. Null handling is owned by the
+ * ladder seams in generated code; validators only fire
  * when a non-null value is present.
  *
  * @param T the type of value this validator accepts
