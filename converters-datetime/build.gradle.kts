@@ -15,9 +15,10 @@ kotlin {
         compileSdk = 36
         minSdk = 30
     }
+    // JVM/Android only: the 2.0 audit moved the kotlinx-datetime converters into core
+    // built-ins, so this module carries java.time converters and bridges exclusively —
+    // there is nothing to ship for native targets (and an empty iOS klib breaks publishing).
     jvm()
-    iosArm64()
-    iosSimulatorArm64()
 
     sourceSets {
         commonMain.dependencies {

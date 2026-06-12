@@ -20,7 +20,6 @@ kotlin {
             implementation(project(":annotations"))
             implementation(project(":converters-immutable"))
             implementation(project(":converters-arrow"))
-            implementation(project(":converters-datetime"))
             implementation(libs.kotlinx.collections.immutable)
             implementation(libs.arrow.core)
             implementation(libs.kotlinx.datetime)
