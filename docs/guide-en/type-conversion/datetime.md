@@ -9,7 +9,7 @@
 
 ```kotlin
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-datetime:2.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-datetime:2.0.1")
 }
 ```
 

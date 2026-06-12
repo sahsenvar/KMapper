@@ -47,7 +47,7 @@ validator can't sit silently in a model.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-validators:2.0.0")
+    implementation("io.github.sahsenvar:kmapper-validators:2.0.1")
 }
 ```
 

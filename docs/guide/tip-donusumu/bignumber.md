@@ -8,7 +8,7 @@ Keyfi hassasiyetli sayılar için converter'lar:
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.0.1")
 }
 ```
 

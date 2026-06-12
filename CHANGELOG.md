@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added — AI-friendliness package (ships in 2.0.1)
+## [2.0.1] - 2026-06-12
+
+### Added — AI-friendliness package
 
 - **Guided 1.x deprecation stubs** in `kmapper-annotations`: `@Ignore`, `@UseMapTypeConverter`,
   `@ValidateFrom`, `@ValidateTo` are ERROR-level typealiases of their 2.0 replacements
@@ -190,6 +192,7 @@ Migration guide: [docs/guide-en/reference/migration-1x.md](docs/guide-en/referen
 
 ---
 
-[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/sahsenvar/KMapper/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/sahsenvar/KMapper/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/sahsenvar/KMapper/releases/tag/v1.0.0

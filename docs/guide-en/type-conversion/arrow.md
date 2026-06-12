@@ -7,7 +7,7 @@ as a *mapping-time guarantee*, and `Option` as an explicit-absence type.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-arrow:2.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-arrow:2.0.1")
 }
 ```
 
