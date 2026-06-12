@@ -1,129 +1,87 @@
-# Null-Safety and @MapDefaultValue
+# Null-Safety and the Fallback Ladder
 
-KMapper detects nullable-to-non-null conversions at compile time and generates safe code. `null` is never silently swallowed.
+This page is Rule 1 and Rule 2 of the [mental model](../getting-started/mental-model.md) in
+working code.
 
----
+## The four nullability cases
 
-## Four Nullability Cases
+For a field mapped between source and target, the compiler handles all four combinations
+exhaustively:
 
-| Source | Target | Generated assignment |
-|--------|--------|----------------------|
-| `T` (required) | `T` (required) | Direct assignment |
-| `T` (required) | `T?` (nullable) | Direct assignment |
-| `T?` (nullable) | `T?` (nullable) | Direct assignment |
-| `T?` (nullable) | `T` (required) | `?: throw MappingException.RequiredFieldMissing("field")` or `@MapDefaultValue` |
+| Source | Target | Behavior |
+|--------|--------|----------|
+| `T` | `T` | direct copy / conversion |
+| `T` | `T?` | direct — a non-null value satisfies a nullable slot |
+| `T?` | `T?` | direct — null flows through as null |
+| `T?` | `T` | **the interesting one** — see below |
 
-Only the last row requires special handling. All others are direct assignments.
-
----
-
-## Nullable → Required: Default Behavior
-
-When the source field is nullable and the target field is required, the processor automatically inserts a `RequiredFieldMissing` throw:
+## Nullable → non-null: the ladder decides
 
 ```kotlin
-@MapTo(OrderDomain::class)
-data class OrderRemote(
-    val id: String?,          // nullable
-    val amount: Double?,      // nullable
+data class User(
+    val email: String,                //  no escape       -> absence is an error
+    val nickname: String = "anon",    //  default escape  -> absence takes the default
+    val bio: String?,                 //  nullable escape -> absence becomes null
 )
 
-data class OrderDomain(
-    val id: String,           // required
-    val amount: Double,       // required
+@MapTo(User::class)
+data class UserResponse(
+    val email: String?,
+    val nickname: String?,
+    val bio: String?,
 )
 ```
 
-Generated code:
+When a source field is null:
 
-```kotlin
-public fun OrderRemote.toOrderDomain(): OrderDomain = OrderDomain(
-    id     = id     ?: throw MappingException.RequiredFieldMissing("id"),
-    amount = amount ?: throw MappingException.RequiredFieldMissing("amount"),
-)
+```
+1. (no value to convert)
+2. target has a constructor default?  -> omit the argument, default applies   [silent]
+3. target is nullable?               -> null                                  [silent]
+4. neither                           -> MappingException.RequiredFieldMissing
 ```
 
-When `null` arrives, `MappingException.RequiredFieldMissing` is thrown. It is a `RuntimeException`, so you can log it or convert it to a domain error before catching:
+Absence taking a declared escape is **silent** — null bios are data, not incidents.
+
+## Broken values ride the same ladder — loudly
+
+When the value is present but its conversion **throws** (`"not-a-date"`, unknown enum value),
+the same escapes apply, with two differences:
+
+- the absorption is **reported** to the [degradation sink](../observability/listener.md)
+  (`AbsorbedConversionError`, with field path and cause), and
+- you can forbid absorption per field with
+  [`@ConvertWith(onFail = OnFail.Throw)`](../type-conversion/convert-with.md).
 
 ```kotlin
-try {
-    val domain = orderRemote.toOrderDomain()
-} catch (e: MappingException.RequiredFieldMissing) {
-    // e.field → which field arrived as null
+// joined: String? -> LocalDate?   with value "garbage"
+// -> target gets null, sink gets AbsorbedConversionError(path="joined", cause=TypeConversionFailed)
+```
+
+## The hard floor: RequiredFieldMissing
+
+With no escape, mapping stops with a path-carrying exception — delivered as a `Result`
+failure, not a crash:
+
+```kotlin
+val result = UserResponse(email = null, …).toUserResult()
+result.exceptionOrNull()?.message
+// Required field missing: email
+```
+
+## Hand-written code: the same rails
+
+`kmapper-core`'s public seams give hand-written mappers identical semantics — this is
+literally what generated code calls:
+
+```kotlin
+val email = response.email.orRequired("email") // null -> RequiredFieldMissing("email")
+val joined = response.joined.convertOrNull("joined", "kotlin.String", "kotlinx.datetime.LocalDate") {
+    LocalDateStringConverter.convertFrom(it) // broken -> null + sink report
 }
 ```
 
----
+See the `CoreOnlyMapping` example in the [gallery](../getting-started/examples.md) for a
+complete hand-written mapper.
 
-## @MapDefaultValue — Providing a Default
-
-If you want to use a specific value instead of throwing when `null` arrives, add `@MapDefaultValue(expression)`. The `expression` is a Kotlin expression inserted verbatim into the generated code — it can be a string literal, a reference, or a function call.
-
-```kotlin
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-
-@MapTo(EventDomain::class)
-data class EventRemote(
-    val title: String?,
-
-    @MapDefaultValue("Clock.System.now()")
-    val createdAt: Instant?,
-
-    @MapDefaultValue("0")
-    val viewCount: Int?,
-)
-
-data class EventDomain(
-    val title: String,
-    val createdAt: Instant,
-    val viewCount: Int,
-)
-```
-
-Generated code:
-
-```kotlin
-public fun EventRemote.toEventDomain(): EventDomain = EventDomain(
-    title     = title     ?: throw MappingException.RequiredFieldMissing("title"),
-    createdAt = createdAt ?: Clock.System.now(),
-    viewCount = viewCount ?: 0,
-)
-```
-
-`title` has no `@MapDefaultValue`, so it still throws. `createdAt` and `viewCount` use their default expressions.
-
----
-
-## Required → Nullable Target
-
-When the source field is required but the target is nullable, a direct assignment is generated with no extra check:
-
-```kotlin
-@MapTo(UserCache::class)
-data class UserDomain(
-    val email: String,    // required
-)
-
-data class UserCache(
-    val email: String?,   // nullable — but the source is already required
-)
-```
-
-Generated:
-
-```kotlin
-public fun UserDomain.toUserCache(): UserCache = UserCache(
-    email = email,        // direct assignment
-)
-```
-
----
-
-## Exception Hierarchy
-
-For the full list of `MappingException.RequiredFieldMissing` and other types, see [Error Handling](../error-handling/mapping-exception.md).
-
----
-
-Next: [Nested Models](nested-models.md)
+> Next: **[Nested Models and Error Paths →](nested-models.md)**

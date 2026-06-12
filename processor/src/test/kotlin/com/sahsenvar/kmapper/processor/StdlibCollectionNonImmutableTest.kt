@@ -18,8 +18,8 @@ import kotlin.test.assertEquals
 @OptIn(ExperimentalCompilerApi::class)
 class StdlibCollectionNonImmutableTest {
     /**
-     * stdlib List<NestedModel> → List<NestedDomain>: must use `.map { it.toTagDomain() }`
-     * and must NOT emit `toImmutableList` / `toImmutableSet`.
+     * stdlib List<NestedModel> → List<NestedDomain>: must ride the element seam
+     * (`convertEachOrSkip`) and must NOT emit `toImmutableList` / `toImmutableSet`.
      */
     @Test
     fun `stdlib List of nested model generates map and no toImmutableList`() {
@@ -44,9 +44,9 @@ class StdlibCollectionNonImmutableTest {
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ContainerRemoteMappers.kt")
 
-        // Must use .map { } for element-level conversion
-        assert(gen.contains(".map·{") || gen.contains(".map {")) {
-            "Expected .map { in generated code:\n$gen"
+        // Must use the element seam for element-level conversion
+        assert(gen.contains("convertEachOrSkip(\"tags\"")) {
+            "Expected convertEachOrSkip in generated code:\n$gen"
         }
 
         // Must NOT contain the deleted dead-branch calls

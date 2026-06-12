@@ -1,170 +1,73 @@
 # Collections
 
-KMapper maps each element in `List` and `Set` collections automatically. No special annotation is needed for collection fields — when the element type is a mapped model, the processor detects this on its own.
+`List`, `Set`, and `Map` fields map element-by-element, and **each element rides its own
+fallback ladder**. The design goal: one malformed element out of a hundred should cost you
+that element, not the payload — and never silently.
 
----
-
-## List Mapping
+## Lists
 
 ```kotlin
-@MapTo(TagDomain::class)
-data class TagRemote(val id: String, val name: String)
+data class Sensors(val readings: List<Int>)
 
-data class TagDomain(val id: String, val name: String)
+@MapTo(Sensors::class)
+data class SensorsResponse(val readings: List<String>) // "42" -> 42 per element
+```
 
-@MapTo(ArticleDomain::class)
-data class ArticleRemote(
-    val title: String,
-    val tags: List<TagRemote>,
-)
+Element behavior when a value is broken or null, by **target element type**:
 
-data class ArticleDomain(
-    val title: String,
-    val tags: List<TagDomain>,
+| Target element | Broken/null element becomes | Reported as |
+|----------------|------------------------------|-------------|
+| `List<T?>` | `null` in place (size preserved) | `AbsorbedConversionError` / position kept |
+| `List<T>` | dropped (list compacts) | `DroppedBrokenElement` / `DroppedNullElement` |
+
+Same philosophy as scalars: the type declares the escape, the sink hears about every use of
+it.
+
+## Per-field element policy: OnFail
+
+[`@ConvertWith(onFail = …)`](../type-conversion/convert-with.md) tunes a single collection
+field. The annotation goes on the **source field of the generating direction**:
+
+```kotlin
+@MapTo(Measurements::class)
+data class MeasurementsResponse(
+    @ConvertWith(onFail = OnFail.Throw)
+    val invoiceLines: List<String>, // all-or-nothing: any broken line fails the mapping
+
+    @ConvertWith(onFail = OnFail.Skip)
+    val tagIds: List<String?>, // compact: drop broken/null elements even into List<T?>
 )
 ```
 
-The generated code uses `.map { it.toTagDomain() }`:
+- `OnFail.Throw` — hardens the field: first broken element fails the whole mapping with
+  `items[i]`-style path.
+- `OnFail.Skip` — compacts: broken/null elements are dropped (and reported), even where the
+  target could hold nulls.
+- `OnFail.Auto` (default) — the table above.
 
-```kotlin
-public fun ArticleRemote.toArticleDomain(): ArticleDomain = ArticleDomain(
-    title = title,
-    tags  = tags.map { it.toTagDomain() },
-)
-```
+## Sets
 
----
+Same ladder. One extra wrinkle: converting elements can make two distinct source elements
+equal in the target (`"01"` and `"1"` both → `1`). The set keeps one and reports
+`ConvergedDuplicateElement` — silent data loss isn't a thing, even when it's set semantics.
 
-## Set Mapping
+## Maps
 
-The same rule applies to `Set`; the processor generates `.map { }.toSet()`:
+Keys and values each ride the ladder. Two map-specific rules:
 
-```kotlin
-@MapTo(PermissionDomain::class)
-data class PermissionRemote(val code: String)
+- a **broken key** drops the whole entry (a value without an address is meaningless) —
+  reported as `DroppedBrokenElement`;
+- two source keys converting to the same target key keep the **last** entry and report
+  `DuplicateKey`.
 
-data class PermissionDomain(val code: String)
+`Map<String, String> → Map<String, String>` with matching types passes through untouched.
 
-@MapTo(RoleDomain::class)
-data class RoleRemote(
-    val name: String,
-    val permissions: Set<PermissionRemote>,
-)
+## Beyond stdlib collections: wrappers
 
-data class RoleDomain(
-    val name: String,
-    val permissions: Set<PermissionDomain>,
-)
-```
+`PersistentList`, `NonEmptyList`, and friends are one `@CollectionWrapper` registration away —
+the same element semantics, a different container. See
+[Immutable Collections](../type-conversion/immutable.md) and
+[Arrow](../type-conversion/arrow.md), or write your own wrapper for your own container type
+([custom converter guide](../type-conversion/custom-converter.md#collection-wrappers)).
 
-Generated:
-
-```kotlin
-public fun RoleRemote.toRoleDomain(): RoleDomain = RoleDomain(
-    name        = name,
-    permissions = permissions.map { it.toPermissionDomain() }.toSet(),
-)
-```
-
----
-
-## Nullable Collections
-
-When the source collection is nullable, a safe call is added:
-
-```kotlin
-@MapTo(ArticleDomain::class)
-data class ArticleRemote(
-    val title: String,
-    val tags: List<TagRemote>?,    // optional list
-)
-
-data class ArticleDomain(
-    val title: String,
-    val tags: List<TagDomain>?,
-)
-```
-
-Generated:
-
-```kotlin
-public fun ArticleRemote.toArticleDomain(): ArticleDomain = ArticleDomain(
-    title = title,
-    tags  = tags?.map { it.toTagDomain() },
-)
-```
-
-If the target `tags` field were required (`List<TagDomain>`, not nullable), the null-safety rules would apply — see [Null-Safety](null-safety.md).
-
----
-
-## Nested Collections
-
-Collection elements can themselves contain collections; the processor chains every level:
-
-```kotlin
-@MapTo(CategoryDomain::class)
-data class CategoryRemote(
-    val name: String,
-    val subCategories: List<CategoryRemote>,
-)
-
-data class CategoryDomain(
-    val name: String,
-    val subCategories: List<CategoryDomain>,
-)
-```
-
-Generated:
-
-```kotlin
-public fun CategoryRemote.toCategoryDomain(): CategoryDomain = CategoryDomain(
-    name          = name,
-    subCategories = subCategories.map { it.toCategoryDomain() },
-)
-```
-
----
-
-## Immutable Collections
-
-If you want to use `kotlinx.collections.immutable` types such as `PersistentList`, `ImmutableList`, or `ImmutableSet` as target types, add the `converters-immutable` module. That module provides wrapper functions annotated with `@CollectionWrapper`, which the processor discovers automatically.
-
-For details, see [Immutable Collections (converters-immutable)](../type-conversion/immutable.md).
-
----
-
-## Map\<K, V\> Mapping
-
-`Map<K, V1>` → `Map<K, V2>` is supported out of the box, with no extra dependency. The processor
-maps each **value** using the same rules as other fields — direct assignment when the value types
-are the same, or a nested `toV2()` call when `V1` is a mapped model. Keys must be the same type
-on both sides.
-
-```kotlin
-@MapTo(ConfigDomain::class)
-data class ConfigRemote(
-    val id: String,
-    val settings: Map<String, SettingRemote>,
-)
-
-data class ConfigDomain(
-    val id: String,
-    val settings: Map<String, SettingDomain>,
-)
-```
-
-Generated:
-
-```kotlin
-public fun ConfigRemote.toConfigDomain(): ConfigDomain = ConfigDomain(
-    id       = id,
-    settings = settings.mapValues { (_, v) -> v.toSettingDomain() },
-)
-```
-
-When value types are the same (`Map<String, String>` → `Map<String, String>`), values are assigned
-directly without a mapper call.
-
-> **Note:** `PersistentMap`, `ImmutableMap`, and other non-stdlib map types are not yet supported
-> and are deferred to a future release.
+> Next: **[Built-in Converters →](../type-conversion/built-in.md)**

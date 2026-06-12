@@ -27,8 +27,73 @@ public final class com/sahsenvar/kmapper/processor/MappingProcessorProvider : co
 	public fun create (Lcom/google/devtools/ksp/processing/SymbolProcessorEnvironment;)Lcom/google/devtools/ksp/processing/SymbolProcessor;
 }
 
+public final class com/sahsenvar/kmapper/processor/analyzer/CollectionWrapperDescriptor {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;ZZ)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Z
+	public final fun component4 ()Z
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;ZZ)Lcom/sahsenvar/kmapper/processor/analyzer/CollectionWrapperDescriptor;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/analyzer/CollectionWrapperDescriptor;Ljava/lang/String;Ljava/lang/String;ZZILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/analyzer/CollectionWrapperDescriptor;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getForTypeFqn ()Ljava/lang/String;
+	public final fun getForTypeSimpleName ()Ljava/lang/String;
+	public final fun getProvidesUnwrap ()Z
+	public final fun getProvidesWrap ()Z
+	public final fun getWrapperObjectFqn ()Ljava/lang/String;
+	public final fun getWrapperSimpleName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class com/sahsenvar/kmapper/processor/analyzer/CollectionWrapperSupportKt {
 	public static final fun discoverWrappersFromConfig (Lcom/google/devtools/ksp/processing/Resolver;Lcom/google/devtools/ksp/processing/KSPLogger;)Ljava/util/Map;
+}
+
+public final class com/sahsenvar/kmapper/processor/analyzer/CollectionWrapperValidator {
+	public static final field LIST_FQN Ljava/lang/String;
+	public fun <init> (Lcom/google/devtools/ksp/processing/KSPLogger;)V
+	public final fun validate (Lcom/google/devtools/ksp/symbol/KSClassDeclaration;Ljava/lang/String;)Lcom/sahsenvar/kmapper/processor/analyzer/CollectionWrapperDescriptor;
+}
+
+public final class com/sahsenvar/kmapper/processor/analyzer/ConverterIntrospector {
+	public fun <init> (Lcom/google/devtools/ksp/processing/Resolver;Lcom/google/devtools/ksp/processing/KSPLogger;)V
+	public synthetic fun <init> (Lcom/google/devtools/ksp/processing/Resolver;Lcom/google/devtools/ksp/processing/KSPLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun declarationExists (Ljava/lang/String;)Z
+	public final fun shapeOf (Ljava/lang/String;)Lcom/sahsenvar/kmapper/processor/analyzer/ConverterShape;
+	public final fun typePairOf (Lcom/google/devtools/ksp/symbol/KSClassDeclaration;)Lkotlin/Pair;
+}
+
+public final class com/sahsenvar/kmapper/processor/analyzer/ConverterShape {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;ZZZZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Z
+	public final fun component4 ()Z
+	public final fun component5 ()Z
+	public final fun component6 ()Z
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;ZZZZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/sahsenvar/kmapper/processor/analyzer/ConverterShape;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/analyzer/ConverterShape;Ljava/lang/String;Ljava/lang/String;ZZZZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/analyzer/ConverterShape;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDeclaredFromOrNull ()Z
+	public final fun getDeclaredFromTotal ()Z
+	public final fun getDeclaredToOrNull ()Z
+	public final fun getDeclaredToTotal ()Z
+	public final fun getOrNullAnnotated ()Z
+	public final fun getOrNullAnnotatedFunction ()Ljava/lang/String;
+	public final fun getOrNullOnlyFrom ()Z
+	public final fun getOrNullOnlyTo ()Z
+	public final fun getProvidesFrom ()Z
+	public final fun getProvidesTo ()Z
+	public final fun getSourceFqn ()Ljava/lang/String;
+	public final fun getTargetFqn ()Ljava/lang/String;
+	public final fun getUnsupportedFromReason ()Ljava/lang/String;
+	public final fun getUnsupportedToReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/sahsenvar/kmapper/processor/analyzer/CycleDetector {
@@ -43,8 +108,8 @@ public final class com/sahsenvar/kmapper/processor/analyzer/FieldAnalyzer {
 }
 
 public final class com/sahsenvar/kmapper/processor/analyzer/TypeMatcher {
-	public fun <init> (Lcom/google/devtools/ksp/processing/KSPLogger;Ljava/util/Map;Ljava/util/Map;)V
-	public synthetic fun <init> (Lcom/google/devtools/ksp/processing/KSPLogger;Ljava/util/Map;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/google/devtools/ksp/processing/KSPLogger;Ljava/util/Map;Ljava/util/Map;Lcom/sahsenvar/kmapper/processor/analyzer/ConverterIntrospector;)V
+	public synthetic fun <init> (Lcom/google/devtools/ksp/processing/KSPLogger;Ljava/util/Map;Ljava/util/Map;Lcom/sahsenvar/kmapper/processor/analyzer/ConverterIntrospector;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun determineMappingStrategy (Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Z)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;
 	public static synthetic fun determineMappingStrategy$default (Lcom/sahsenvar/kmapper/processor/analyzer/TypeMatcher;Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/FieldInfo;ZILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;
 	public final fun extractCollectionElementType (Lcom/google/devtools/ksp/symbol/KSType;)Lcom/google/devtools/ksp/symbol/KSType;
@@ -52,7 +117,7 @@ public final class com/sahsenvar/kmapper/processor/analyzer/TypeMatcher {
 	public final fun extractMapValueType (Lcom/google/devtools/ksp/symbol/KSType;)Lcom/google/devtools/ksp/symbol/KSType;
 	public final fun isCollectionType (Lcom/google/devtools/ksp/symbol/KSType;)Z
 	public final fun isMapType (Lcom/google/devtools/ksp/symbol/KSType;)Z
-	public final fun isSetCollectionType (Lcom/google/devtools/ksp/symbol/KSType;)Z
+	public final fun isStdlibCollectionType (Lcom/google/devtools/ksp/symbol/KSType;)Z
 }
 
 public final class com/sahsenvar/kmapper/processor/generator/FunctionNameGenerator {
@@ -62,41 +127,59 @@ public final class com/sahsenvar/kmapper/processor/generator/FunctionNameGenerat
 }
 
 public final class com/sahsenvar/kmapper/processor/generator/MappingCodeGenerator {
+	public static final field SEAMS_PACKAGE Ljava/lang/String;
 	public fun <init> (Lcom/google/devtools/ksp/processing/KSPLogger;)V
-	public final fun generateFieldMapping (Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;Z)Lcom/squareup/kotlinpoet/CodeBlock;
-	public static synthetic fun generateFieldMapping$default (Lcom/sahsenvar/kmapper/processor/generator/MappingCodeGenerator;Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;ZILjava/lang/Object;)Lcom/squareup/kotlinpoet/CodeBlock;
+	public final fun generateFieldMapping (Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;ZZ)Lcom/squareup/kotlinpoet/CodeBlock;
+	public static synthetic fun generateFieldMapping$default (Lcom/sahsenvar/kmapper/processor/generator/MappingCodeGenerator;Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;ZZILjava/lang/Object;)Lcom/squareup/kotlinpoet/CodeBlock;
+}
+
+public final class com/sahsenvar/kmapper/processor/model/ConverterDirective {
+	public fun <init> (Ljava/lang/String;Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;
+	public final fun copy (Ljava/lang/String;Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;)Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;Ljava/lang/String;Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getConverterFqn ()Ljava/lang/String;
+	public final fun getOnFail ()Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/sahsenvar/kmapper/processor/model/FieldInfo {
-	public fun <init> (Ljava/lang/String;Lcom/google/devtools/ksp/symbol/KSType;ZZLjava/lang/String;ZLjava/util/Map;Ljava/lang/String;ZLjava/util/List;Ljava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/String;Lcom/google/devtools/ksp/symbol/KSType;ZZLjava/lang/String;ZLjava/util/Map;Ljava/lang/String;ZLjava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Lcom/google/devtools/ksp/symbol/KSType;ZZZLjava/util/Map;ZLcom/sahsenvar/kmapper/processor/model/ConverterDirective;Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;Ljava/util/List;Z)V
+	public synthetic fun <init> (Ljava/lang/String;Lcom/google/devtools/ksp/symbol/KSType;ZZZLjava/util/Map;ZLcom/sahsenvar/kmapper/processor/model/ConverterDirective;Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;Ljava/util/List;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
-	public final fun component10 ()Ljava/util/List;
+	public final fun component10 ()Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
 	public final fun component11 ()Ljava/util/List;
+	public final fun component12 ()Z
 	public final fun component2 ()Lcom/google/devtools/ksp/symbol/KSType;
 	public final fun component3 ()Z
 	public final fun component4 ()Z
-	public final fun component5 ()Ljava/lang/String;
-	public final fun component6 ()Z
-	public final fun component7 ()Ljava/util/Map;
-	public final fun component8 ()Ljava/lang/String;
-	public final fun component9 ()Z
-	public final fun copy (Ljava/lang/String;Lcom/google/devtools/ksp/symbol/KSType;ZZLjava/lang/String;ZLjava/util/Map;Ljava/lang/String;ZLjava/util/List;Ljava/util/List;)Lcom/sahsenvar/kmapper/processor/model/FieldInfo;
-	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Ljava/lang/String;Lcom/google/devtools/ksp/symbol/KSType;ZZLjava/lang/String;ZLjava/util/Map;Ljava/lang/String;ZLjava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/FieldInfo;
+	public final fun component5 ()Z
+	public final fun component6 ()Ljava/util/Map;
+	public final fun component7 ()Z
+	public final fun component8 ()Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
+	public final fun component9 ()Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
+	public final fun copy (Ljava/lang/String;Lcom/google/devtools/ksp/symbol/KSType;ZZZLjava/util/Map;ZLcom/sahsenvar/kmapper/processor/model/ConverterDirective;Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;Ljava/util/List;Z)Lcom/sahsenvar/kmapper/processor/model/FieldInfo;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Ljava/lang/String;Lcom/google/devtools/ksp/symbol/KSType;ZZZLjava/util/Map;ZLcom/sahsenvar/kmapper/processor/model/ConverterDirective;Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;Ljava/util/List;ZILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/FieldInfo;
+	public final fun directiveFor (Z)Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getDefaultValue ()Ljava/lang/String;
-	public final fun getFieldMapTarget ()Ljava/lang/String;
+	public final fun getConvertFromDirective ()Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
+	public final fun getConvertToDirective ()Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
+	public final fun getConvertWith ()Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
 	public final fun getFieldMapTargets ()Ljava/util/Map;
 	public final fun getHasDefault ()Z
+	public final fun getIgnoreDefaultValue ()Z
 	public final fun getName ()Ljava/lang/String;
 	public final fun getType ()Lcom/google/devtools/ksp/symbol/KSType;
-	public final fun getUseConverter ()Ljava/lang/String;
-	public final fun getValidateFrom ()Ljava/util/List;
-	public final fun getValidateTo ()Ljava/util/List;
+	public final fun getUsesDefaultInMapping ()Z
+	public final fun getValidators ()Ljava/util/List;
 	public fun hashCode ()I
 	public final fun isComputed ()Z
 	public final fun isIgnored ()Z
 	public final fun isNullable ()Z
+	public final fun onFailFor (Z)Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -118,12 +201,14 @@ public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$Collect
 }
 
 public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$Convert : com/sahsenvar/kmapper/processor/model/MappingStrategy {
-	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Z)V
 	public final fun component1 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Convert;
-	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Convert;Ljava/lang/String;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Convert;
+	public final fun component2 ()Z
+	public final fun copy (Ljava/lang/String;Z)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Convert;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Convert;Ljava/lang/String;ZILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Convert;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getConverterFqn ()Ljava/lang/String;
+	public final fun getForward ()Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -220,16 +305,33 @@ public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$Unmappa
 }
 
 public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$WrappedCollection : com/sahsenvar/kmapper/processor/model/MappingStrategy {
-	public fun <init> (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;Ljava/lang/String;)V
+	public fun <init> (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;Ljava/lang/String;Z)V
+	public synthetic fun <init> (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;
 	public final fun component2 ()Ljava/lang/String;
-	public final fun copy (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;Ljava/lang/String;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$WrappedCollection;
-	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$WrappedCollection;Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;Ljava/lang/String;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$WrappedCollection;
+	public final fun component3 ()Z
+	public final fun copy (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;Ljava/lang/String;Z)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$WrappedCollection;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$WrappedCollection;Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;Ljava/lang/String;ZILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$WrappedCollection;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getElementStrategy ()Lcom/sahsenvar/kmapper/processor/model/MappingStrategy;
+	public final fun getUseUnwrap ()Z
 	public final fun getWrapperObjectFqn ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/processor/model/OnFailPolicy : java/lang/Enum {
+	public static final field Auto Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;
+	public static final field Companion Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy$Companion;
+	public static final field Skip Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;
+	public static final field Throw Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;
+	public static fun values ()[Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;
+}
+
+public final class com/sahsenvar/kmapper/processor/model/OnFailPolicy$Companion {
+	public final fun parse (Ljava/lang/String;)Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;
 }
 
 public final class com/sahsenvar/kmapper/processor/model/TypeInfo {

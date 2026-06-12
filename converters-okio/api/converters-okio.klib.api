@@ -6,17 +6,32 @@
 // - Show declarations: true
 
 // Library unique name: <io.github.sahsenvar:converters-okio>
+final object com.sahsenvar.kmapper.okio/Base64ByteStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, okio/ByteString> { // com.sahsenvar.kmapper.okio/Base64ByteStringConverter|null[0]
+    final fun convertFrom(okio/ByteString): kotlin/String // com.sahsenvar.kmapper.okio/Base64ByteStringConverter.convertFrom|convertFrom(okio.ByteString){}[0]
+    final fun convertTo(kotlin/String): okio/ByteString // com.sahsenvar.kmapper.okio/Base64ByteStringConverter.convertTo|convertTo(kotlin.String){}[0]
+}
+
+final object com.sahsenvar.kmapper.okio/Base64UrlByteStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, okio/ByteString> { // com.sahsenvar.kmapper.okio/Base64UrlByteStringConverter|null[0]
+    final fun convertFrom(okio/ByteString): kotlin/String // com.sahsenvar.kmapper.okio/Base64UrlByteStringConverter.convertFrom|convertFrom(okio.ByteString){}[0]
+    final fun convertTo(kotlin/String): okio/ByteString // com.sahsenvar.kmapper.okio/Base64UrlByteStringConverter.convertTo|convertTo(kotlin.String){}[0]
+}
+
 final object com.sahsenvar.kmapper.okio/ByteArrayByteStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/ByteArray, okio/ByteString> { // com.sahsenvar.kmapper.okio/ByteArrayByteStringConverter|null[0]
-    final fun convertFromNonNull(okio/ByteString): kotlin/ByteArray // com.sahsenvar.kmapper.okio/ByteArrayByteStringConverter.convertFromNonNull|convertFromNonNull(okio.ByteString){}[0]
-    final fun convertToNonNull(kotlin/ByteArray): okio/ByteString // com.sahsenvar.kmapper.okio/ByteArrayByteStringConverter.convertToNonNull|convertToNonNull(kotlin.ByteArray){}[0]
+    final fun convertFrom(okio/ByteString): kotlin/ByteArray // com.sahsenvar.kmapper.okio/ByteArrayByteStringConverter.convertFrom|convertFrom(okio.ByteString){}[0]
+    final fun convertTo(kotlin/ByteArray): okio/ByteString // com.sahsenvar.kmapper.okio/ByteArrayByteStringConverter.convertTo|convertTo(kotlin.ByteArray){}[0]
+}
+
+final object com.sahsenvar.kmapper.okio/HexByteStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, okio/ByteString> { // com.sahsenvar.kmapper.okio/HexByteStringConverter|null[0]
+    final fun convertFrom(okio/ByteString): kotlin/String // com.sahsenvar.kmapper.okio/HexByteStringConverter.convertFrom|convertFrom(okio.ByteString){}[0]
+    final fun convertTo(kotlin/String): okio/ByteString // com.sahsenvar.kmapper.okio/HexByteStringConverter.convertTo|convertTo(kotlin.String){}[0]
 }
 
 final object com.sahsenvar.kmapper.okio/StringByteStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, okio/ByteString> { // com.sahsenvar.kmapper.okio/StringByteStringConverter|null[0]
-    final fun convertFromNonNull(okio/ByteString): kotlin/String // com.sahsenvar.kmapper.okio/StringByteStringConverter.convertFromNonNull|convertFromNonNull(okio.ByteString){}[0]
-    final fun convertToNonNull(kotlin/String): okio/ByteString // com.sahsenvar.kmapper.okio/StringByteStringConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+    final fun convertFrom(okio/ByteString): kotlin/String // com.sahsenvar.kmapper.okio/StringByteStringConverter.convertFrom|convertFrom(okio.ByteString){}[0]
+    final fun convertTo(kotlin/String): okio/ByteString // com.sahsenvar.kmapper.okio/StringByteStringConverter.convertTo|convertTo(kotlin.String){}[0]
 }
 
 final object com.sahsenvar.kmapper.okio/StringPathConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, okio/Path> { // com.sahsenvar.kmapper.okio/StringPathConverter|null[0]
-    final fun convertFromNonNull(okio/Path): kotlin/String // com.sahsenvar.kmapper.okio/StringPathConverter.convertFromNonNull|convertFromNonNull(okio.Path){}[0]
-    final fun convertToNonNull(kotlin/String): okio/Path // com.sahsenvar.kmapper.okio/StringPathConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+    final fun convertFrom(okio/Path): kotlin/String // com.sahsenvar.kmapper.okio/StringPathConverter.convertFrom|convertFrom(okio.Path){}[0]
+    final fun convertTo(kotlin/String): okio/Path // com.sahsenvar.kmapper.okio/StringPathConverter.convertTo|convertTo(kotlin.String){}[0]
 }

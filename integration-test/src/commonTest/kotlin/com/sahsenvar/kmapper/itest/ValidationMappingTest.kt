@@ -2,66 +2,63 @@ package com.sahsenvar.kmapper.itest
 
 import com.sahsenvar.kmapper.MappingException
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlin.test.Test
-import kotlin.test.assertFailsWith
 
 class ValidationMappingTest {
-    // ─── @ValidateFrom: validated on source field BEFORE mapping ─────────────
+    // ─── @Validate on SOURCE field (ContactR.name): fires BEFORE mapping ─────
 
     @Test
     fun `valid ContactR maps successfully`() {
-        val d = ContactR(name = "Alice", label = "work").toContactD()
-        d.name shouldBe "Alice"
-        d.label shouldBe "work"
+        val domain = ContactR(name = "Alice", label = "work").toContactDResult().getOrThrow()
+        domain.name shouldBe "Alice"
+        domain.label shouldBe "work"
     }
 
     @Test
-    fun `blank name throws ValidationFailed from ValidateFrom`() {
-        val ex =
-            assertFailsWith<MappingException.ValidationFailed> {
-                ContactR(name = "   ", label = "ok").toContactD()
-            }
-        ex.field shouldBe "name"
+    fun `blank name fails with ValidationFailed from source-field Validate`() {
+        val outcome = ContactR(name = "   ", label = "ok").toContactDResult()
+        outcome.isFailure shouldBe true
+        val exception = outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.ValidationFailed>()
+        exception.path shouldBe "name"
     }
 
     @Test
-    fun `empty name throws ValidationFailed from ValidateFrom`() {
-        val ex =
-            assertFailsWith<MappingException.ValidationFailed> {
-                ContactR(name = "", label = null).toContactD()
-            }
-        ex.field shouldBe "name"
+    fun `empty name fails with ValidationFailed from source-field Validate`() {
+        val outcome = ContactR(name = "", label = null).toContactDResult()
+        outcome.isFailure shouldBe true
+        val exception = outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.ValidationFailed>()
+        exception.path shouldBe "name"
     }
 
-    // ─── @ValidateTo: validated on produced value AFTER mapping ──────────────
+    // ─── @Validate on TARGET field (ContactD.label): fires AFTER mapping ─────
 
     @Test
-    fun `blank label throws ValidationFailed from ValidateTo`() {
-        val ex =
-            assertFailsWith<MappingException.ValidationFailed> {
-                ContactR(name = "Bob", label = "  ").toContactD()
-            }
-        ex.field shouldBe "label"
+    fun `blank label fails with ValidationFailed from target-field Validate`() {
+        val outcome = ContactR(name = "Bob", label = "  ").toContactDResult()
+        outcome.isFailure shouldBe true
+        val exception = outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.ValidationFailed>()
+        exception.path shouldBe "label"
     }
 
     @Test
-    fun `null label skips ValidateTo because null is not passed to validator`() {
+    fun `null label skips target-field Validate because null is not passed to validator`() {
         // null is never passed to the validator; mapping should succeed
-        val d = ContactR(name = "Bob", label = null).toContactD()
-        d.name shouldBe "Bob"
-        d.label shouldBe null
+        val domain = ContactR(name = "Bob", label = null).toContactDResult().getOrThrow()
+        domain.name shouldBe "Bob"
+        domain.label shouldBe null
     }
 
-    // ─── ValidationFailed carries field + reason ─────────────────────────────
+    // ─── ValidationFailed carries field path + reason ─────────────────────────
 
     @Test
-    fun `ValidationFailed message contains field name and reason`() {
-        val ex =
-            assertFailsWith<MappingException.ValidationFailed> {
-                ContactR(name = "", label = null).toContactD()
-            }
-        ex.field shouldBe "name"
-        ex.reason shouldBe "must not be blank"
-        (ex.message ?: "").contains("name") shouldBe true
+    fun `ValidationFailed message contains field path and reason`() {
+        val outcome = ContactR(name = "", label = null).toContactDResult()
+        outcome.isFailure shouldBe true
+        val exception = outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.ValidationFailed>()
+        exception.path shouldBe "name"
+        exception.reason shouldBe "must not be blank"
+        (exception.message ?: "") shouldContain "Validation failed for 'name': must not be blank"
     }
 }

@@ -1,114 +1,37 @@
-# UUID Converter'ları — converters-uuid
+# UUID — converters-uuid
 
-`converters-uuid` modülü, `kotlin.uuid.Uuid` (KMP ortak) ve `java.util.UUID` (JVM/Android) tipleri
-için **scalar converter'lar** sağlar. Diğer scalar add-on'lar gibi, `@KMapperConfig(converters = [...])`
-listesine eklenmeleri gerekir — otomatik keşfedilmezler.
-
----
+`kotlin.uuid.Uuid` (KMP) ve `java.util.UUID` (JVM/Android) için converter'lar.
 
 ## Kurulum
 
-
 ```kotlin
-// build.gradle.kts (tüketen modül)
-kotlin {
-    sourceSets {
-        commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
-            implementation("io.github.sahsenvar:kmapper-converters-uuid:1.0.0")
-        }
-    }
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-uuid:2.0.0")
 }
 ```
 
----
-
-## Platform Desteği
-
-| Kaynak küme | Kullanılabilir converter'lar |
-|-------------|------------------------------|
-| `commonMain` | `StringUuidConverter` (`String` ↔ `kotlin.uuid.Uuid`) |
-| `jvmAndroidMain` | `JavaStringUuidConverter` (`String` ↔ `java.util.UUID`), `KotlinJavaUuidConverter` (`kotlin.uuid.Uuid` ↔ `java.util.UUID`) |
-
----
-
-## commonMain Converter'ları
-
-| Nesne | K | H | İleri | Geri |
-|-------|---|---|-------|------|
-| `StringUuidConverter` | `String` | `kotlin.uuid.Uuid` | `Uuid.parse(value)` | `value.toString()` |
-
-`kotlin.uuid.Uuid`, Kotlin 2.1'den itibaren kararlıdır. Bu proje Kotlin 2.3.10 hedefler — `@OptIn` anotasyonu gerekmez.
-
----
-
-## jvmAndroidMain Converter'ları
-
-| Nesne | K | H | İleri | Geri |
-|-------|---|---|-------|------|
-| `JavaStringUuidConverter` | `String` | `java.util.UUID` | `UUID.fromString(value)` | `value.toString()` |
-| `KotlinJavaUuidConverter` | `kotlin.uuid.Uuid` | `java.util.UUID` | `value.toJavaUuid()` | `value.toKotlinUuid()` |
-
----
-
-## Kullanım
-
-Converter'ları `@KMapperConfig(converters = [...])` listesine ekleyin:
-
 ```kotlin
-import com.sahsenvar.kmapper.annotations.KMapperConfig
-import com.sahsenvar.kmapper.uuid.StringUuidConverter
-
 @KMapperConfig(converters = [StringUuidConverter::class])
-object AppMappers
+object AppMapperConfig
 ```
 
-Ardından modellerinizde `kotlin.uuid.Uuid` kullanın:
+## Converter'lar (`com.sahsenvar.kmapper.uuid`)
 
-```kotlin
-import kotlin.uuid.Uuid
+| Object | Çift | Platform |
+|--------|------|----------|
+| `StringUuidConverter` | `String ↔ kotlin.uuid.Uuid` | tümü (commonMain) |
+| `JavaStringUuidConverter` | `String ↔ java.util.UUID` | JVM/Android |
+| `KotlinJavaUuidConverter` | `kotlin.uuid.Uuid ↔ java.util.UUID` | JVM/Android |
 
-@MapTo(UserDomain::class)
-data class UserRemote(
-    val id: String,           // "550e8400-e29b-41d4-a716-446655440000"
-    val name: String,
-)
+Parse, kanonik 8-4-4-4-12 hex biçimini kabul eder; bozuk girdi fırlatır ve
+[ladder'a](../temel-kullanim/null-safety.md) biner. Tipi dönüştürmeden UUID biçimli bir
+string'i yalnızca *doğrulamak* için `kmapper-validators`'taki
+[`UuidStringValidator`](../dogrulama/validatorler.md)'ı kullanın.
 
-data class UserDomain(
-    val id: Uuid,
-    val name: String,
-)
-```
+## `Uuid ↔ String` neden core built-in değil?
 
-Üretilen eşleştirme:
+`kotlin.uuid.Uuid`, Kotlin 2.3'te hâlâ `@ExperimentalUuidApi`. Core built-in üretilen koda
+otomatik bağlanır; bu da deneysel opt-in'i bütün tüketicilere dayatırdı. Add-on bu seçimi
+size bırakır; API mezun olduğunda çift core'a taşınacak.
 
-```kotlin
-public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
-    id   = StringUuidConverter.convertToNonNull(id),
-    name = name,
-)
-```
-
-JVM/Android'de `kotlin.uuid.Uuid` ile `java.util.UUID` arasında köprü kurmak için:
-
-```kotlin
-import com.sahsenvar.kmapper.annotations.KMapperConfig
-import com.sahsenvar.kmapper.uuid.KotlinJavaUuidConverter
-
-@KMapperConfig(converters = [KotlinJavaUuidConverter::class])
-object AppMappers
-```
-
----
-
-## Hangi Converter'ı Seçmeli?
-
-| Hedef tip | Converter |
-|-----------|-----------|
-| `kotlin.uuid.Uuid` (KMP ortak) | `StringUuidConverter` |
-| `java.util.UUID` (yalnızca JVM/Android) | `JavaStringUuidConverter` |
-| Köprü: `kotlin.uuid.Uuid` ↔ `java.util.UUID` | `KotlinJavaUuidConverter` |
-
----
-
-Sonraki adım: [Okio Converter'ları →](okio.md) | Diğer kaynaklar: [@KMapperConfig](kmapperconfig.md)
+> Sıradaki: **[Okio →](okio.md)**

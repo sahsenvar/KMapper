@@ -1,57 +1,68 @@
 # Kurulum
 
-KMapper iki zorunlu parçadan oluşur: çalışma-zamanı kütüphanesi (`core`) ve KSP işlemcisi (`processor`). Koleksiyon sarmalayıcıları gibi ekler isteğe bağlıdır.
+KMapper birlikte çalışan üç artifact'ten ve isteğe bağlı add-on'lardan oluşur. Hepsi
+[Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core)'da,
+`io.github.sahsenvar` grubu altında.
 
-## Gereksinimler
+| Artifact | Ne zaman gerekli… |
+|----------|--------------------|
+| `kmapper-core` | her zaman — runtime (exception'lar, converter'lar, validator'lar, seam'ler) |
+| `kmapper-annotations` | mapping'leri annotation'la tanımlıyorsanız (neredeyse her zaman) |
+| `kmapper-compiler` | yukarıdakiyle birlikte — annotation'ları okuyan KSP işlemcisi |
 
-- Kotlin **2.1+** (KSP2 ile)
-- KSP (Kotlin Symbol Processing) Gradle eklentisi
-- Kotlin Multiplatform veya saf JVM/Android projesi
+> Yalnızca `kmapper-core` da geçerli bir kurulum: KSP olmadan, elle yazılmış mapper'lar için
+> üretilen kodun kullandığı seam'lerin aynısını sunar. Bkz.
+> [`CoreOnlyMapping` örneği](ornekler.md).
 
-## 1. Depoları ekle
-
-`settings.gradle.kts`:
-
-```kotlin
-dependencyResolutionManagement {
-    repositories {
-        mavenCentral()
-    }
-}
-```
-
-## 2. KSP eklentisini uygula
-
-`build.gradle.kts` (tüketen modül):
+## JVM / Android (tek platform)
 
 ```kotlin
+// build.gradle.kts
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.ksp)
+    kotlin("jvm") version "2.3.10" // ya da com.android.application / kotlin("android")
+    id("com.google.devtools.ksp") version "2.3.10-2.0.5"
+}
+
+dependencies {
+    implementation("io.github.sahsenvar:kmapper-core:2.0.0")
+    implementation("io.github.sahsenvar:kmapper-annotations:2.0.0")
+    ksp("io.github.sahsenvar:kmapper-compiler:2.0.0")
 }
 ```
 
-## 3. Bağımlılıkları ekle
+## Kotlin Multiplatform
 
-### Kotlin Multiplatform modülü
+Modelleri ve mapping'leri `commonMain`'de tanımlayın; işlemciyi her derleme hedefi için
+kaydedin:
 
 ```kotlin
+// build.gradle.kts
+plugins {
+    kotlin("multiplatform") version "2.3.10"
+    id("com.google.devtools.ksp") version "2.3.10-2.0.5"
+}
+
 kotlin {
+    jvm()
+    iosArm64()
+    iosSimulatorArm64()
+
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
-            // İsteğe bağlı: ihtiyaç duyduğunuz converter ek modüllerini ekleyin, ör.:
-            // implementation("io.github.sahsenvar:kmapper-converters-immutable:1.0.0")
+            implementation("io.github.sahsenvar:kmapper-core:2.0.0")
+            implementation("io.github.sahsenvar:kmapper-annotations:2.0.0")
         }
     }
 }
 
 dependencies {
-    // Eşleme kodunu commonMain için üret
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:1.0.0")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:2.0.0")
+    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:2.0.0")
+    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:2.0.0")
+    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:2.0.0")
 }
 
-// KMP + KSP bağlama: commonMain metadata'sı derlemeden ÖNCE işlensin
+// Her derlemenin commonMain'de üretilen kaynakları görmesi için:
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
     if (name != "kspCommonMainKotlinMetadata") {
         dependsOn("kspCommonMainKotlinMetadata")
@@ -59,40 +70,33 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 }
 ```
 
-### Saf JVM / Android modülü
+## Add-on'lar (isteğe bağlı)
 
-KMP değilsen kurulum daha basittir:
-
-```kotlin
-dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:1.0.0")
-    ksp("io.github.sahsenvar:kmapper-processor:1.0.0")
-}
-```
-
-## Üretilen kod nereye gider?
-
-KSP, eşleme uzantılarını standart KSP çıktısı altına yazar:
-
-```
-build/generated/ksp/.../<KaynakSınıf>Mappers.kt
-```
-
-Bu dosyalar otomatik olarak derleme yoluna eklenir; commit etmenize veya elle düzenlemenize gerek yoktur.
-
-## Doğrulama
-
-Kurulumu sınamak için küçük bir model tanımla ve projeyi derle:
+Her add-on bağımsız bir KMP artifact'idir; yalnızca modellerinizin kullandığını ekleyin:
 
 ```kotlin
-import com.sahsenvar.kmapper.annotations.MapTo
-
-data class PingDomain(val message: String)
-
-@MapTo(PingDomain::class)
-data class PingRemote(val message: String)
+implementation("io.github.sahsenvar:kmapper-converters-immutable:2.0.0") // PersistentList vb.
+implementation("io.github.sahsenvar:kmapper-converters-arrow:2.0.0")     // NonEmptyList, Option
+implementation("io.github.sahsenvar:kmapper-converters-datetime:2.0.0")  // java.time + köprüler
+implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.0.0") // BigDecimal/BigInteger
+implementation("io.github.sahsenvar:kmapper-converters-uuid:2.0.0")      // Uuid / java.util.UUID
+implementation("io.github.sahsenvar:kmapper-converters-okio:2.0.0")      // ByteString, Path
+implementation("io.github.sahsenvar:kmapper-converters-uri:2.0.0")       // URI / Uri / NSURL
+implementation("io.github.sahsenvar:kmapper-validators:2.0.0")           // Email, E.164, IP, …
 ```
 
-Derlemeden sonra `PingRemote.toPingDomain()` çağrılabilir olmalıdır. Olmuyorsa, KSP eklentisinin uygulandığını ve (KMP'de) yukarıdaki `kspCommonMainMetadata` bağlamasının yapıldığını kontrol edin.
+kotlinx-datetime tipleri (`LocalDate`, `Instant`, …) için add-on gerekmez — bunların
+`String`/`Long` converter'ları core built-in'dir ve `kmapper-core`, kotlinx-datetime'ı API
+bağımlılığı olarak getirir.
 
-> Sonraki adım: **[5 Dakikada İlk Mapper →](ilk-mapper.md)**
+## Sürüm uyumluluğu
+
+| KMapper | Kotlin | KSP |
+|---------|--------|-----|
+| 2.x | 2.3+ | KSP2 (`2.3.x-2.x`) |
+
+Çok modüllü projelerde compiler yalnızca mapping *tanımlayan* modüllere gerekir; üretilen
+fonksiyonları yalnızca çağıran modüllere runtime yeter. Ayrıntılar:
+[Çok Modüllü Projeler](../ileri/cok-modullu.md).
+
+> Sıradaki: **[İlk Mapper'ınız →](ilk-mapper.md)**

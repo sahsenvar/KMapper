@@ -7,12 +7,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Tests for Set<T> → Set<T> collection mapping.
- *
- * Bug: generateCollectionMapping emitted only `.map { it.toX() }`, which returns a List,
- * so assigning it to a Set<T> target did not compile.
- * Fix: when the target collection FQN is kotlin.collections.Set (or MutableSet),
- * the generator must append `.toSet()` (or `?.toSet()` for nullable source).
+ * Tests for Set<T> → Set<T> collection mapping: a Set target must select the Set-producing
+ * element seams (convertEachOrSkipToSet) so the produced value matches the Set<T> target
+ * type; List targets must keep the List-shaped seam.
  */
 @OptIn(ExperimentalCompilerApi::class)
 class SetCollectionMappingTest {
@@ -20,8 +17,8 @@ class SetCollectionMappingTest {
      * Non-null Set<TagRemote> → Set<TagDomain> where TagRemote is @MapTo(TagDomain::class).
      * Generated code must:
      *   - compile (exit code OK)
-     *   - contain `.map { it.toTagDomain() }.toSet()` (non-safe form, non-null source)
-     *   - NOT be a bare `.map { }` without `.toSet()` (that would produce List, not Set)
+     *   - ride the Set seam: `tags.convertEachOrSkipToSet(...) { it.toTagDomainResult().getOrThrow() }`
+     *   - NOT use a safe-call chain (non-null source)
      */
     @Test
     fun `non-null Set of mapped elements emits map toSet`() {
@@ -46,22 +43,22 @@ class SetCollectionMappingTest {
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
 
         // Must call the element mapper
-        assert(gen.contains("toTagDomain()")) {
-            "Expected toTagDomain() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
+            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
         }
-        // Must append .toSet() so the result type is Set, not List
-        assert(gen.contains(".toSet()")) {
-            "Expected .toSet() suffix for Set target in generated code:\n$gen"
+        // Must select the Set-producing seam so the result type is Set, not List
+        assert(gen.contains("tags.convertEachOrSkipToSet(\"tags\", \"TagRemote\", \"TagDomain\")")) {
+            "Expected convertEachOrSkipToSet for Set target in generated code:\n$gen"
         }
-        // Must NOT use safe-call map for non-null source
-        assert(!gen.contains("?.map")) {
-            "Generated code must NOT use ?.map for non-null Set source:\n$gen"
+        // Must NOT use a safe-call chain for non-null source
+        assert(!gen.contains("?.convertEachOrSkipToSet")) {
+            "Generated code must NOT use ?.convertEachOrSkipToSet for non-null Set source:\n$gen"
         }
     }
 
     /**
      * Nullable Set<TagRemote>? → Set<TagDomain>?: null-safe form.
-     * Generated code must use `?.map { it.toTagDomain() }?.toSet()`.
+     * Generated code must use `tags?.convertEachOrSkipToSet(...) { ... }`.
      */
     @Test
     fun `nullable Set of mapped elements emits safe-call map toSet`() {
@@ -86,22 +83,18 @@ class SetCollectionMappingTest {
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
 
         // Must call the element mapper
-        assert(gen.contains("toTagDomain()")) {
-            "Expected toTagDomain() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
+            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
         }
-        // Nullable source must use ?.map
-        assert(gen.contains("?.map")) {
-            "Expected ?.map for nullable Set source:\n$gen"
-        }
-        // Must append ?.toSet() for nullable chain
-        assert(gen.contains(".toSet()")) {
-            "Expected .toSet() suffix for Set target in generated code:\n$gen"
+        // Nullable source must safe-call into the Set seam
+        assert(gen.contains("tags?.convertEachOrSkipToSet(")) {
+            "Expected tags?.convertEachOrSkipToSet( for nullable Set source:\n$gen"
         }
     }
 
     /**
-     * Guard: List<TagRemote> → List<TagDomain> must NOT emit .toSet().
-     * Confirms the fix only applies to Set targets.
+     * Guard: List<TagRemote> → List<TagDomain> must keep the List-shaped seam.
+     * Confirms the Set seams only apply to Set targets.
      */
     @Test
     fun `List target does NOT emit toSet`() {
@@ -126,12 +119,12 @@ class SetCollectionMappingTest {
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
 
         // Must call the element mapper
-        assert(gen.contains("toTagDomain()")) {
-            "Expected toTagDomain() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
+            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
         }
-        // Must NOT append .toSet() for List target
-        assert(!gen.contains(".toSet()")) {
-            "List target must NOT contain .toSet():\n$gen"
+        // Must keep the List-shaped seam for a List target
+        assert(gen.contains("convertEachOrSkip(") && !gen.contains("convertEachOrSkipToSet")) {
+            "List target must use convertEachOrSkip, not the Set seam:\n$gen"
         }
     }
 }

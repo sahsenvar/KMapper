@@ -1,70 +1,41 @@
 # Sınırlamalar ve Yol Haritası
 
-## Mevcut Sınırlamalar
+Mevcut sürümün dürüst kenarları, gerekçeleriyle — çoğu bilinçli kapsam kararıdır ve projenin
+tasarım defterinde kayıtlıdır.
 
-### Yalnızca Constructor `val` Alanları
+## Mevcut sınırlamalar
 
-KMapper yalnızca primary constructor'daki `val` parametrelerini analiz eder. `var` property'ler, `init` bloğunda atanan alanlar ve constructor dışında tanımlanan property'ler eşleştirilmez.
+- **Modül başına, tip çifti başına tek converter.**
+  [Keşif](../tip-donusumu/kmapperconfig.md) belirsizliğe düşemez; format varyantları alan
+  bazlı [`@ConvertWith`](../tip-donusumu/convert-with.md) kararıdır.
+- **Validator'lar ve converter'lar object'tir.** Üretilen kod onları FQN ile çağırır —
+  instance state yok, DI yok. Parametreleme
+  [açık taban türetmesiyle](../tip-donusumu/ozel-converter.md) yapılır.
+- **`@FieldMap` yalın adla eşler.** Nitelikli yol yeniden adlandırmaları
+  (`Data.wireScore → Domain.score` sözdizimi) desteklenmez; tek ad bugüne dek yetti.
+- **Map biçimli özel kaplar** (iki tip parametresi, `MultiMap<K, V>` tarzı)
+  `@CollectionWrapper` sözleşmesinin dışındadır — wrapper'lar tek eleman tipli kapları
+  kapsar.
+- **Doğrulama her zaman serttir.** `@Validate` hatası
+  [ladder'a](../temel-kullanim/null-safety.md) asla binmez; "emilebilir doğrulama" gerçek bir
+  kullanım senaryosu çıkana dek park edildi.
+- **`kotlin.uuid.Uuid` core built-in değil** — API deneysel olduğu sürece
+  [add-on karşılıyor](../tip-donusumu/uuid.md).
 
-```kotlin
-data class OrderRemote(
-    val id: String,       // ✓ eşlenir
-    val total: Double,    // ✓ eşlenir
-) : RemoteModel {
-    var cached: Boolean = false  // ✗ eşlenmez, processor görmez
-}
-```
+## Park edilenler (tasarlandı, henüz yayınlanmadı)
 
-Bu, constructor-only analizi kasıtlı olarak sınırlı tutan bir tasarım kararıdır. Mutable property eşleştirme sonraki bir round'da değerlendirilebilir.
+- **Arrow birikimli sınır** — `toXAccumulated(): IorNel<MappingError, X>`: hızlı düşmek
+  yerine *bütün* hataları topla. Uçtan uca tasarlandı; bir sonraki sürümde.
+- **Mapping başına özet sink olayı** ("100 elemandan 3'ü düştü") ve listener kısma rehberi.
+- **`OnAbsent` eleman politikası** (null kaynak elemanını hata say) — talep gelirse.
+- **Map anahtarlarında çakışmada-katı seçeneği** (şimdiki: son giren kazanır +
+  `DuplicateKey` raporu).
+- **`converters-format` add-on'u** (locale duyarlı sayı formatlama) — bu arada
+  [parametreli converter reçetesi](../tip-donusumu/ozel-converter.md) kullanıcı tarafında
+  karşılıyor.
 
-### Enum'lar MappableEnum Implement Etmek Zorundadır
+Sizi engelleyen bir sınırlama mı buldunuz?
+[Issue açın](https://github.com/sahsenvar/KMapper/issues) — park edilenler gerçek kullanım
+senaryolarıyla parktan çıkar.
 
-Mapping hedefinde ya da kaynağında bir enum türü kullanılıyorsa o enum `MappableEnum<W>` implement etmelidir. Üçüncü taraf enum'lar için `@UseMapTypeConverter` escape hatch'i mevcuttur; bkz. [MappableEnum](../enum/mappable-enum.md).
-
-### sealed class Mapping Yok
-
-`sealed class` ve `sealed interface` hiyerarşileri henüz desteklenmemektedir. Her alt-sınıfı ayrı ayrı `@MapTo` ile işaretleyebilirsiniz; ancak sealed dispatch kodu otomatik üretilmez.
-
-### Map\<K, V\> Koleksiyonu Yok
-
-`Map<K, V>` alanları doğrudan desteklenmez. Geçici çözüm olarak alan bazlı `@UseMapTypeConverter` ile dönüşümü kendiniz yazabilirsiniz.
-
-## Yol Haritası
-
-Aşağıdaki özellikler gelecekteki bir round'a planlanmıştır; **henüz implement edilmemiştir**.
-
-### sealed class Mapping
-
-`sealed class` / `sealed interface` hiyerarşilerini tip güvenli biçimde eşleştirme. Her alt-sınıf ayrı `@MapTo`'ya ihtiyaç duymadan otomatik dispatch üretimi.
-
-### Map\<K, V\> Koleksiyon Mapping
-
-`Map` tipindeki alanların eleman bazlı dönüştürülmesi.
-
-### converters-arrow — Nel Desteği
-
-`converters-arrow` artifact'ının gerçek dolumu: `List<T>` → `NonEmptyList<T>` converter'ları. Bu noktada `EmptyCollection` hata tipi de geri gelebilir.
-
-### verifyEnums() — Enum Çakışma Kontrolü
-
-Aynı `wireValue` değerini paylaşan iki enum sabitini tespit eden bir yardımcı. KSP constructor argümanlarının runtime değerlerini güvenilir okuyamadığından bu kontrol derleme zamanında yapılamaz; bunun yerine debug/test başlangıcında çalıştırılan opsiyonel bir doğrulama fonksiyonu olarak planlanmaktadır:
-
-```kotlin
-// HENÜZ YOK — yol haritasında
-KMapper.verifyEnums()  // tüm kayıtlı enum'larda wireValue benzersizliğini kontrol eder
-```
-
-### kmapper.verbose KSP Seçeneği
-
-Processor'ın hangi mapper'ları ve eşleşmeleri ürettiğini build zamanında `logger.info`'a yazan bir KSP option:
-
-```kotlin
-// HENÜZ YOK — yol haritasında
-ksp {
-    arg("kmapper.verbose", "true")
-}
-```
-
----
-
-Sonraki adım: [Sık Sorulan Sorular](./sss.md)
+> Sıradaki: **[SSS →](sss.md)**

@@ -1,86 +1,67 @@
-# Mimari — Modüller ve KSP Pipeline
+# Mimari: Nasıl Çalışır
 
-Bu sayfa KMapper'in iç tasarımını kavramsal düzeyde açıklar. Kütüphaneyi kullanmak için buradaki detayları bilmeniz gerekmez; ancak nasıl çalıştığını anlamak sorun gidermeyi ve katkı sağlamayı kolaylaştırır.
+Kaputun altına bir bakış — build'leri debug etmek, üretilen kodu incelemek ve production'da
+ne koştuğuna güvenmek için.
 
-## Modül Bölünmesi
-
-KMapper dört ayrı artifact'tan oluşur:
-
-```
-com.sahsenvar.kmapper
-├── core              (KMP)
-│   ├── Anotasyonlar: @MapTo, @MapFrom, @FieldMap, @MapDefaultValue,
-│   │                 @UseMapTypeConverter, @Ignore, @KMapperConfig, @CollectionWrapper
-│   ├── MappableEnum<W>, MappingException (sealed)
-│   ├── MapTypeConverter (abstract), TypeConverterRegistry (expect/actual)
-│   ├── Built-in primitive converter'lar (str↔int/long/double/float/bool, int↔long, …)
-│   └── KMapper, MappingListener, LoggingMappingListener
-│
-├── processor         (JVM-only, KSP)
-│   └── MappingProcessor + FieldAnalyzer → TypeMatcher → MappingCodeGenerator pipeline'ı
-│
-├── converters-immutable (KMP, opsiyonel)
-│   └── List/Set → PersistentList/ImmutableList/ImmutableSet wrapper'ları
-│       (kotlinx.collections.immutable bağımlılığı yalnızca burada)
-│
-└── converters-arrow  (KMP, opsiyonel, bu sürümde boş slot)
-    └── Nel converter'ları için ayrılmış (sonraki tur)
-```
-
-**Tasarım kararları:**
-
-- Anotasyonlar ve runtime tek `core` artifact'ında bir arada tutulur (MapStruct yaklaşımı). İleride ayrıştırmak mekanik bir işlemdir; şimdilik YAGNI.
-- `kotlinx.collections.immutable` `core`'dan çıkarılmıştır — yalnızca `converters-immutable`'dadır. `core`'u kullanan projeler bu bağımlılığı almak zorunda kalmaz.
-- `processor` JVM-only'dir: KSP sadece JVM'de çalışır. Üretilen kod KMP'dir.
-
-## KSP Pipeline — Derleme Zamanı
-
-KMapper hiçbir zaman çalışma zamanı reflection kullanmaz. Tüm mapping kodu derleme sırasında üretilir:
+## Boru hattı
 
 ```
-@MapTo ile anotasyonlu kaynak sınıf
-        ↓
-  FieldAnalyzer
-  • Constructor val alanlarını inceler
-  • Her alan için strateji belirler:
-    direct / type-conversion / nested / collection / wrapped-collection / enum
-        ↓
-  TypeMatcher
-  • @KMapperConfig converter listesini çözer
-  • Built-in primitive dönüşümleri kontrol eder
-  • Eksik converter → compile error
-        ↓
-  Validator
-  • Döngü tespiti (koşulsuz döngü → compile error)
-  • Enum MappableEnum kontrolü
-  • W tip uyumu kontrolü
-        ↓
-  MappingCodeGenerator (KotlinPoet)
-  • {Source}Mappers.kt extension dosyasını üretir
-  • Null-check'leri yazar (RequiredFieldMissing)
-  • Converter çağrılarını TypeConversionFailed ile sarar
-  • Listener guard bloklarını ekler
-        ↓
-  build/generated/ksp/…/{Source}Mappers.kt
+annotation'lı modelleriniz
+   └─ KSP2 (kmapper-compiler)
+        ├─ analiz: alanları eşle, converter/wrapper çözümle, direktifleri denetle
+        ├─ ret:    MissingConverter / UnsupportedConversion / yapısal hatalar -> build düşer
+        └─ üretim: toXResult() extension fonksiyonları (düz Kotlin, KotlinPoet)
+              └─ elle yazılmış kod gibi derlenir; çalışma zamanında kmapper-core seam'lerini çağırır
 ```
 
-Processor, analiz ettiği her `@MapTo`/`@MapFrom` anotasyonlu sınıf için bir `.kt` dosyası üretir. Dosyalar normal Kotlin kaynak kodu gibi derlenir; reflection yoktur.
+Tiplerle ilgili her şey **derleme zamanında** kararlaştırılır: hangi alanı hangi converter
+işler, her kaçış ladder'ın hangi basamağını sağlar, hangi validator'lar ateşler. Sıcak yolda
+çalışma zamanı registry araması yok, hiçbir yerde reflection yok.
 
-## Neden Reflection Yok?
+## Üretilen kod neye benziyor?
 
-KSP yaklaşımının temel avantajı tam derleme zamanı güvencesidir:
+```kotlin
+public fun UserResponse.toUserResult(): Result<User> = runCatching {
+    if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toUserResult, User::class) }
+    val result = User(
+        id = id,
+        joined = joined.convertOrFail("joined", "kotlin.String", "kotlinx.datetime.LocalDate") {
+            LocalDateStringConverter.convertFrom(it)
+        },
+    )
+    if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toUserResult, result) }
+    result
+}
+```
 
-- Eksik converter → derleme hatası, runtime surprise değil.
-- Tip uyumsuzluğu → derleme hatası.
-- Döngüsel bağımlılık → derleme hatası.
-- iOS/Native dahil tüm KMP hedeflerinde çalışır (reflection kısıtlaması yoktur).
+Dikkate değer noktalar:
 
-## Platform Uyumluluğu
+- **Converter'lar object olarak çağrılır** (`LocalDateStringConverter.convertFrom(...)`),
+  asla geçici cast olarak gömülmez — kullanıcı ve built-in converter'ları aynı raylarda koşar.
+- **Seam'ler** (`convertOrFail`, `convertOrNull`, `convertEachOrSkip`, …)
+  [ladder](../temel-kullanim/null-safety.md)'ı gerçekleyen public `kmapper-core`
+  fonksiyonlarıdır — [elle yazılmış mapper'lara](../baslarken/ornekler.md) açık olan
+  fonksiyonların aynısı.
+- **Yollar string literal'dir** — R8/ProGuard'a dayanıklı hata mesajları.
+- Gözlemlenebilirlik kancaları kullanılmadığında tek bir `hasListeners` kontrolünün arkasında
+  kaybolur.
 
-`core` KMP olduğundan üretilen extension fonksiyonlar Android, iOS (Kotlin/Native) ve JVM hedeflerinde derlenir. `processor` JVM-only'dir ama yalnızca build araçları tarafından çalıştırılır; dağıtılan koda dahil değildir.
+## Üretilen kodu incelemek
 
-`TypeConverterRegistry` `expect/actual` mekanizmasıyla platform başına ayrı implementasyon alır; dışarıya açık API aynıdır.
+```
+build/generated/ksp/<hedef>/kotlin/…
+```
 
----
+Üretilen dosyalar sıradan Kotlin'dir — okunur, debug edilir, breakpoint konur. Mapping
+davranışı sizi şaşırttığında önce üretilen fonksiyonu okuyun; soruyu çoğunlukla o yanıtlar.
 
-Sonraki adım: [Anotasyon Referansı](../referans/anotasyonlar.md)
+## Üretecin koruduğu tasarım değişmezleri
+
+- Bir alan ya temiz eşlenir ya da build sorunu adıyla söyler — sessiz atlama yok.
+- *Siz* converter'ını yazmadıkça kayıplı dönüşüm yoktur
+  ([ret politikası](../tip-donusumu/builtin.md)).
+- Emilen her hatanın bir sink olayı, sert her hatanın bir yolu vardır.
+- `CancellationException` her zaman yeniden fırlatılır — mapping'ler coroutine iptalini asla
+  yutmaz.
+
+> Sıradaki: **[Annotation Referansı →](../referans/anotasyonlar.md)**

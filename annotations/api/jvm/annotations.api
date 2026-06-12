@@ -1,0 +1,68 @@
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/CollectionWrapper : java/lang/annotation/Annotation {
+	public abstract fun forType ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/ConvertFrom : java/lang/annotation/Annotation {
+	public abstract fun onFail ()Lcom/sahsenvar/kmapper/annotations/OnFail;
+	public abstract fun use ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/ConvertTo : java/lang/annotation/Annotation {
+	public abstract fun onFail ()Lcom/sahsenvar/kmapper/annotations/OnFail;
+	public abstract fun use ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/ConvertWith : java/lang/annotation/Annotation {
+	public abstract fun onFail ()Lcom/sahsenvar/kmapper/annotations/OnFail;
+	public abstract fun use ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/FieldMap : java/lang/annotation/Annotation {
+	public abstract fun fieldName ()Ljava/lang/String;
+	public abstract fun targetClass ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/FieldMap$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Lcom/sahsenvar/kmapper/annotations/FieldMap;
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/IgnoreDefaultValue : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/IgnoreMap : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/KMapperConfig : java/lang/annotation/Annotation {
+	public abstract fun converters ()[Ljava/lang/Class;
+	public abstract fun wrappers ()[Ljava/lang/Class;
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapFrom : java/lang/annotation/Annotation {
+	public abstract fun source ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapFrom$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Lcom/sahsenvar/kmapper/annotations/MapFrom;
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapTo : java/lang/annotation/Annotation {
+	public abstract fun target ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapTo$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Lcom/sahsenvar/kmapper/annotations/MapTo;
+}
+
+public final class com/sahsenvar/kmapper/annotations/OnFail : java/lang/Enum {
+	public static final field Auto Lcom/sahsenvar/kmapper/annotations/OnFail;
+	public static final field Skip Lcom/sahsenvar/kmapper/annotations/OnFail;
+	public static final field Throw Lcom/sahsenvar/kmapper/annotations/OnFail;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/sahsenvar/kmapper/annotations/OnFail;
+	public static fun values ()[Lcom/sahsenvar/kmapper/annotations/OnFail;
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/Validate : java/lang/annotation/Annotation {
+	public abstract fun validators ()[Ljava/lang/Class;
+}
+

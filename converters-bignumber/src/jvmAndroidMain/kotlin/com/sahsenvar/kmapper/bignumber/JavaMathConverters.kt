@@ -1,6 +1,7 @@
 package com.sahsenvar.kmapper.bignumber
 
 import com.sahsenvar.kmapper.converter.MapTypeConverter
+import com.sahsenvar.kmapper.converter.UnsupportedDirection
 import java.math.BigDecimal as JBigDecimal
 import java.math.BigInteger as JBigInteger
 
@@ -11,35 +12,38 @@ import java.math.BigInteger as JBigInteger
 
 /** ISO decimal [String] ↔ [java.math.BigDecimal]. */
 object StringJavaBigDecimalConverter : MapTypeConverter<String, JBigDecimal>(String::class, JBigDecimal::class) {
-    override fun convertToNonNull(value: String): JBigDecimal = JBigDecimal(value)
+    override fun convertTo(source: String): JBigDecimal = JBigDecimal(source)
 
-    override fun convertFromNonNull(value: JBigDecimal): String = value.toPlainString()
+    override fun convertFrom(target: JBigDecimal): String = target.toPlainString()
 }
 
 /** Decimal [String] ↔ [java.math.BigInteger]. */
 object StringJavaBigIntegerConverter : MapTypeConverter<String, JBigInteger>(String::class, JBigInteger::class) {
-    override fun convertToNonNull(value: String): JBigInteger = JBigInteger(value)
+    override fun convertTo(source: String): JBigInteger = JBigInteger(source)
 
-    override fun convertFromNonNull(value: JBigInteger): String = value.toString()
+    override fun convertFrom(target: JBigInteger): String = target.toString()
 }
 
-/** [Double] ↔ [java.math.BigDecimal]. Uses valueOf for reliable decimal representation. */
+/** [Double] -> [java.math.BigDecimal] via valueOf (widening only; lossy reverse unsupported). */
 object DoubleJavaBigDecimalConverter : MapTypeConverter<Double, JBigDecimal>(Double::class, JBigDecimal::class) {
-    override fun convertToNonNull(value: Double): JBigDecimal = JBigDecimal.valueOf(value)
+    override fun convertTo(source: Double): JBigDecimal = JBigDecimal.valueOf(source)
 
-    override fun convertFromNonNull(value: JBigDecimal): Double = value.toDouble()
+    @UnsupportedDirection("BigDecimal -> Double loses precision (binary floating point cannot represent most decimals); convert explicitly if intended.")
+    override fun convertFrom(target: JBigDecimal): Double = unsupported()
 }
 
-/** [Long] ↔ [java.math.BigInteger]. */
+/** [Long] -> [java.math.BigInteger] (widening only; overflowing reverse unsupported). */
 object LongJavaBigIntegerConverter : MapTypeConverter<Long, JBigInteger>(Long::class, JBigInteger::class) {
-    override fun convertToNonNull(value: Long): JBigInteger = JBigInteger.valueOf(value)
+    override fun convertTo(source: Long): JBigInteger = JBigInteger.valueOf(source)
 
-    override fun convertFromNonNull(value: JBigInteger): Long = value.toLong()
+    @UnsupportedDirection("BigInteger -> Long can overflow and previously truncated SILENTLY; write a custom converter if your domain guarantees the range.")
+    override fun convertFrom(target: JBigInteger): Long = unsupported()
 }
 
-/** [java.math.BigInteger] ↔ [java.math.BigDecimal]. Lossless integer-to-decimal promotion. */
+/** [java.math.BigInteger] -> [java.math.BigDecimal]: lossless promotion (fraction-truncating reverse unsupported). */
 object JavaBigIntegerBigDecimalConverter : MapTypeConverter<JBigInteger, JBigDecimal>(JBigInteger::class, JBigDecimal::class) {
-    override fun convertToNonNull(value: JBigInteger): JBigDecimal = JBigDecimal(value)
+    override fun convertTo(source: JBigInteger): JBigDecimal = JBigDecimal(source)
 
-    override fun convertFromNonNull(value: JBigDecimal): JBigInteger = value.toBigInteger()
+    @UnsupportedDirection("BigDecimal -> BigInteger truncates the fraction; decide floor/round/ceil explicitly.")
+    override fun convertFrom(target: JBigDecimal): JBigInteger = unsupported()
 }

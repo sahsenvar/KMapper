@@ -43,7 +43,9 @@ class EnumMappingTest {
     }
 
     /**
-     * Nullable wire field → nullable enum field: null passthrough, no UnknownEnumValue on null.
+     * Nullable wire field → nullable enum field: the entries lookup rides the convertOrNull
+     * seam, so null passes through silently and an unknown wire value absorbs to null
+     * (reported) instead of failing the mapping.
      */
     @Test
     fun `nullable string-backed MappableEnum wire to nullable enum`() {
@@ -67,9 +69,9 @@ class EnumMappingTest {
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("OrderRemoteMappers.kt")
-        // Nullable source: uses ?.let { ... } pattern
-        assert(gen.contains("let") || gen.contains("?.")) {
-            "Expected null-safe pattern in:\n$gen"
+        // Nullable target: the lookup rides the null-absorbing seam
+        assert(gen.contains("convertOrNull(\"status\"")) {
+            "Expected convertOrNull seam for the nullable enum target in:\n$gen"
         }
         assert(gen.contains("entries.firstOrNull")) {
             "Expected entries.firstOrNull in:\n$gen"

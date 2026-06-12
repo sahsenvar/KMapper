@@ -7,6 +7,6 @@
 
 // Library unique name: <io.github.sahsenvar:converters-uri>
 final object com.sahsenvar.kmapper.uri/NsUrlStringConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, platform.Foundation/NSURL> { // com.sahsenvar.kmapper.uri/NsUrlStringConverter|null[0]
-    final fun convertFromNonNull(platform.Foundation/NSURL): kotlin/String // com.sahsenvar.kmapper.uri/NsUrlStringConverter.convertFromNonNull|convertFromNonNull(platform.Foundation.NSURL){}[0]
-    final fun convertToNonNull(kotlin/String): platform.Foundation/NSURL // com.sahsenvar.kmapper.uri/NsUrlStringConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+    final fun convertFrom(platform.Foundation/NSURL): kotlin/String // com.sahsenvar.kmapper.uri/NsUrlStringConverter.convertFrom|convertFrom(platform.Foundation.NSURL){}[0]
+    final fun convertTo(kotlin/String): platform.Foundation/NSURL // com.sahsenvar.kmapper.uri/NsUrlStringConverter.convertTo|convertTo(kotlin.String){}[0]
 }

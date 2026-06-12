@@ -1,129 +1,73 @@
-# Hata Yönetimi — MappingException
+# Result Sınırı ve MappingException
 
-KMapper'in ürettiği tüm kodlar tek bir exception hiyerarşisi kullanır: `com.sahsenvar.kmapper.MappingException`. Feature katmanınız bu exception'ları kendi domain hatalarına dönüştürür — kütüphane tiplerine doğrudan bağımlı kalmazsınız.
+KMapper'ın hata sözleşmesi tek cümlede: **çalışma zamanında başarısız olabilecek her şey,
+yol taşıyan bir `MappingException` içeren `Result` hatası olarak gelir; daha erken
+bilinebilecek her şey ise build'i düşürür.**
 
-## Hiyerarşi
+## Result sınırı
 
-```kotlin
-sealed class MappingException(message: String, cause: Throwable? = null)
-    : RuntimeException(message, cause) {
-
-    class RequiredFieldMissing(val field: String)
-        : MappingException("Required field missing: $field")
-
-    class TypeConversionFailed(val from: String, val to: String, cause: Throwable)
-        : MappingException("Cannot convert $from -> $to", cause)
-
-    class UnknownEnumValue(val enum: String, val value: Any)
-        : MappingException("Unknown wire value '$value' for enum $enum")
-}
-```
-
-### RequiredFieldMissing
-
-Nullable bir kaynak alan, non-null bir hedef alana eşleniyorsa ve değer `null` ise üretilen null-check fırlatır:
+Üretilen her mapper `Result<T>` döner:
 
 ```kotlin
-// kaynak: String?  →  hedef: String (non-null)
-id = id ?: throw MappingException.RequiredFieldMissing("id")
+val result: Result<User> = response.toUserResult()
 ```
 
-`@MapDefaultValue` ile varsayılan değer verirseniz bu exception yerine default expression kullanılır. Bkz. [Null-Safety](../temel-kullanim/null-safety.md).
-
-### TypeConversionFailed
-
-Converter (`MapTypeConverter`) çalışma zamanında bir exception fırlatırsa, üretilen kod onu `TypeConversionFailed`'e sarar. Ham platform exception sızmaz:
+Hata politikasını *çağrı noktasında*, stdlib araçlarıyla seçersiniz:
 
 ```kotlin
-// üretilen (kavramsal):
-startsAt = convertOrFail("String", "Instant") {
-    IsoStringToInstantConverter.convertToNonNull(startsAt)
-}
-// "abc" gibi geçersiz bir değer gelirse:
-// TypeConversionFailed(from="String", to="Instant", cause=DateTimeParseException)
+// bozuk-veride-çök (testler, debug build'leri, gerçekten zorunlu veri):
+val user = result.getOrThrow()
+
+// geri düşüş:
+val user = result.getOrElse { User.GUEST }
+
+// dallanma:
+result.fold(
+    onSuccess = { render(it) },
+    onFailure = { e -> showError(); log(e) },
+)
 ```
 
-`cause` alanı orijinal exception'ı taşır; loglama için kullanabilirsiniz.
+Pratik bir kalıp: debug'da `getOrThrow()`, release'te `getOrElse` + telemetri — bozuk wire
+verisi gece build'ini çökertir, kullanıcıyı değil.
 
-### UnknownEnumValue
+## Exception taksonomisi
 
-Wire kaynağı, enum tanımında bulunmayan bir değer gönderdiğinde `MappableEnum` forward yolu fırlatır:
+Bütün hatalar sealed `MappingException`'ın alt tipleridir; her biri mapping kökünden **alan
+yolu** taşır (`customer.address.zipCode`, `items[3].price`):
 
-```kotlin
-// wire'dan "UNKNOWN_STATUS" geldi, ama OrderStatus'te bu wireValue yok:
-MappingException.UnknownEnumValue(enum = "OrderStatus", value = "UNKNOWN_STATUS")
-```
+| Tip | Anlamı |
+|-----|--------|
+| `RequiredFieldMissing` | eksik değer, hedefte kaçış yoktu ([ladder](../temel-kullanim/null-safety.md) tabanı) |
+| `TypeConversionFailed` | converter fırlattı — orijinal nedeni taşır |
+| `UnknownEnumValue` | wire değeri hiçbir [`MappableEnum`](../enum/mappable-enum.md) sabitine uymadı |
+| `EmptyCollection` | boş-olamaz bir kap ([NonEmptyList](../tip-donusumu/arrow.md)) boş wire listesi aldı |
+| `ValidationFailed` | bir [`@Validate`](../dogrulama/validate.md) kuralı değeri reddetti |
+| `UnsupportedConversion` | reddedilmiş bir [`@UnsupportedDirection`](../tip-donusumu/ozel-converter.md) çalışma zamanında çağrıldı (elle yazılmış kod yolları; üretilen kod derlemede reddeder) |
 
-Bkz. [MappableEnum](../enum/mappable-enum.md).
+Tip sealed olduğundan hata türleri üzerinde exhaustive bir `when` derlenir — ve gelecekteki
+bir sürüm tür eklerse uyarı verir.
 
-## Domain Hatasına Dönüştürme
+Yollar derleme zamanı string literal'i olarak üretilir: **R8/ProGuard'dan** aynen geçer.
 
-Feature katmanınızda bir `Throwable.toX()` extension'ı yazarak `MappingException`'ı kendi hiyerarşinize çevirin. `when` bloğu ile sealed hiyerarşinin tüm dalları işlenir:
+## Çalışma zamanına hiç ulaşmayanlar
 
-```kotlin
-// feature/order/data/mapper/OrderMapper.kt
-fun Throwable.toOrderError(): OrderError = when (this) {
-    is MappingException.RequiredFieldMissing ->
-        OrderError.DataCorruption("Zorunlu alan eksik: $field")
-    is MappingException.TypeConversionFailed ->
-        OrderError.DataCorruption("Dönüştürme başarısız: $from → $to", cause)
-    is MappingException.UnknownEnumValue ->
-        OrderError.InvalidStatus("Bilinmeyen durum değeri: $value")
-    is RemoteError.Timeout ->
-        OrderError.NetworkTimeout
-    else ->
-        OrderError.Unknown(message, this)
-}
-```
+Bunlar tasarım gereği *build hatasıdır*:
 
-Repository katmanınızdaki `catch` bloğunda çağırın:
+- **`MissingConverter`** — bir alan çiftinin hiçbir yerde converter'ı yok
+  (`Money -> String has no registered converter. Add one via @ConvertWith / @KMapperConfig…`)
+- **`UnsupportedConversion`** — ihtiyaç duyulan yön beyanla reddedilmiş
+  (`Long -> Int conversion is unsupported! …` yazarın gerekçesiyle)
+- yapısal sorunlar: eşlenemeyen alan, wrapper imza ihlali, skalerde `OnFail.Skip`,
+  yalnızca-`OrNull` override'ı, …
 
-```kotlin
-override fun getOrder(id: String): Flow<Order> = flow {
-    val dto = remoteDataSource.fetchOrder(id)
-    emit(dto.toOrder())           // toOrder() içinde üretilen mapper çalışır
-}.catch { exception ->
-    throw exception.toOrderError()
-}
-```
+Derleme mesajları alanı, çifti ve çözümü söyler — sonradan akla gelen değil, API yüzeyinin
+parçasıdırlar.
 
-## Derleme Zamanı Güvenlik Garantileri
+## Sink ile ilişkisi
 
-`MappingException`'ların büyük çoğunluğu **derleme zamanında** önlenir:
+`MappingException` **sert hata** kanalıdır. Beyan edilmiş bir kaçışın *emdiği* hatalar asla
+fırlamaz — onlar [degradation sink](../gozlemleme/listener.md)'e gider. Aynı taksonomi
+(`AbsorbedConversionError`, fırlayacak olan exception'ı neden olarak taşır), farklı şiddet.
 
-| Durum | Davranış |
-|---|---|
-| Gereken converter ne global listede ne field'da | **Compile error** |
-| Enum `MappableEnum` implement etmiyor, `@UseMapTypeConverter` da yok | **Compile error** |
-| Koşulsuz mapping döngüsü (A→B→A, hepsi non-null) | **Compile error** |
-| Nullable → non-null, `@MapDefaultValue` yok | Üretilen `RequiredFieldMissing` (runtime) |
-| Bilinmeyen wire enum değeri | Üretilen `UnknownEnumValue` (runtime) |
-| Converter runtime exception fırlatırsa | Üretilen `TypeConversionFailed` (runtime) |
-
-### Koşulsuz Döngü — Compile Error
-
-Processor `@MapTo`/`@MapFrom` tip grafiğini analiz eder. Halkadaki tüm kenarlar non-null ve non-collection alandan geçiyorsa nesne inşa edilemez; derleme hatası verilir:
-
-```kotlin
-// HATA — garantili sonsuz döngü
-@MapTo(BDomain::class) data class A(val b: B)
-@MapTo(ADomain::class) data class B(val a: A)
-// e: Mapping cycle detected: A -> B -> A. This would cause infinite construction at runtime.
-//    Break the cycle with a nullable field, a collection, or @Ignore.
-```
-
-Döngü en az bir nullable ya da collection alandan geçiyorsa (ağaç, opsiyonel geri-referans) izin verilir:
-
-```kotlin
-// OK — koşullu; nullable parent
-@MapTo(CategoryDomain::class)
-data class Category(val parent: Category?)
-
-// OK — koşullu; collection
-@MapTo(NodeDomain::class)
-data class Node(val children: List<Node>)
-```
-
----
-
-Sonraki adım: [Gözlemleme — MappingListener](../gozlemleme/listener.md)
+> Sıradaki: **[Gözlemlenebilirlik →](../gozlemleme/listener.md)**

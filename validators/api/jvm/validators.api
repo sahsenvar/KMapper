@@ -1,11 +1,83 @@
+public final class com/sahsenvar/kmapper/validators/Base64Validator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/Base64Validator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validators/CreditCardNumberValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/CreditCardNumberValidator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
 public final class com/sahsenvar/kmapper/validators/EmailValidator : com/sahsenvar/kmapper/validation/Validator {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/EmailValidator;
 	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
 	public fun validate (Ljava/lang/String;)Ljava/lang/String;
 }
 
+public final class com/sahsenvar/kmapper/validators/HexStringValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/HexStringValidator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validators/HostnameValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/HostnameValidator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validators/Ipv4Validator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/Ipv4Validator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validators/Ipv6Validator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/Ipv6Validator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validators/LatitudeValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/LatitudeValidator;
+	public fun validate (D)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validators/LongitudeValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/LongitudeValidator;
+	public fun validate (D)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validators/PhoneE164Validator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/PhoneE164Validator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validators/PortNumberValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/PortNumberValidator;
+	public fun validate (I)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validators/SlugValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/SlugValidator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
 public final class com/sahsenvar/kmapper/validators/UrlValidator : com/sahsenvar/kmapper/validation/Validator {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/UrlValidator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validators/UuidStringValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validators/UuidStringValidator;
 	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
 	public fun validate (Ljava/lang/String;)Ljava/lang/String;
 }

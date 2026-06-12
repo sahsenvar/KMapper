@@ -10,7 +10,8 @@ import kotlin.test.assertEquals
 class CollectionNestedMappingTest {
     /**
      * Non-null List<NestedSource> → List<NestedDomain> where NestedSource is itself @MapTo-mapped.
-     * Generated code must use `.map { it.toTagDomain() }` (no safe-call `?.map`).
+     * Generated code must ride the element seam without a safe call:
+     * `tags.convertEachOrSkip("tags", "TagRemote", "TagDomain") { it.toTagDomainResult().getOrThrow() }`.
      */
     @Test
     fun `non-null list of mapped elements uses map not safe-call map`() {
@@ -33,23 +34,23 @@ class CollectionNestedMappingTest {
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
-        // Must use non-safe map (no ?.map), since tags is non-nullable
-        assert(gen.contains(".map·{") || gen.contains(".map {")) {
-            "Expected .map { (non-safe-call) in generated code:\n$gen"
+        // Must ride the skip-rung element seam without a safe call, since tags is non-nullable
+        assert(gen.contains("tags.convertEachOrSkip(\"tags\", \"TagRemote\", \"TagDomain\")")) {
+            "Expected non-safe-call convertEachOrSkip in generated code:\n$gen"
         }
-        // Must NOT use safe-call map for non-null source
-        assert(!gen.contains("?.map")) {
-            "Generated code must NOT use ?.map for non-null List source:\n$gen"
+        // Must NOT use a safe-call chain for a non-null source
+        assert(!gen.contains("?.convertEachOrSkip")) {
+            "Generated code must NOT use ?.convertEachOrSkip for non-null List source:\n$gen"
         }
-        // Must call the element mapper
-        assert(gen.contains("toTagDomain()")) {
-            "Expected toTagDomain() element mapper call:\n$gen"
+        // Must call the element mapper through the Result boundary
+        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
+            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
         }
     }
 
     /**
-     * Nullable List<NestedSource>? → List<NestedDomain>?: null passthrough via ?.map.
-     * Generated code must use `?.map { it.toTagDomain() }`.
+     * Nullable List<NestedSource>? → List<NestedDomain>?: null passthrough via a safe-called
+     * element seam chain — `tags?.convertEachOrSkip(...) { it.toTagDomainResult().getOrThrow() }`.
      */
     @Test
     fun `nullable list of mapped elements uses safe-call map`() {
@@ -72,12 +73,12 @@ class CollectionNestedMappingTest {
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
-        // Nullable source must use ?.map
-        assert(gen.contains("?.map")) {
-            "Expected ?.map for nullable List source:\n$gen"
+        // Nullable source must safe-call into the element seam
+        assert(gen.contains("tags?.convertEachOrSkip(")) {
+            "Expected tags?.convertEachOrSkip( for nullable List source:\n$gen"
         }
-        assert(gen.contains("toTagDomain()")) {
-            "Expected toTagDomain() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
+            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
         }
     }
 }

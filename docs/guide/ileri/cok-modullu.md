@@ -1,120 +1,45 @@
 # Çok Modüllü Projeler
 
-KMapper, her modülü bağımsız bir KSP çalıştırmasıyla derler. Bu sayfa scalar converter'lar ve koleksiyon wrapper'larının çok modüllü bir projede nasıl yapılandırıldığını açıklar.
+Pratik kural: **compiler, mapping'in tanımlandığı yere; runtime, üretilen kodun çağrıldığı
+yere gider.**
 
-## @KMapperConfig — Modül Başına Konum
+## Kime ne lazım?
 
-Her mapper üreten modül kendi `@KMapperConfig` nesnesini tanımlar. Processor yalnızca işlediği modülün içindeki `@KMapperConfig`'i görür; başka bir modüldeki config nesnesini otomatik olarak devralamaz.
+| Modül | İhtiyacı |
+|-------|----------|
+| `@MapTo`/`@MapFrom` modelleri tanımlıyor | `kmapper-annotations` + `ksp(kmapper-compiler)` |
+| yalnızca `toXResult()` *çağırıyor* | `kmapper-core` (çoğunlukla transitif gelir) |
+| yalnızca seam'leri/validator'ları elle kullanıyor | `kmapper-core` |
+
+Tipik katmanlı bir uygulama:
+
+```
+:data       -> wire modelleri + @MapTo + kendi @KMapperConfig'i; KSP çalışır
+:domain     -> düz modeller; yalnızca kmapper-core (transitif)
+:app        -> üretilen mapper'ları çağırır; KSP yok
+```
+
+## Modüller arası model çiftleri çalışır
+
+`:data`'daki `@MapTo(DomainUser::class)`, `:domain`'deki bir sınıfı gösterebilir — KSP
+classpath sembollerini, constructor default'ları dahil çözümler
+([ladder](../temel-kullanim/null-safety.md) modül sınırlarının ötesinde çalışır).
+
+## Tanımlayan modül başına bir @KMapperConfig
+
+[Kayıt](../tip-donusumu/kmapperconfig.md) derleme modülü başınadır. Modüller birbirinin
+config'ini miras almaz; mapping tanımlayan her modüle kendi config'ini verin (converter
+*object'lerini* aralarında paylaşmak serbest — onlar sıradan sınıflar):
 
 ```kotlin
-// feature/order/data/src/commonMain/.../OrderMapperConfig.kt
-@KMapperConfig(
-    converters = [IsoStringToInstantConverter::class],
-    wrappers   = [PersistentListWrapper::class],
-)
-object OrderMapperConfig
+// :data/src/…/DataMapperConfig.kt
+@KMapperConfig(converters = [MoneyStringConverter::class])
+object DataMapperConfig
 ```
 
-```kotlin
-// feature/product/data/src/commonMain/.../ProductMapperConfig.kt
-@KMapperConfig(
-    converters = [IsoStringToInstantConverter::class],
-)
-object ProductMapperConfig
-```
+## KMP bağlama hatırlatması
 
-Her modül ihtiyacı olan converter ve wrapper'ları kendi config'inde listeler. Tekrar gibi görünse de bu kasıtlı bir tasarım kararıdır: her modülün bağımlılık grafiği derleme zamanında açıkça görünür olur.
+Multiplatform bir modülde işlemci **hedef başına** kaydedilir (`kspCommonMainMetadata`,
+`kspJvm`, `kspIosArm64`, …) — tam snippet için [Kurulum](../baslarken/kurulum.md).
 
-## Modüller Arası @CollectionWrapper Kullanımı
-
-`converters-immutable` veya `converters-arrow` gibi bir add-on modülü `@CollectionWrapper` anotasyonlu `object`'ler tanımlar:
-
-```kotlin
-// converters-immutable modülü
-@CollectionWrapper(forType = PersistentList::class)
-object PersistentListWrapper {
-    fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
-}
-```
-
-Tüketici modülün processor'ı bu wrapper'ları **otomatik keşfetmez**. Bunun yerine tüketici modül, kullanmak istediği wrapper'ları `@KMapperConfig.wrappers` listesinde açıkça belirtir:
-
-```kotlin
-// feature/order/data/src/commonMain/.../OrderMapperConfig.kt
-import com.sahsenvar.kmapper.annotations.KMapperConfig
-import com.sahsenvar.kmapper.immutable.PersistentListWrapper
-import com.sahsenvar.kmapper.arrow.NonEmptyListWrapper
-
-@KMapperConfig(
-    converters = [IsoStringToInstantConverter::class],
-    wrappers   = [PersistentListWrapper::class, NonEmptyListWrapper::class],
-)
-object OrderMapperConfig
-```
-
-### Neden Açık Listeleme?
-
-KSP2'nin per-module (modül başına) yalıtılmış çalıştırması nedeniyle `getSymbolsWithAnnotation` ve `getDeclarationsFromPackage` fonksiyonları **bağımlılık artifact'larındaki** sembolleri göremez — yalnızca o anki derleme birimini inceler. Bu, özellikle KMP'nin `kspCommonMainMetadata` çalıştırmasında ve iOS/Native hedeflerinde geçerlidir.
-
-Çözüm: `@KMapperConfig(wrappers = [...])` listesi **tüketici modülün kendi KSP çalıştırmasında** okunur (in-module, her zaman görünür). Processor bu listeden her wrapper'ın `@CollectionWrapper.forType` değerini bağımlılık artifact'larından çözer — bu standart bir tür+anotasyon çözümlemesidir ve JVM, Android, iOS/Native dahil tüm platformlarda çalışır.
-
-### KMP Tüketici İçin KSP Yapılandırması
-
-KMP modüllerinde processor'ın her hedefe ayrı ayrı uygulanması gerekir:
-
-```kotlin
-// feature/order/data/build.gradle.kts
-dependencies {
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:<v>")
-    add("kspJvm", "io.github.sahsenvar:kmapper-processor:<v>")             // JVM hedefi
-    add("kspAndroid", "io.github.sahsenvar:kmapper-processor:<v>")         // Android hedefi
-    add("kspIosArm64", "io.github.sahsenvar:kmapper-processor:<v>")        // iOS cihaz
-    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-processor:<v>") // iOS simülatör
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
-    if (name != "kspCommonMainKotlinMetadata") {
-        dependsOn("kspCommonMainKotlinMetadata")
-    }
-}
-```
-
-`kspCommonMainMetadata` genel metadata mapper'larını üretir; diğer `ksp*` girişleri platform-spesifik kaynakların de derlenebilmesini sağlar.
-
-### Çakışma Koruması
-
-Aynı `forType` için `wrappers` listesinde birden fazla wrapper bulunursa processor **compile error** verir:
-
-```
-e: [KMapper] Multiple @CollectionWrapper found for 'PersistentList'. Remove one from the wrappers list.
-```
-
-## Örnek Çok Modüllü Yapı
-
-```
-:core:mappers           → @KMapperConfig (ortak converter'lar)
-:feature:order:data     → @KMapperConfig (converters + wrappers) + @MapTo modelleri
-:feature:product:data   → @KMapperConfig (converters) + @MapTo modelleri
-converters-immutable    → @CollectionWrapper nesneleri (PersistentListWrapper vb.)
-converters-arrow        → @CollectionWrapper nesneleri (NonEmptyListWrapper)
-```
-
-Her `:feature:*:data` modülünün `build.gradle.kts`'inde:
-
-```kotlin
-commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:<v>")
-
-    // Immutable koleksiyon desteği için:
-    implementation("io.github.sahsenvar:kmapper-converters-immutable:<v>")
-}
-
-dependencies {
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-processor:<v>")
-    // Hedeflere göre kspJvm / kspAndroid / kspIosArm64 / kspIosSimulatorArm64 ekleyin
-}
-```
-
----
-
-Sonraki adım: [Mimari — Modüller ve Pipeline](./mimari.md)
+> Sıradaki: **[Mimari →](mimari.md)**

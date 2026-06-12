@@ -8,21 +8,21 @@ import kotlin.test.Test
 // (The registry is first-write-wins, so distinct pairs make each test order-independent.)
 
 private object StringToInt : MapTypeConverter<String, Int>(String::class, Int::class) {
-    override fun convertToNonNull(value: String) = value.toInt()
+    override fun convertTo(source: String) = source.toInt()
 
-    override fun convertFromNonNull(value: Int) = value.toString()
+    override fun convertFrom(target: Int) = target.toString()
 }
 
 private object StringToIntDuplicate : MapTypeConverter<String, Int>(String::class, Int::class) {
-    override fun convertToNonNull(value: String) = -1
+    override fun convertTo(source: String) = -1
 
-    override fun convertFromNonNull(value: Int) = "x"
+    override fun convertFrom(target: Int) = "x"
 }
 
 private object LongToBoolean : MapTypeConverter<Long, Boolean>(Long::class, Boolean::class) {
-    override fun convertToNonNull(value: Long) = value != 0L
+    override fun convertTo(source: Long) = source != 0L
 
-    override fun convertFromNonNull(value: Boolean) = if (value) 1L else 0L
+    override fun convertFrom(target: Boolean) = if (target) 1L else 0L
 }
 
 class TypeConverterRegistryTest {

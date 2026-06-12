@@ -1,85 +1,51 @@
-# Okio Converters — converters-okio
+# Okio — converters-okio
 
-The `converters-okio` module provides **scalar converters** for Okio types (`ByteString`, `Path`).
-Like other scalar add-ons, they must be listed in `@KMapperConfig(converters = [...])` — they are
-not auto-discovered.
-
----
+Converters for [Okio](https://square.github.io/okio/) types (`ByteString`, `Path`), including
+three **same-pair encoding alternates** for `String ↔ ByteString`.
 
 ## Setup
 
 ```kotlin
-// build.gradle.kts (consuming module)
-kotlin {
-    sourceSets {
-        commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
-            implementation("io.github.sahsenvar:kmapper-converters-okio:1.0.0")
-        }
-    }
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-okio:2.0.0")
 }
 ```
 
-Okio 3.9.1 (a known-stable KMP release) is a transitive dependency of this module. It covers JVM,
-Android, `iosArm64`, and `iosSimulatorArm64` targets.
-
----
-
-## Provided Converters (commonMain)
-
-All converters live in the `com.sahsenvar.kmapper.okio` package.
-
-| Object | S | T | Forward | Reverse | Round-trip |
-|--------|---|---|---------|---------|------------|
-| `StringByteStringConverter` | `String` | `okio.ByteString` | `value.encodeUtf8()` | `value.utf8()` | exact |
-| `ByteArrayByteStringConverter` | `ByteArray` | `okio.ByteString` | `value.toByteString()` | `value.toByteArray()` | compare with `contentEquals` |
-| `StringPathConverter` | `String` | `okio.Path` | `value.toPath()` | `value.toString()` | exact on normalized strings |
-
-All three converters are available on all supported platforms (JVM, Android, iOS).
-
----
-
-## Usage
-
 ```kotlin
-import com.sahsenvar.kmapper.annotations.KMapperConfig
-import com.sahsenvar.kmapper.okio.StringByteStringConverter
-import com.sahsenvar.kmapper.okio.StringPathConverter
-
 @KMapperConfig(converters = [StringByteStringConverter::class, StringPathConverter::class])
-object AppMappers
+object AppMapperConfig
 ```
 
-Then use `okio.ByteString` or `okio.Path` in your domain models:
+## Converters (`com.sahsenvar.kmapper.okio`)
+
+| Object | Pair | Encoding |
+|--------|------|----------|
+| `StringByteStringConverter` | `String ↔ ByteString` | UTF-8 |
+| `ByteArrayByteStringConverter` | `ByteArray ↔ ByteString` | — |
+| `StringPathConverter` | `String ↔ Path` | — |
+| `Base64ByteStringConverter` | `String ↔ ByteString` | Base64 (RFC 4648; decode accepts URL-safe too) |
+| `Base64UrlByteStringConverter` | `String ↔ ByteString` | URL-safe Base64 |
+| `HexByteStringConverter` | `String ↔ ByteString` | hex (lower-case out, either case in) |
+
+## Same pair, different encodings — how to choose
+
+`UTF-8`, `Base64`, and `Hex` all claim `String ↔ ByteString`, and
+[discovery](kmapperconfig.md) allows only one converter per pair. So: register the
+**module-wide default** in `@KMapperConfig`, select alternates **per field**:
 
 ```kotlin
-import okio.ByteString
-import okio.Path
-
-@MapTo(FileDomain::class)
-data class FileRemote(
-    val name: String,
-    val content: String,     // base64 or raw UTF-8 payload
-    val location: String,    // "/var/data/file.bin"
-)
-
-data class FileDomain(
-    val name: String,
-    val content: ByteString,
-    val location: Path,
+@MapTo(Document::class)
+data class DocumentResponse(
+    val title: String,    // module default: UTF-8
+    @ConvertWith(use = Base64ByteStringConverter::class)
+    val payload: String,  // this wire field is Base64
+    @ConvertWith(use = HexByteStringConverter::class)
+    val checksum: String, // and this one is hex
 )
 ```
 
-Generated mapping:
+Malformed Base64/hex input throws `IllegalArgumentException` and rides the
+[ladder](../basic-usage/null-safety.md). To validate the *string shape* without converting,
+see [`Base64Validator` / `HexStringValidator`](../validation/validators.md).
 
-```kotlin
-public fun FileRemote.toFileDomain(): FileDomain = FileDomain(
-    name     = name,
-    content  = StringByteStringConverter.convertToNonNull(content),
-    location = StringPathConverter.convertToNonNull(location),
-)
-```
-
----
-
-Next: [URI Converters →](uri.md) | Other references: [@KMapperConfig](kmapperconfig.md)
+> Next: **[URI →](uri.md)**

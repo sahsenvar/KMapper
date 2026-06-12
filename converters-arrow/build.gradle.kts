@@ -23,6 +23,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":core"))
+            implementation(project(":annotations"))
             implementation(libs.arrow.core)
         }
         commonTest.dependencies {

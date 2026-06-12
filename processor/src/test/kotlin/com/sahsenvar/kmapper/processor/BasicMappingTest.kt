@@ -2,99 +2,101 @@
 
 package com.sahsenvar.kmapper.processor
 
-import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.string.shouldContain
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
-class BasicMappingTest {
-    @Test
-    fun `nested mapping with required-field null check`() {
-        val src =
-            SourceFile.kotlin(
-                "Models.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapTo
+/**
+ * Basic generated-source shapes in the Result-boundary world: nested mapping with the
+ * required-field absence guard, reverse generation via @MapFrom, and built-in converter
+ * resolution (richer-first naming — String→Int rides IntStringConverter's convertFrom).
+ */
+class BasicMappingTest :
+    BehaviorSpec({
 
-                data class AddressDomain(val city: String)
-                data class UserDomain(val id: String, val address: AddressDomain)
+        given("a nested mapping with nullable wire fields and non-null domain fields") {
+            val source =
+                SourceFile.kotlin(
+                    "Models.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
 
-                @MapTo(AddressDomain::class)
-                data class AddressRemote(val city: String?)
+                    data class AddressDomainModel(val city: String)
+                    data class UserDomainModel(val id: String, val address: AddressDomainModel)
 
-                @MapTo(UserDomain::class)
-                data class UserRemote(val id: String?, val address: AddressRemote?)
-                """.trimIndent(),
-            )
+                    @MapTo(AddressDomainModel::class)
+                    data class AddressDataModel(val city: String?)
 
-        val (result, compilation) = compile(src)
-        assertEquals(
-            KotlinCompilation.ExitCode.OK,
-            result.exitCode,
-            "Compilation failed:\n${result.messages}",
-        )
+                    @MapTo(UserDomainModel::class)
+                    data class UserDataModel(val id: String?, val address: AddressDataModel?)
+                    """.trimIndent(),
+                )
 
-        val gen = compilation.generatedFile("UserRemoteMappers.kt")
-        assert(gen.contains("fun UserRemote.toUserDomain()")) { "Missing function:\n$gen" }
-        assert(gen.contains("throw MappingException.RequiredFieldMissing(\"id\")")) {
-            "Missing RequiredFieldMissing for 'id':\n$gen"
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(source, "UserDataModelMappers.kt")
+
+                then("the function rides the Result boundary") {
+                    generated shouldContain "fun UserDataModel.toUserDomainModelResult(): Result<UserDomainModel>"
+                }
+
+                then("the nullable same-type field gets the absence guard") {
+                    generated shouldContain "id.orRequired(\"id\")"
+                }
+
+                then("the nullable nested field rides the hard seam with the sub-mapper") {
+                    generated shouldContain "convertOrFail(\"address\", \"AddressDataModel\", \"AddressDomainModel\")"
+                    generated shouldContain "toAddressDomainModelResult().getOrThrow()"
+                }
+            }
         }
-        // address is nullable AddressRemote?, so the generated code uses ?. safe-call + null check
-        assert(gen.contains("address = address")) { "Missing address mapping:\n$gen" }
-        assert(gen.contains("toAddressDomain()")) { "Missing nested toAddressDomain() call:\n$gen" }
-    }
 
-    @Test
-    fun `reverse mapping via MapFrom`() {
-        val src =
-            SourceFile.kotlin(
-                "Rev.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapFrom
+        given("a reverse mapping declared via @MapFrom") {
+            val source =
+                SourceFile.kotlin(
+                    "Rev.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapFrom
 
-                data class TagDomain(val name: String)
+                    data class TagDomainModel(val name: String)
 
-                @MapFrom(TagDomain::class)
-                data class TagRemote(val name: String)
-                """.trimIndent(),
-            )
+                    @MapFrom(TagDomainModel::class)
+                    data class TagDataModel(val name: String)
+                    """.trimIndent(),
+                )
 
-        val (result, compilation) = compile(src)
-        assertEquals(
-            KotlinCompilation.ExitCode.OK,
-            result.exitCode,
-            "Compilation failed:\n${result.messages}",
-        )
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(source, "TagDomainModelMappers.kt")
 
-        val gen = compilation.generatedFile("TagDomainMappers.kt")
-        assert(gen.contains("fun TagDomain.toTagRemote()")) { "Missing reverse function:\n$gen" }
-    }
+                then("the reverse function is generated on the @MapFrom argument class") {
+                    generated shouldContain "fun TagDomainModel.toTagDataModelResult(): Result<TagDataModel>"
+                }
+            }
+        }
 
-    @Test
-    fun `built-in String to Int conversion`() {
-        val src =
-            SourceFile.kotlin(
-                "Conv.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapTo
+        given("a built-in String to Int conversion") {
+            val source =
+                SourceFile.kotlin(
+                    "Conv.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
 
-                data class CountDomain(val n: Int)
+                    data class CountDomainModel(val n: Int)
 
-                @MapTo(CountDomain::class)
-                data class CountRemote(val n: String)
-                """.trimIndent(),
-            )
+                    @MapTo(CountDomainModel::class)
+                    data class CountDataModel(val n: String)
+                    """.trimIndent(),
+                )
 
-        val (result, compilation) = compile(src)
-        assertEquals(
-            KotlinCompilation.ExitCode.OK,
-            result.exitCode,
-            "Compilation failed:\n${result.messages}",
-        )
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(source, "CountDataModelMappers.kt")
 
-        val gen = compilation.generatedFile("CountRemoteMappers.kt")
-        assert(gen.contains("StringIntConverter")) { "Missing StringIntConverter in:\n$gen" }
-        assert(gen.contains("convertToNonNull(n)")) { "Missing convertToNonNull call in:\n$gen" }
-    }
-}
+                then("the richer-first converter is called in its reverse orientation") {
+                    // IntStringConverter is MapTypeConverter<Int, String>; the String→Int field
+                    // pair matches T→S, so codegen calls convertFrom.
+                    generated shouldContain "IntStringConverter.convertFrom(it)"
+                    generated shouldContain "convertOrFail(\"n\", \"kotlin.String\", \"kotlin.Int\")"
+                }
+            }
+        }
+    })

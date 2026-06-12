@@ -13,7 +13,7 @@ plugins {
 
 allprojects {
     group = "io.github.sahsenvar"
-    version = "1.0.0"
+    version = "2.0.0"
 }
 
 @OptIn(kotlinx.validation.ExperimentalBCVApi::class)
@@ -52,6 +52,7 @@ spotless {
 dependencies {
     // Published modules for coverage aggregation
     kover(project(":core"))
+    kover(project(":annotations"))
     kover(project(":processor"))
     kover(project(":converters-immutable"))
     kover(project(":converters-arrow"))
@@ -64,6 +65,7 @@ dependencies {
 
     // Dokka aggregation — published modules
     dokka(project(":core"))
+    dokka(project(":annotations"))
     dokka(project(":processor"))
     dokka(project(":converters-immutable"))
     dokka(project(":converters-arrow"))

@@ -1,100 +1,112 @@
-# Kendi Converter'ını Yazmak
+# Kendi Converter'ınızı Yazmak
 
-Built-in tabloda bulunmayan bir tip çiftini dönüştürmeniz gerektiğinde `MapTypeConverter<S, T>` soyut sınıfından kalıtım alarak kendi converter'ınızı yazarsınız.
+Bir converter, `MapTypeConverter<S, T>`'yi genişleten bir `object`'tir. Sizinki built-in'lerle
+**birebir aynı raylarda** koşar: aynı keşif, aynı override'lar, aynı derleme zamanı
+kontrolleri, aynı hata taksonomisi. Bu sayfa sözleşmenin tamamıdır.
 
----
-
-## MapTypeConverter Arayüzü
-
-```kotlin
-abstract class MapTypeConverter<S : Any, T : Any>(
-    val sourceType: KClass<S>,
-    val targetType: KClass<T>,
-) {
-    abstract fun convertToNonNull(value: S): T
-    abstract fun convertFromNonNull(value: T): S
-
-    // Null-safe yardımcılar (override etmenize gerek yok):
-    fun convertTo(value: S?): T? = value?.let { convertToNonNull(it) }
-    fun convertFrom(value: T?): S? = value?.let { convertFromNonNull(it) }
-}
-```
-
-Tek bir converter nesnesi **her iki yönü** de kapsar:
-
-- `convertToNonNull(S): T` → `S → T` dönüşümü (ileri yön)
-- `convertFromNonNull(T): S` → `T → S` dönüşümü (ters yön)
-- `convertTo` / `convertFrom` → null-safe sarmalayıcılar, yeniden implement etmek zorunda değilsiniz
-
-Processor hangi yönde dönüşüm gerektiğini analiz eder ve doğru metodu çağırır. İkisini tek seferde yazmanız yeterlidir.
-
----
-
-## Örnek: UUID ↔ String
+## Şekil
 
 ```kotlin
-import com.benasher44.uuid.Uuid
-import com.benasher44.uuid.uuidFrom
 import com.sahsenvar.kmapper.converter.MapTypeConverter
 
-object UuidStringConverter : MapTypeConverter<Uuid, String>(Uuid::class, String::class) {
-    override fun convertToNonNull(value: Uuid): String = value.toString()
-    override fun convertFromNonNull(value: String): Uuid = uuidFrom(value)
+object MoneyStringConverter : MapTypeConverter<Money, String>(Money::class, String::class) {
+    override fun convertTo(source: Money): String = source.format()        // Money  -> String
+    override fun convertFrom(target: String): Money = Money.parse(target)  // String -> Money
 }
 ```
 
----
+Kurallar:
 
-## Örnek: Enum Wire Değeri ↔ Domain Enum
+- **`object`, class değil** — üretilen kod `MoneyStringConverter.convertFrom(x)` diye
+  doğrudan FQN ile çağırır; nesne kurulumu yok, reflection yok.
+- **Zengin tip önce** (`<Money, String>`): `convertTo` ikinci tipe *doğru* gider,
+  `convertFrom` oradan döner.
+- **Bozuk girdide fırlatın.** `convertFrom("garbage")` fırlatmalı
+  (`IllegalArgumentException` uygundur) — [ladder](../temel-kullanim/null-safety.md) ve
+  `Result` sınırı onu tipli, yol taşıyan bir hataya çevirir. Asla tahmini değer döndürmeyin.
+
+[@KMapperConfig](kmapperconfig.md)'e bir kez kaydedin — sonrasında modüldeki her
+`Money`/`String` alan çifti otomatik ona çözümlenir.
+
+## İki opsiyonel metot: sanctioned null
+
+`convertToOrNull` / `convertFromOrNull`, **null'un hata değil geçerli bir cevap olduğu**
+dönüşümler içindir — ör. meşru biçimde sonuçsuz kalabilen bir arama. Varsayılan halleri total
+metotlara delege eder; "sonuç yok" anlamlıysa override edin:
 
 ```kotlin
-enum class StatusRemote { ACTIVE, INACTIVE, UNKNOWN }
-enum class StatusDomain { Active, Inactive }
+object CountryCodeConverter : MapTypeConverter<Country, String>(Country::class, String::class) {
+    override fun convertTo(source: Country): String = source.isoCode
+    override fun convertFrom(target: String): Country =
+        Country.byIso(target) ?: throw IllegalArgumentException("Unknown ISO code: $target")
 
-object StatusConverter : MapTypeConverter<StatusRemote, StatusDomain>(
-    StatusRemote::class, StatusDomain::class
-) {
-    override fun convertToNonNull(value: StatusRemote): StatusDomain = when (value) {
-        StatusRemote.ACTIVE   -> StatusDomain.Active
-        StatusRemote.INACTIVE -> StatusDomain.Inactive
-        StatusRemote.UNKNOWN  -> throw IllegalArgumentException("Unknown status: $value")
-    }
-
-    override fun convertFromNonNull(value: StatusDomain): StatusRemote = when (value) {
-        StatusDomain.Active   -> StatusRemote.ACTIVE
-        StatusDomain.Inactive -> StatusRemote.INACTIVE
-    }
+    // sanctioned null: bilinmeyen kod burada beklenen bir sonuçtur, hata değil
+    override fun convertFromOrNull(target: String): Country? = Country.byIso(target)
 }
 ```
 
-> Enum eşleştirmesi için KMapper'in `MappableEnum<W>` arayüzü de mevcuttur. Ayrıntılar için bkz. [MappableEnum](../enum/mappable-enum.md).
+Hedef alan nullable olduğunda üretilen kod `OrNull` varyantını çağırır — bilinmeyen ülke,
+degradation raporu *olmadan* `null` olarak akar (bozuk değil, onaylı).
 
----
+## Bir yönü reddetmek
 
-## Hata Yönetimi
-
-`convertToNonNull` veya `convertFromNonNull` içinde fırlattığınız her istisna, üretilen kod tarafından `MappingException.TypeConversionFailed` içine sarılır (`convertOrFail` mekanizması):
-
-```kotlin
-// Üretilen sarma:
-field = convertOrFail("Uuid", "String") { UuidStringConverter.convertToNonNull(rawId) }
-```
-
-Dönüşümde herhangi bir `Throwable` fırlatırsanız çağıran her zaman `MappingException.TypeConversionFailed` alır. `cause` alanında orijinal istisnanız yer alır.
-
----
-
-## Converter'ı Kaydetmek
-
-Yazdığınız converter'ı `@KMapperConfig` listesine eklemeniz gerekir; aksi halde processor onu göremez ve derleme hatası verir:
+Bir yön dürüstçe gerçeklenemiyorsa yaklaşık değer üretmek yerine **gürültüyle reddedin** —
+built-in'lerin kullandığı mekanizmanın aynısı:
 
 ```kotlin
-@KMapperConfig(converters = [UuidStringConverter::class, StatusConverter::class])
-object AppMapperConfig
+import com.sahsenvar.kmapper.converter.UnsupportedDirection
+
+object SearchQueryConverter : MapTypeConverter<SearchQuery, String>(SearchQuery::class, String::class) {
+    override fun convertTo(source: SearchQuery): String = source.serialize()
+
+    @UnsupportedDirection("ham sorgu string'ini parse etmek kayıplıdır; SearchQuery'yi DSL ile kurun")
+    override fun convertFrom(target: String): SearchQuery = unsupported()
+}
 ```
 
-Belirli bir alan için global listeden farklı bir converter kullanmak istiyorsanız `@UseMapTypeConverter` uygulayabilirsiniz — bkz. [@KMapperConfig ve @UseMapTypeConverter](kmapperconfig.md).
+Bir mapping reddedilen yöne *ihtiyaç duyarsa* **build düşer** ve mesajda sizin gerekçeniz
+görünür. (Tespit annotation'ladır; `unsupported()` tutarlı runtime arka planını sağlar. Total
+metodu işaretleyin, `OrNull` olanı değil — tersini yaparsanız derleyici yol gösterir.)
 
----
+## Parametreli converter'lar
 
-Sonraki adım: [@KMapperConfig ve @UseMapTypeConverter](kmapperconfig.md)
+`@KMapperConfig`/`@ConvertWith` object referansı aldığından, parametreleme **constructor
+parametreli bir abstract taban** + tabandan türeyen tek satırlık object'lerle yapılır —
+kuralı bir kez tanımlayın, varyantları damgalayın:
+
+```kotlin
+abstract class FormattedDoubleStringConverter(
+    private val decimalDigits: Int,
+    private val suffix: String = "",
+) : MapTypeConverter<Double, String>(Double::class, String::class) {
+    override fun convertTo(source: Double): String = source.format(decimalDigits) + suffix
+    override fun convertFrom(target: String): Double = target.removeSuffix(suffix).trim().toDouble()
+}
+
+/** 12.345 -> "12.35"  */ object PriceFormatConverter : FormattedDoubleStringConverter(decimalDigits = 2)
+/** 12.345 -> "12.3%" */ object PercentFormatConverter : FormattedDoubleStringConverter(decimalDigits = 1, suffix = "%")
+```
+
+Her varyant isimli, test edilebilir bir şeydir; alan bazında
+`@ConvertWith(use = PriceFormatConverter::class)` ile seçilir — annotation argümanı sihri
+yok. (Çalışan tam sürüm: [galerideki](../baslarken/ornekler.md) `ParameterizedConverters.kt`.)
+[Validator kütüphanesi](../dogrulama/validatorler.md) birebir aynı reçeteyi kullanır
+(`RegexValidator`, `IntRangeValidator`, …).
+
+## Collection wrapper'ları
+
+`List<T>`'yi kendi kap tipinize eşlemek için `@CollectionWrapper` ile bir wrapper tanımlayın:
+
+```kotlin
+@CollectionWrapper(forType = PersistentList::class)
+object PersistentListWrapper {
+    fun <T> wrap(source: List<T>): PersistentList<T> = source.toPersistentList()
+    fun <T> unwrap(source: PersistentList<T>): List<T> = source.toList()
+}
+```
+
+İki yön de zorunludur ve **derlemede denetlenir** (imza kuralını processor doğrular).
+`@KMapperConfig(wrappers = [...])` ile kaydedin. Eleman dönüşümü yine normal eleman
+ladder'ına biner — wrapper yalnızca kabı değiştirir.
+
+> Sıradaki: **[@KMapperConfig →](kmapperconfig.md)**

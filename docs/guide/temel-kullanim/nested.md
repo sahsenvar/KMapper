@@ -1,110 +1,58 @@
-# İç İçe Modeller
+# İç İçe Modeller ve Hata Yolları
 
-KMapper, iç içe geçmiş modelleri otomatik olarak tanır. Bir alan başka bir eşlenmiş modele referans veriyorsa processor, üretilen kodda doğrudan `toX()` çağrısı zincirler — fazladan anotasyon gerekmez.
+Bir alanın tipi kendisi de eşlenmiş bir çiftse, KMapper onu üretilmiş alt mapper'dan otomatik
+geçirir — ve hatalar adreslenebilir kalsın diye hata yollarını uç uca ekler.
 
----
-
-## Temel İç İçe Eşleştirme
-
-Aşağıdaki örnekte `OrderRemote`, bir `AddressRemote` alanı içeriyor. Her iki remote sınıfı da kendi domain karşılığına `@MapTo` ile işaretlenmiş:
+## İç içe geçme kendiliğinden çalışır
 
 ```kotlin
-@MapTo(AddressDomain::class)
-data class AddressRemote(
-    val street: String,
-    val city: String,
-)
+data class Order(val id: Long, val customer: Customer)
+data class Customer(val name: String, val address: Address)
+data class Address(val street: String, val zipCode: Int)
 
-data class AddressDomain(
-    val street: String,
-    val city: String,
-)
+@MapTo(Order::class)
+data class OrderResponse(val id: Long, val customer: CustomerResponse)
 
-@MapTo(OrderDomain::class)
-data class OrderRemote(
-    val id: String,
-    val address: AddressRemote,
-)
+@MapTo(Customer::class)
+data class CustomerResponse(val name: String, val address: AddressResponse)
 
-data class OrderDomain(
-    val id: String,
-    val address: AddressDomain,
+@MapTo(Address::class)
+data class AddressResponse(val street: String, val zipCode: String)
+```
+
+Her seviyenin kendi `@MapTo`'su olmalı (her çift açık bir tanımdır — yapısal tahmin yok) ve
+en üstteki çağrı bütün ağacı eşler:
+
+```kotlin
+val order = orderResponse.toOrderResult().getOrThrow()
+```
+
+## Hatalar tam yolu taşır
+
+`zipCode` üç seviye derinlikte `"ABC"` geldiğinde:
+
+```
+Cannot convert customer.address.zipCode: String -> Int failed for value "ABC" …
+```
+
+Yol, üretilen koddaki **derleme zamanı string literal'lerinden** kurulur — R8/ProGuard
+karartmasından aynen sağ çıkar. Koleksiyonlar indeks segmenti ekler: `items[3].price`.
+
+## Hasar yarıçapını sınırlamak
+
+Varsayılan olarak herhangi bir yerdeki sert hata `toOrderResult()`'ın tamamını düşürür — tek
+`Result`, tek sınır. Payload'un bir *bölümü* isteğe bağlıysa bunu tiple beyan edin; hata
+orada durur:
+
+```kotlin
+data class Order(
+    val id: Long,
+    val customer: Customer?, // bozuk customer artık siparişin tamamını öldürmez
 )
 ```
 
-Processor `OrderRemote.toOrderDomain()` üretirken `address` alanının tipini kontrol eder, `AddressRemote → AddressDomain` eşleştirmesinin var olduğunu görür ve çağrısı zincirler:
+Bozuk alt eşleme bu kez nullable kaçışta emilir (iç içe yolu taşıyan bir
+`AbsorbedConversionError` raporuyla) ve siparişin kalanı normal eşlenir. Ladder bileşiktir:
+*hataya en yakın kaçış* kazanır.
 
-```kotlin
-public fun OrderRemote.toOrderDomain(): OrderDomain = OrderDomain(
-    id      = id,
-    address = address.toAddressDomain(),
-)
-```
-
-`toAddressDomain()` ayrıca `AddressRemoteMappers.kt` dosyasında da üretilir; her şey derleme zamanında bağlanır.
-
----
-
-## Nullable İç Modeller
-
-İç model nullable ise güvenli çağrı (`?.`) otomatik eklenir:
-
-```kotlin
-@MapTo(ProfileDomain::class)
-data class ProfileRemote(
-    val userId: String,
-    val address: AddressRemote?,    // opsiyonel
-)
-
-data class ProfileDomain(
-    val userId: String,
-    val address: AddressDomain?,
-)
-```
-
-Üretilen:
-
-```kotlin
-public fun ProfileRemote.toProfileDomain(): ProfileDomain = ProfileDomain(
-    userId  = userId,
-    address = address?.toAddressDomain(),
-)
-```
-
-Hedef `address` alanı zorunlu (`AddressDomain`, nullable değil) olsaydı null-safety kuralları devreye girerdi — bkz. [Null-Safety](null-safety.md).
-
----
-
-## Döngüsel Bağımlılıklar
-
-KMapper, **koşulsuz döngüleri** derleme zamanında yakalar ve hata verir:
-
-```kotlin
-// DERLEME HATASI — koşulsuz döngü:
-@MapTo(BDomain::class) data class A(val b: B)   // non-null
-@MapTo(ADomain::class) data class B(val a: A)   // non-null
-// e: Mapping cycle detected: A -> B -> A. This would cause infinite construction at runtime.
-//    Break the cycle with a nullable field, a collection, or @Ignore.
-```
-
-Ancak döngü **koşullu** ise (nullable alan veya koleksiyon üzerinden) geçerlidir:
-
-```kotlin
-// OK — nullable parent referansı
-@MapTo(CategoryDomain::class)
-data class CategoryRemote(
-    val id: String,
-    val parent: CategoryRemote?,     // nullable → koşullu döngü, izin verilir
-)
-
-// OK — koleksiyon üzerinden
-@MapTo(NodeDomain::class)
-data class NodeRemote(
-    val value: Int,
-    val children: List<NodeRemote>,  // liste → koşullu döngü, izin verilir
-)
-```
-
----
-
-Sonraki adım: [Koleksiyonlar](koleksiyonlar.md)
+> Sıradaki: **[Koleksiyonlar →](koleksiyonlar.md)**

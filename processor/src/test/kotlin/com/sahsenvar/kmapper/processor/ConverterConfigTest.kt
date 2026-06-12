@@ -2,198 +2,289 @@
 
 package com.sahsenvar.kmapper.processor
 
-import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
-class ConverterConfigTest {
-    /**
-     * Baseline: @KMapperConfig with a single converter (HexIntConverter) compiles and
-     * the generated file references that converter.
-     */
-    @Test
-    fun `@KMapperConfig converter is applied`() {
-        val hexOnly =
-            SourceFile.kotlin(
-                "HexConverter.kt",
-                """
-                import com.sahsenvar.kmapper.converter.MapTypeConverter
+/**
+ * Converter configuration in the redesigned world: @KMapperConfig registers global converters
+ * by type pair (no per-field annotation needed), @ConvertWith(use = …) overrides per field —
+ * including a SAME-pair converter alongside the global one — duplicate pairs inside
+ * @KMapperConfig stay a compile error, and a pair with no converter at all produces the
+ * MissingConverter diagnostic.
+ */
+class ConverterConfigTest :
+    BehaviorSpec({
 
-                object HexIntConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
-                    override fun convertToNonNull(v: String): Int = v.toInt(16)
-                    override fun convertFromNonNull(v: Int): String = v.toString(16)
-                }
-                """.trimIndent(),
-            )
-        val model =
-            SourceFile.kotlin(
-                "M.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapTo
-                import com.sahsenvar.kmapper.annotations.KMapperConfig
+        given("a @KMapperConfig with a single custom converter") {
+            val converterSource =
+                SourceFile.kotlin(
+                    "HexConverter.kt",
+                    """
+                    import com.sahsenvar.kmapper.converter.MapTypeConverter
 
-                @KMapperConfig(converters = [HexIntConverter::class])
-                object Cfg
-
-                data class ItemDomain(val code: Int)
-
-                @MapTo(ItemDomain::class)
-                data class ItemRemote(val code: String)
-                """.trimIndent(),
-            )
-        val (r, compilation) = compile(hexOnly, model)
-        assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
-        val gen = compilation.generatedFile("ItemRemoteMappers.kt")
-        assert(gen.contains("HexIntConverter")) { "Expected HexIntConverter in generated:\n$gen" }
-    }
-
-    /**
-     * HEADLINE FEATURE TEST:
-     *
-     * Global converter IsoInstant (String→Instant, registered via @KMapperConfig) handles the
-     * default field, while EpochInstant (also String→Instant, SAME type pair) is used ONLY for
-     * the 'legacy' field via @UseMapTypeConverter.
-     *
-     * Before the fix the validator would hard-error because it scanned all MapTypeConverter
-     * subclasses and found two String→Instant converters. After the fix the validator only
-     * checks the @KMapperConfig list itself — EpochInstant is exempt because it is referenced
-     * only via @UseMapTypeConverter (explicit, unambiguous).
-     *
-     * Assertions:
-     *   - Compilation succeeds (exit code OK)
-     *   - Generated EvRemoteMappers.kt uses IsoInstant for 'startsAt'
-     *   - Generated EvRemoteMappers.kt uses EpochInstant for 'legacy'
-     */
-    @Test
-    fun `per-field @UseMapTypeConverter allows same-pair converter alongside global`() {
-        val converters =
-            SourceFile.kotlin(
-                "Converters.kt",
-                """
-                import com.sahsenvar.kmapper.converter.MapTypeConverter
-
-                /** Global default: ISO-8601 string → Instant */
-                object IsoInstant : MapTypeConverter<String, Long>(String::class, Long::class) {
-                    override fun convertToNonNull(v: String): Long = v.toLong() + 1000L
-                    override fun convertFromNonNull(v: Long): String = v.toString()
-                }
-
-                /** Per-field override: epoch-millis string → Instant (SAME String→Long pair!) */
-                object EpochInstant : MapTypeConverter<String, Long>(String::class, Long::class) {
-                    override fun convertToNonNull(v: String): Long = v.toLong()
-                    override fun convertFromNonNull(v: Long): String = v.toString()
-                }
-                """.trimIndent(),
-            )
-        val model =
-            SourceFile.kotlin(
-                "EvRemote.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapTo
-                import com.sahsenvar.kmapper.annotations.KMapperConfig
-                import com.sahsenvar.kmapper.annotations.UseMapTypeConverter
-
-                @KMapperConfig(converters = [IsoInstant::class])
-                object Cfg
-
-                data class EvDomain(val startsAt: Long, val legacy: Long)
-
-                @MapTo(EvDomain::class)
-                data class EvRemote(
-                    val startsAt: String,
-                    @UseMapTypeConverter(EpochInstant::class) val legacy: String,
+                    object HexIntConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
+                        override fun convertTo(source: String): Int = source.toInt(16)
+                        override fun convertFrom(target: Int): String = target.toString(16)
+                    }
+                    """.trimIndent(),
                 )
-                """.trimIndent(),
-            )
-        val (r, compilation) = compile(converters, model)
-        assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
-        val gen = compilation.generatedFile("EvRemoteMappers.kt")
-        assert(gen.contains("IsoInstant")) {
-            "Expected IsoInstant (global converter) in generated:\n$gen"
-        }
-        assert(gen.contains("EpochInstant")) {
-            "Expected EpochInstant (per-field converter) in generated:\n$gen"
-        }
-    }
+            val modelSource =
+                SourceFile.kotlin(
+                    "M.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.KMapperConfig
 
-    /**
-     * GENUINELY AMBIGUOUS CASE:
-     *
-     * Listing TWO converters for the same (S,T) pair inside @KMapperConfig is ambiguous —
-     * the processor cannot know which one to use for undecorated fields. This MUST produce
-     * a COMPILATION_ERROR with a message about duplicate/ambiguous converters.
-     */
-    @Test
-    fun `two converters for same pair in @KMapperConfig is an error`() {
-        val converters =
-            SourceFile.kotlin(
-                "DupConverters.kt",
-                """
-                import com.sahsenvar.kmapper.converter.MapTypeConverter
+                    @KMapperConfig(converters = [HexIntConverter::class])
+                    object Cfg
 
-                object ConverterA : MapTypeConverter<String, Long>(String::class, Long::class) {
-                    override fun convertToNonNull(v: String): Long = v.toLong()
-                    override fun convertFromNonNull(v: Long): String = v.toString()
+                    data class ItemDomainModel(val code: Int)
+
+                    @MapTo(ItemDomainModel::class)
+                    data class ItemDataModel(val code: String)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(listOf(converterSource, modelSource), "ItemDataModelMappers.kt")
+
+                then("the registered converter is auto-discovered for the pair — no field annotation") {
+                    generated shouldContain "HexIntConverter.convertTo(it)"
+                }
+            }
+        }
+
+        given("a global converter plus a per-field @ConvertWith override for the SAME type pair") {
+            // HEADLINE: the global registry resolves undecorated fields; @ConvertWith(use = …)
+            // picks a different converter for one field even though both share (String, Long) —
+            // per-field references are exempt from the duplicate-pair validation.
+            val converterSource =
+                SourceFile.kotlin(
+                    "Converters.kt",
+                    """
+                    import com.sahsenvar.kmapper.converter.MapTypeConverter
+
+                    /** Global default for the (String, Long) pair. */
+                    object IsoInstantConverter : MapTypeConverter<String, Long>(String::class, Long::class) {
+                        override fun convertTo(source: String): Long = source.toLong() + 1000L
+                        override fun convertFrom(target: Long): String = target.toString()
+                    }
+
+                    /** Per-field override: SAME (String, Long) pair, different semantics. */
+                    object EpochInstantConverter : MapTypeConverter<String, Long>(String::class, Long::class) {
+                        override fun convertTo(source: String): Long = source.toLong()
+                        override fun convertFrom(target: Long): String = target.toString()
+                    }
+                    """.trimIndent(),
+                )
+            val modelSource =
+                SourceFile.kotlin(
+                    "EvModel.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.KMapperConfig
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+
+                    @KMapperConfig(converters = [IsoInstantConverter::class])
+                    object Cfg
+
+                    data class EventDomainModel(val startsAt: Long, val legacy: Long)
+
+                    @MapTo(EventDomainModel::class)
+                    data class EventDataModel(
+                        val startsAt: String,
+                        @ConvertWith(use = EpochInstantConverter::class) val legacy: String,
+                    )
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(listOf(converterSource, modelSource), "EventDataModelMappers.kt")
+
+                then("the global converter handles the undecorated field") {
+                    generated shouldContain "IsoInstantConverter.convertTo(it)"
                 }
 
-                object ConverterB : MapTypeConverter<String, Long>(String::class, Long::class) {
-                    override fun convertToNonNull(v: String): Long = v.toLong() * 2L
-                    override fun convertFromNonNull(v: Long): String = v.toString()
+                then("the per-field override handles the decorated field") {
+                    generated shouldContain "EpochInstantConverter.convertTo(it)"
                 }
-                """.trimIndent(),
-            )
-        val model =
-            SourceFile.kotlin(
-                "AmbigModel.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapTo
-                import com.sahsenvar.kmapper.annotations.KMapperConfig
+            }
+        }
 
-                @KMapperConfig(converters = [ConverterA::class, ConverterB::class])
-                object Cfg
+        given("two converters for the same pair inside @KMapperConfig") {
+            val converterSource =
+                SourceFile.kotlin(
+                    "DupConverters.kt",
+                    """
+                    import com.sahsenvar.kmapper.converter.MapTypeConverter
 
-                data class ADomain(val value: Long)
+                    object ConverterA : MapTypeConverter<String, Long>(String::class, Long::class) {
+                        override fun convertTo(source: String): Long = source.toLong()
+                        override fun convertFrom(target: Long): String = target.toString()
+                    }
 
-                @MapTo(ADomain::class)
-                data class ARemote(val value: String)
-                """.trimIndent(),
-            )
-        val (r, _) = compile(converters, model)
-        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, r.exitCode, r.messages)
-        assert(
-            r.messages.contains("DUPLICATE", ignoreCase = true) ||
-                r.messages.contains("duplicate", ignoreCase = true) ||
-                r.messages.contains("ambiguous", ignoreCase = true) ||
-                r.messages.contains("@KMapperConfig", ignoreCase = true),
-        ) { "Expected duplicate/ambiguous converter error in:\n${r.messages}" }
-    }
+                    object ConverterB : MapTypeConverter<String, Long>(String::class, Long::class) {
+                        override fun convertTo(source: String): Long = source.toLong() * 2L
+                        override fun convertFrom(target: Long): String = target.toString()
+                    }
+                    """.trimIndent(),
+                )
+            val modelSource =
+                SourceFile.kotlin(
+                    "AmbigModel.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.KMapperConfig
 
-    /**
-     * When no converter exists for a type pair and no @KMapperConfig registers one,
-     * the processor must emit a compilation error mentioning "no converter" or similar.
-     */
-    @Test
-    fun `missing converter fails with clear error`() {
-        val model =
-            SourceFile.kotlin(
-                "M3.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapTo
+                    @KMapperConfig(converters = [ConverterA::class, ConverterB::class])
+                    object Cfg
 
-                data class XDomain(val flag: Boolean)
+                    data class AmountDomainModel(val value: Long)
 
-                @MapTo(XDomain::class)
-                data class XRemote(val flag: Int)
-                """.trimIndent(),
-            )
-        val (r, _) = compile(model)
-        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, r.exitCode)
-        assert(
-            r.messages.contains("no converter", ignoreCase = true) ||
-                r.messages.contains("@KMapperConfig", ignoreCase = true) ||
-                r.messages.contains("UseMapTypeConverter", ignoreCase = true),
-        ) { "Expected missing-converter error in:\n${r.messages}" }
-    }
-}
+                    @MapTo(AmountDomainModel::class)
+                    data class AmountDataModel(val value: String)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("compilation fails — the registry cannot disambiguate undecorated fields") {
+                    val messages = errMessages(converterSource, modelSource)
+                    messages shouldContain "DUPLICATE"
+                }
+            }
+        }
+
+        given("a type pair with no registered converter at all") {
+            val modelSource =
+                SourceFile.kotlin(
+                    "M3.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+
+                    data class WrappedId(val raw: String)
+
+                    data class XDomainModel(val id: WrappedId)
+
+                    @MapTo(XDomainModel::class)
+                    data class XDataModel(val id: Int)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                then("compilation fails with the MissingConverter guidance") {
+                    val messages = errMessages(modelSource)
+                    messages shouldContain "has no registered converter"
+                    messages shouldContain "@ConvertWith"
+                }
+            }
+        }
+
+        given("a configured converter object extending an abstract parameterized base") {
+            // The ledger's official parameterized-converter recipe: the abstract base binds
+            // MapTypeConverter<Double, String> with CONCRETE types and takes configuration
+            // through its constructor; objects configure by extension. Resolution must walk
+            // the superclass CHAIN (the object's direct supertype is the base, not
+            // MapTypeConverter).
+            val baseAndObjectSource =
+                SourceFile.kotlin(
+                    "Formatted.kt",
+                    """
+                    import com.sahsenvar.kmapper.converter.MapTypeConverter
+
+                    abstract class FormattedDoubleStringConverter(
+                        private val digits: Int,
+                    ) : MapTypeConverter<Double, String>(Double::class, String::class) {
+                        override fun convertTo(source: Double): String {
+                            val factor = generateSequence(1L) { it * 10 }.take(digits + 1).last()
+                            val scaled = kotlin.math.round(source * factor) / factor
+                            return scaled.toString()
+                        }
+
+                        override fun convertFrom(target: String): Double = target.toDouble()
+                    }
+
+                    object PriceFormatConverter : FormattedDoubleStringConverter(digits = 2)
+                    """.trimIndent(),
+                )
+
+            `when`("the object is referenced per-field via @ConvertWith(use = …)") {
+                val modelSource =
+                    SourceFile.kotlin(
+                        "PerField.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.ConvertWith
+                        import com.sahsenvar.kmapper.annotations.MapTo
+
+                        data class PriceDomainModel(val price: String)
+
+                        @MapTo(PriceDomainModel::class)
+                        data class PriceDataModel(
+                            @ConvertWith(use = PriceFormatConverter::class) val price: Double,
+                        )
+                        """.trimIndent(),
+                    )
+                val generated = okAndReadGenerated(listOf(baseAndObjectSource, modelSource), "PriceDataModelMappers.kt")
+
+                then("the chain-resolved converter is emitted") {
+                    generated shouldContain "PriceFormatConverter.convertTo(it)"
+                }
+            }
+
+            `when`("the object is registered globally via @KMapperConfig") {
+                val modelSource =
+                    SourceFile.kotlin(
+                        "Global.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.KMapperConfig
+                        import com.sahsenvar.kmapper.annotations.MapTo
+
+                        @KMapperConfig(converters = [PriceFormatConverter::class])
+                        object Cfg
+
+                        data class FareDomainModel(val fare: String)
+
+                        @MapTo(FareDomainModel::class)
+                        data class FareDataModel(val fare: Double)
+                        """.trimIndent(),
+                    )
+                val generated = okAndReadGenerated(listOf(baseAndObjectSource, modelSource), "FareDataModelMappers.kt")
+
+                then("the pair registers from the chain and resolves without a field annotation") {
+                    generated shouldContain "PriceFormatConverter.convertTo(it)"
+                }
+            }
+
+            `when`("the converted value lands on a hard site and the mapping runs") {
+                val modelSource =
+                    SourceFile.kotlin(
+                        "Rt.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.KMapperConfig
+                        import com.sahsenvar.kmapper.annotations.MapTo
+
+                        @KMapperConfig(converters = [PriceFormatConverter::class])
+                        object Cfg
+
+                        data class CostDomainModel(val cost: String)
+
+                        @MapTo(CostDomainModel::class)
+                        data class CostDataModel(val cost: Double)
+                        """.trimIndent(),
+                    )
+                val (result, _) = compile(baseAndObjectSource, modelSource)
+
+                then("the configured base behavior (2-digit rounding) applies end-to-end") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "CostDataModelMappersKt",
+                            "toCostDomainModelResult",
+                            result.newInstance("CostDataModel", 12.346),
+                        )
+                    outcome.getOrThrow()!!.prop("cost") shouldBe "12.35"
+                }
+            }
+        }
+    })

@@ -1,5 +1,30 @@
-public final class com/sahsenvar/kmapper/ConvertOrFailKt {
-	public static final fun convertOrFail (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+public final class com/sahsenvar/kmapper/CollectionSeamsKt {
+	public static final fun convertEachOrFail (Ljava/lang/Iterable;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/util/List;
+	public static final fun convertEachOrFailToSet (Ljava/lang/Iterable;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/util/Set;
+	public static final fun convertEachOrNull (Ljava/lang/Iterable;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/util/List;
+	public static final fun convertEachOrNullStrict (Ljava/lang/Iterable;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/util/List;
+	public static final fun convertEachOrSkip (Ljava/lang/Iterable;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/util/List;
+	public static final fun convertEachOrSkipToSet (Ljava/lang/Iterable;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/util/Set;
+	public static final fun convertEntriesOrFail (Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Ljava/util/Map;
+	public static final fun convertEntriesOrSkip (Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Ljava/util/Map;
+	public static final fun convertEntriesValueOrNull (Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Ljava/util/Map;
+}
+
+public final class com/sahsenvar/kmapper/ConversionSeamsKt {
+	public static final fun convertNullableOrFail (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public static final fun convertOrElse (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public static final fun convertOrElseStrict (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public static final fun convertOrFail (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public static final fun convertOrNull (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public static final fun convertOrNullStrict (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public static final fun orRequired (Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;
+	public static final fun reportDegradation (Lkotlin/jvm/functions/Function0;)V
+	public static final fun toMappingException (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)Lcom/sahsenvar/kmapper/MappingException;
+}
+
+public final class com/sahsenvar/kmapper/ConverterErrorsKt {
+	public static final fun missingConverterMessage (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public static final fun unsupportedConversionMessage (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 }
 
 public final class com/sahsenvar/kmapper/KMapper {
@@ -13,6 +38,7 @@ public final class com/sahsenvar/kmapper/KMapper {
 
 public final class com/sahsenvar/kmapper/LoggingMappingListener : com/sahsenvar/kmapper/MappingListener {
 	public fun <init> (Lkotlin/jvm/functions/Function1;)V
+	public fun onDegradation (Lcom/sahsenvar/kmapper/MappingDegradation;)V
 	public fun onError (Ljava/lang/Object;Lcom/sahsenvar/kmapper/MappingException;)V
 	public fun onMapComplete (Ljava/lang/Object;Ljava/lang/Object;)V
 	public fun onMapStart (Ljava/lang/Object;Lkotlin/reflect/KClass;)V
@@ -22,112 +48,125 @@ public abstract interface class com/sahsenvar/kmapper/MappableEnum {
 	public abstract fun getWireValue ()Ljava/lang/Object;
 }
 
+public abstract class com/sahsenvar/kmapper/MappingDegradation {
+	public abstract fun getPath ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/MappingDegradation$AbsorbedConversionError : com/sahsenvar/kmapper/MappingDegradation {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+	public final fun getCause ()Ljava/lang/Throwable;
+	public final fun getFrom ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
+	public final fun getTo ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/MappingDegradation$ConvergedDuplicateElement : com/sahsenvar/kmapper/MappingDegradation {
+	public fun <init> (Ljava/lang/String;)V
+	public fun getPath ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/MappingDegradation$DroppedBrokenElement : com/sahsenvar/kmapper/MappingDegradation {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public final fun getCause ()Ljava/lang/Throwable;
+	public fun getPath ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/MappingDegradation$DroppedNullElement : com/sahsenvar/kmapper/MappingDegradation {
+	public fun <init> (Ljava/lang/String;)V
+	public fun getPath ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/MappingDegradation$DuplicateKey : com/sahsenvar/kmapper/MappingDegradation {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getKey ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
 public abstract class com/sahsenvar/kmapper/MappingException : java/lang/RuntimeException {
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public abstract fun getPath ()Ljava/lang/String;
+	public abstract fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public final class com/sahsenvar/kmapper/MappingException$EmptyCollection : com/sahsenvar/kmapper/MappingException {
-	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun getDetail ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$EmptyCollection;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public final class com/sahsenvar/kmapper/MappingException$RequiredFieldMissing : com/sahsenvar/kmapper/MappingException {
 	public fun <init> (Ljava/lang/String;)V
-	public final fun getField ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$RequiredFieldMissing;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public final class com/sahsenvar/kmapper/MappingException$TypeConversionFailed : com/sahsenvar/kmapper/MappingException {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun getCause ()Ljava/lang/Throwable;
 	public final fun getFrom ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
 	public final fun getTo ()Ljava/lang/String;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$TypeConversionFailed;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public final class com/sahsenvar/kmapper/MappingException$UnknownEnumValue : com/sahsenvar/kmapper/MappingException {
-	public fun <init> (Ljava/lang/String;Ljava/lang/Object;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V
 	public final fun getEnum ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
 	public final fun getValue ()Ljava/lang/Object;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$UnknownEnumValue;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
+}
+
+public final class com/sahsenvar/kmapper/MappingException$UnsupportedConversion : com/sahsenvar/kmapper/MappingException {
+	public fun <init> (Ljava/lang/String;)V
+	public fun getPath ()Ljava/lang/String;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$UnsupportedConversion;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public final class com/sahsenvar/kmapper/MappingException$ValidationFailed : com/sahsenvar/kmapper/MappingException {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
-	public final fun getField ()Ljava/lang/String;
+	public fun getPath ()Ljava/lang/String;
 	public final fun getReason ()Ljava/lang/String;
+	public fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException$ValidationFailed;
+	public synthetic fun withPathPrefix (Ljava/lang/String;)Lcom/sahsenvar/kmapper/MappingException;
 }
 
 public abstract interface class com/sahsenvar/kmapper/MappingListener {
+	public fun onDegradation (Lcom/sahsenvar/kmapper/MappingDegradation;)V
 	public fun onError (Ljava/lang/Object;Lcom/sahsenvar/kmapper/MappingException;)V
 	public fun onMapComplete (Ljava/lang/Object;Ljava/lang/Object;)V
 	public fun onMapStart (Ljava/lang/Object;Lkotlin/reflect/KClass;)V
 }
 
 public final class com/sahsenvar/kmapper/MappingListener$DefaultImpls {
+	public static fun onDegradation (Lcom/sahsenvar/kmapper/MappingListener;Lcom/sahsenvar/kmapper/MappingDegradation;)V
 	public static fun onError (Lcom/sahsenvar/kmapper/MappingListener;Ljava/lang/Object;Lcom/sahsenvar/kmapper/MappingException;)V
 	public static fun onMapComplete (Lcom/sahsenvar/kmapper/MappingListener;Ljava/lang/Object;Ljava/lang/Object;)V
 	public static fun onMapStart (Lcom/sahsenvar/kmapper/MappingListener;Ljava/lang/Object;Lkotlin/reflect/KClass;)V
 }
 
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/CollectionWrapper : java/lang/annotation/Annotation {
-	public abstract fun forType ()Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/FieldMap : java/lang/annotation/Annotation {
-	public abstract fun fieldName ()Ljava/lang/String;
-	public abstract fun targetClass ()Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/FieldMap$Container : java/lang/annotation/Annotation {
-	public abstract fun value ()[Lcom/sahsenvar/kmapper/annotations/FieldMap;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/Ignore : java/lang/annotation/Annotation {
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/KMapperConfig : java/lang/annotation/Annotation {
-	public abstract fun converters ()[Ljava/lang/Class;
-	public abstract fun wrappers ()[Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapDefaultValue : java/lang/annotation/Annotation {
-	public abstract fun expression ()Ljava/lang/String;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapFrom : java/lang/annotation/Annotation {
-	public abstract fun source ()Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapFrom$Container : java/lang/annotation/Annotation {
-	public abstract fun value ()[Lcom/sahsenvar/kmapper/annotations/MapFrom;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapTo : java/lang/annotation/Annotation {
-	public abstract fun target ()Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapTo$Container : java/lang/annotation/Annotation {
-	public abstract fun value ()[Lcom/sahsenvar/kmapper/annotations/MapTo;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/UseMapTypeConverter : java/lang/annotation/Annotation {
-	public abstract fun converter ()Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/ValidateFrom : java/lang/annotation/Annotation {
-	public abstract fun validators ()[Ljava/lang/Class;
-}
-
-public abstract interface annotation class com/sahsenvar/kmapper/annotations/ValidateTo : java/lang/annotation/Annotation {
-	public abstract fun validators ()[Ljava/lang/Class;
-}
-
 public abstract class com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public fun <init> (Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;)V
-	public final fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
-	public abstract fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public final fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
-	public abstract fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFromOrNull (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertToOrNull (Ljava/lang/Object;)Ljava/lang/Object;
 	public final fun getSourceType ()Lkotlin/reflect/KClass;
 	public final fun getTargetType ()Lkotlin/reflect/KClass;
+	protected final fun unsupported ()Ljava/lang/Void;
+	protected final fun unsupported (Ljava/lang/String;)Ljava/lang/Void;
 }
 
 public final class com/sahsenvar/kmapper/converter/TypeConverterRegistry {
@@ -137,74 +176,343 @@ public final class com/sahsenvar/kmapper/converter/TypeConverterRegistry {
 	public final fun register (Lcom/sahsenvar/kmapper/converter/MapTypeConverter;)V
 }
 
-public final class com/sahsenvar/kmapper/converter/builtin/IntLongConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
-	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/IntLongConverter;
-	public fun convertFromNonNull (J)Ljava/lang/Integer;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (I)Ljava/lang/Long;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+public abstract interface annotation class com/sahsenvar/kmapper/converter/UnsupportedDirection : java/lang/annotation/Annotation {
+	public abstract fun reason ()Ljava/lang/String;
 }
 
-public final class com/sahsenvar/kmapper/converter/builtin/LongInstantConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
-	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LongInstantConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Lkotlinx/datetime/Instant;)Ljava/lang/Long;
-	public fun convertToNonNull (J)Lkotlinx/datetime/Instant;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
+public final class com/sahsenvar/kmapper/converter/builtin/BooleanStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/BooleanStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Ljava/lang/Boolean;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Z)Ljava/lang/String;
 }
 
-public final class com/sahsenvar/kmapper/converter/builtin/StringBooleanConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
-	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/StringBooleanConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Z)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/lang/Boolean;
+public final class com/sahsenvar/kmapper/converter/builtin/ByteBooleanConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/ByteBooleanConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Z)Ljava/lang/Byte;
+	public fun convertTo (B)Ljava/lang/Boolean;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
 }
 
-public final class com/sahsenvar/kmapper/converter/builtin/StringDoubleConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
-	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/StringDoubleConverter;
-	public fun convertFromNonNull (D)Ljava/lang/String;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/lang/Double;
+public final class com/sahsenvar/kmapper/converter/builtin/ByteStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/ByteStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Ljava/lang/Byte;
+	public fun convertTo (B)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
 }
 
-public final class com/sahsenvar/kmapper/converter/builtin/StringFloatConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
-	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/StringFloatConverter;
-	public fun convertFromNonNull (F)Ljava/lang/String;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/lang/Float;
+public final class com/sahsenvar/kmapper/converter/builtin/DoubleBooleanConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/DoubleBooleanConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Z)Ljava/lang/Double;
+	public fun convertTo (D)Ljava/lang/Boolean;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
 }
 
-public final class com/sahsenvar/kmapper/converter/builtin/StringInstantConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
-	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/StringInstantConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Lkotlinx/datetime/Instant;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Lkotlinx/datetime/Instant;
+public final class com/sahsenvar/kmapper/converter/builtin/DoubleByteConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/DoubleByteConverter;
+	public fun convertFrom (B)Ljava/lang/Double;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (D)Ljava/lang/Byte;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
 }
 
-public final class com/sahsenvar/kmapper/converter/builtin/StringIntConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
-	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/StringIntConverter;
-	public fun convertFromNonNull (I)Ljava/lang/String;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/lang/Integer;
+public final class com/sahsenvar/kmapper/converter/builtin/DoubleFloatConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/DoubleFloatConverter;
+	public fun convertFrom (F)Ljava/lang/Double;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (D)Ljava/lang/Float;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
 }
 
-public final class com/sahsenvar/kmapper/converter/builtin/StringLongConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
-	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/StringLongConverter;
-	public fun convertFromNonNull (J)Ljava/lang/String;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/lang/Long;
+public final class com/sahsenvar/kmapper/converter/builtin/DoubleIntConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/DoubleIntConverter;
+	public fun convertFrom (I)Ljava/lang/Double;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (D)Ljava/lang/Integer;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/DoubleLongConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/DoubleLongConverter;
+	public fun convertFrom (J)Ljava/lang/Double;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (D)Ljava/lang/Long;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/DoubleShortConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/DoubleShortConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (S)Ljava/lang/Double;
+	public fun convertTo (D)Ljava/lang/Short;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/DoubleStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/DoubleStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Ljava/lang/Double;
+	public fun convertTo (D)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/DurationLongConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/DurationLongConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom-5sfh64U (J)J
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo-LRDsOJo (J)Ljava/lang/Long;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/DurationStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/DurationStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom-5sfh64U (Ljava/lang/String;)J
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo-LRDsOJo (J)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/FloatBooleanConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/FloatBooleanConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Z)Ljava/lang/Float;
+	public fun convertTo (F)Ljava/lang/Boolean;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/FloatByteConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/FloatByteConverter;
+	public fun convertFrom (B)Ljava/lang/Float;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (F)Ljava/lang/Byte;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/FloatIntConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/FloatIntConverter;
+	public fun convertFrom (I)Ljava/lang/Float;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (F)Ljava/lang/Integer;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/FloatLongConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/FloatLongConverter;
+	public fun convertFrom (J)Ljava/lang/Float;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (F)Ljava/lang/Long;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/FloatShortConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/FloatShortConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (S)Ljava/lang/Float;
+	public fun convertTo (F)Ljava/lang/Short;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/FloatStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/FloatStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Ljava/lang/Float;
+	public fun convertTo (F)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/InstantLongConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/InstantLongConverter;
+	public fun convertFrom (J)Lkotlinx/datetime/Instant;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Lkotlinx/datetime/Instant;)Ljava/lang/Long;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/InstantStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/InstantStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Lkotlinx/datetime/Instant;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Lkotlinx/datetime/Instant;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/IntBooleanConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/IntBooleanConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Z)Ljava/lang/Integer;
+	public fun convertTo (I)Ljava/lang/Boolean;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/IntByteConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/IntByteConverter;
+	public fun convertFrom (B)Ljava/lang/Integer;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (I)Ljava/lang/Byte;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/IntShortConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/IntShortConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (S)Ljava/lang/Integer;
+	public fun convertTo (I)Ljava/lang/Short;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/IntStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/IntStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Ljava/lang/Integer;
+	public fun convertTo (I)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/LocalDateStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LocalDateStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Lkotlinx/datetime/LocalDate;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Lkotlinx/datetime/LocalDate;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/LocalDateTimeStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LocalDateTimeStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Lkotlinx/datetime/LocalDateTime;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Lkotlinx/datetime/LocalDateTime;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/LocalTimeStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LocalTimeStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Lkotlinx/datetime/LocalTime;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Lkotlinx/datetime/LocalTime;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/LongBooleanConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LongBooleanConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Z)Ljava/lang/Long;
+	public fun convertTo (J)Ljava/lang/Boolean;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/LongByteConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LongByteConverter;
+	public fun convertFrom (B)Ljava/lang/Long;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (J)Ljava/lang/Byte;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/LongIntConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LongIntConverter;
+	public fun convertFrom (I)Ljava/lang/Long;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (J)Ljava/lang/Integer;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/LongShortConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LongShortConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (S)Ljava/lang/Long;
+	public fun convertTo (J)Ljava/lang/Short;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/LongStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/LongStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Ljava/lang/Long;
+	public fun convertTo (J)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/ShortBooleanConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/ShortBooleanConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Z)Ljava/lang/Short;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (S)Ljava/lang/Boolean;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/ShortByteConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/ShortByteConverter;
+	public fun convertFrom (B)Ljava/lang/Short;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (S)Ljava/lang/Byte;
+}
+
+public final class com/sahsenvar/kmapper/converter/builtin/ShortStringConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/converter/builtin/ShortStringConverter;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/lang/String;)Ljava/lang/Short;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (S)Ljava/lang/String;
 }
 
 public abstract class com/sahsenvar/kmapper/validation/Validator {
 	public fun <init> (Lkotlin/reflect/KClass;)V
 	public final fun getTargetType ()Lkotlin/reflect/KClass;
 	public abstract fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public class com/sahsenvar/kmapper/validation/builtin/CollectionSizeValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (II)V
+	public synthetic fun <init> (IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/util/Collection;)Ljava/lang/String;
+}
+
+public class com/sahsenvar/kmapper/validation/builtin/DoubleRangeValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (DD)V
+	public fun validate (D)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/FiniteDoubleValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/FiniteDoubleValidator;
+	public fun validate (D)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public class com/sahsenvar/kmapper/validation/builtin/IntRangeValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (Lkotlin/ranges/IntRange;)V
+	public fun validate (I)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public class com/sahsenvar/kmapper/validation/builtin/LongRangeValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (Lkotlin/ranges/LongRange;)V
+	public fun validate (J)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/NonNegativeDoubleValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/NonNegativeDoubleValidator;
+	public fun validate (D)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/NonNegativeIntValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/NonNegativeIntValidator;
+	public fun validate (I)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/NonNegativeLongValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/NonNegativeLongValidator;
+	public fun validate (J)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
 }
 
 public final class com/sahsenvar/kmapper/validation/builtin/NotBlankValidator : com/sahsenvar/kmapper/validation/Validator {
@@ -221,6 +529,37 @@ public final class com/sahsenvar/kmapper/validation/builtin/NotEmptyCollectionVa
 
 public final class com/sahsenvar/kmapper/validation/builtin/NotEmptyStringValidator : com/sahsenvar/kmapper/validation/Validator {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/NotEmptyStringValidator;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/PositiveDoubleValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/PositiveDoubleValidator;
+	public fun validate (D)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/PositiveIntValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/PositiveIntValidator;
+	public fun validate (I)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/validation/builtin/PositiveLongValidator : com/sahsenvar/kmapper/validation/Validator {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/validation/builtin/PositiveLongValidator;
+	public fun validate (J)Ljava/lang/String;
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public class com/sahsenvar/kmapper/validation/builtin/RegexValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (Lkotlin/text/Regex;Ljava/lang/String;)V
+	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
+	public fun validate (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public class com/sahsenvar/kmapper/validation/builtin/StringLengthValidator : com/sahsenvar/kmapper/validation/Validator {
+	public fun <init> (II)V
+	public synthetic fun <init> (IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun validate (Ljava/lang/Object;)Ljava/lang/String;
 	public fun validate (Ljava/lang/String;)Ljava/lang/String;
 }

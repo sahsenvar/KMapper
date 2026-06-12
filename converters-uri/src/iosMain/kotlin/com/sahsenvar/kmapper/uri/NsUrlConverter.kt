@@ -8,18 +8,19 @@ import platform.Foundation.NSURL
  * [String] ↔ [NSURL].
  *
  * [NSURL.URLWithString] returns null for malformed URLs; in that case
- * [convertToNonNull] throws [MappingException.TypeConversionFailed].
+ * [convertTo] throws [MappingException.TypeConversionFailed].
  *
  * Round-trip caveat: NSURL normalizes URLs (e.g. adds trailing slash to bare hosts).
  * Tests must use pre-normalized URLs to pass a true round-trip check.
  */
 object NsUrlStringConverter : MapTypeConverter<String, NSURL>(String::class, NSURL::class) {
-    override fun convertToNonNull(value: String): NSURL = NSURL.URLWithString(value)
+    override fun convertTo(source: String): NSURL = NSURL.URLWithString(source)
         ?: throw MappingException.TypeConversionFailed(
-            "String",
-            "NSURL",
-            IllegalArgumentException("NSURL.URLWithString returned null for: $value"),
+            path = "",
+            from = "String",
+            to = "NSURL",
+            cause = IllegalArgumentException("NSURL.URLWithString returned null for: $source"),
         )
 
-    override fun convertFromNonNull(value: NSURL): String = value.absoluteString ?: value.path ?: ""
+    override fun convertFrom(target: NSURL): String = target.absoluteString ?: target.path ?: ""
 }

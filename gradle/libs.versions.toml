@@ -29,6 +29,10 @@ arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 ionspin-bignum = { module = "com.ionspin.kotlin:bignum", version.ref = "ionspin-bignum" }
 kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotest-property   = { module = "io.kotest:kotest-property", version.ref = "kotest" }
+kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
+# NOTE: no kotest-framework-datatest entry — in Kotest 6.x the datatest module (io.kotest.datatest.withData)
+# was merged into kotest-framework-engine; the standalone artifact stopped at 5.9.1.
+kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 
 [plugins]

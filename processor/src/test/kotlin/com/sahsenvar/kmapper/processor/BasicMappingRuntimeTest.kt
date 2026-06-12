@@ -2,179 +2,183 @@
 
 package com.sahsenvar.kmapper.processor
 
+import com.sahsenvar.kmapper.MappingException
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFails
-import kotlin.test.assertTrue
 
 /**
- * Runtime-execution tests for the KSP mapping processor.
+ * Runtime-execution tests for the KSP mapping processor at the Result boundary.
  *
- * These tests compile source code with the processor attached (via [compile]), then
- * instantiate the generated classes and invoke the generated mapper functions at
- * runtime using reflection helpers from [RuntimeExecSupport].
+ * Compiles source with the processor attached, classloads the generated mappers, and
+ * invokes them reflectively via [invokeResultMapper]. The library never throws at the
+ * caller: hard failures surface as `Result.failure` carrying the typed [MappingException].
  *
  * A FAILURE here is a real production bug — do NOT weaken these assertions.
  */
-class BasicMappingRuntimeTest {
-    /**
-     * Test (a): generated mapper copies all fields correctly at runtime.
-     */
-    @Test
-    fun `mapper copies fields at runtime`() {
-        val (result, _) =
-            compile(
-                SourceFile.kotlin(
-                    "M.kt",
-                    """
-                    import com.sahsenvar.kmapper.annotations.MapTo
-                    data class UserDomain(val id: String, val email: String)
-                    @MapTo(UserDomain::class)
-                    data class UserRemote(val id: String, val email: String)
-                    """.trimIndent(),
-                ),
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+class BasicMappingRuntimeTest :
+    BehaviorSpec({
 
-        val domain =
-            result.invokeMapper(
-                "UserRemoteMappersKt",
-                "toUserDomain",
-                result.newInstance("UserRemote", "42", "a@b.com"),
-            )!!
+        given("a same-shape field-by-field mapping") {
+            val (result, _) =
+                compile(
+                    SourceFile.kotlin(
+                        "M.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        data class UserDomainModel(val id: String, val email: String)
+                        @MapTo(UserDomainModel::class)
+                        data class UserDataModel(val id: String, val email: String)
+                        """.trimIndent(),
+                    ),
+                )
+            result.exitCode shouldBe KotlinCompilation.ExitCode.OK
 
-        assertEquals("42", domain.prop("id"))
-        assertEquals("a@b.com", domain.prop("email"))
-    }
-
-    /**
-     * Test (b): nullable→non-null field with null input throws RequiredFieldMissing at runtime.
-     * Asserts by qualified name to handle cross-classloader identity.
-     */
-    @Test
-    fun `nullable-to-nonnull null throws RequiredFieldMissing at runtime`() {
-        val (result, _) =
-            compile(
-                SourceFile.kotlin(
-                    "N.kt",
-                    """
-                    import com.sahsenvar.kmapper.annotations.MapTo
-                    data class D(val id: String)
-                    @MapTo(D::class)
-                    data class R(val id: String?)
-                    """.trimIndent(),
-                ),
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
-
-        val ex =
-            assertFails {
-                result.invokeMapper("RMappersKt", "toD", result.newInstance("R", null as String?))
+            `when`("the mapper runs") {
+                then("all fields copy through and the boundary reports success") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "UserDataModelMappersKt",
+                            "toUserDomainModelResult",
+                            result.newInstance("UserDataModel", "42", "a@b.com"),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    val domain = outcome.getOrNull()!!
+                    domain.prop("id") shouldBe "42"
+                    domain.prop("email") shouldBe "a@b.com"
+                }
             }
-        assertTrue(
-            ex::class.qualifiedName!!.contains("RequiredFieldMissing"),
-            "Expected RequiredFieldMissing but got: ${ex::class.qualifiedName} — ${ex.message}",
-        )
-    }
+        }
 
-    /**
-     * Test (c): built-in String→Int converter produces the correct integer value at runtime.
-     */
-    @Test
-    fun `built-in String to Int converts at runtime`() {
-        val (result, _) =
-            compile(
-                SourceFile.kotlin(
-                    "C.kt",
-                    """
-                    import com.sahsenvar.kmapper.annotations.MapTo
-                    data class CountD(val n: Int)
-                    @MapTo(CountD::class)
-                    data class CountR(val n: String)
-                    """.trimIndent(),
-                ),
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+        given("a nullable source field mapped into a non-null target without a default") {
+            val (result, _) =
+                compile(
+                    SourceFile.kotlin(
+                        "N.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        data class StrictDomainModel(val id: String)
+                        @MapTo(StrictDomainModel::class)
+                        data class StrictDataModel(val id: String?)
+                        """.trimIndent(),
+                    ),
+                )
+            result.exitCode shouldBe KotlinCompilation.ExitCode.OK
 
-        val domain =
-            result.invokeMapper(
-                "CountRMappersKt",
-                "toCountD",
-                result.newInstance("CountR", "7"),
-            )!!
-
-        assertEquals(7, domain.prop("n"))
-    }
-
-    /**
-     * Test (d): malformed String input for Int target wraps as TypeConversionFailed at runtime.
-     *
-     * If this test fails with a raw NumberFormatException instead of TypeConversionFailed,
-     * that is a REAL bug: the generated convertOrFail wrapping has a hole and raw converter
-     * exceptions escape to callers.
-     */
-    @Test
-    fun `bad conversion input wraps as TypeConversionFailed`() {
-        val (result, _) =
-            compile(
-                SourceFile.kotlin(
-                    "C2.kt",
-                    """
-                    import com.sahsenvar.kmapper.annotations.MapTo
-                    data class CountD(val n: Int)
-                    @MapTo(CountD::class)
-                    data class CountR(val n: String)
-                    """.trimIndent(),
-                ),
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
-
-        val ex =
-            assertFails {
-                result.invokeMapper("CountRMappersKt", "toCountD", result.newInstance("CountR", "abc"))
+            `when`("the source value is null") {
+                then("the boundary reports failure with RequiredFieldMissing") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "StrictDataModelMappersKt",
+                            "toStrictDomainModelResult",
+                            result.newInstance("StrictDataModel", null as String?),
+                        )
+                    outcome.isFailure.shouldBeTrue()
+                    outcome
+                        .exceptionOrNull()
+                        .shouldBeInstanceOf<MappingException.RequiredFieldMissing>()
+                        .path shouldBe "id"
+                }
             }
-        assertTrue(
-            ex::class.qualifiedName!!.contains("TypeConversionFailed"),
-            "Expected TypeConversionFailed but got: ${ex::class.qualifiedName} — ${ex.message}\n" +
-                "This is a real production bug: raw converter exception escapes convertOrFail wrapping.",
-        )
-    }
+        }
 
-    /**
-     * Test (e): @MapDefaultValue substitutes the default expression when the source field is null.
-     */
-    @Test
-    fun `MapDefaultValue substitutes default when source is null at runtime`() {
-        val (result, _) =
-            compile(
-                SourceFile.kotlin(
-                    "D.kt",
-                    """
-                    import com.sahsenvar.kmapper.annotations.MapTo
-                    import com.sahsenvar.kmapper.annotations.MapDefaultValue
-                    data class ProfileD(val name: String, val score: Int)
-                    @MapTo(ProfileD::class)
-                    data class ProfileR(
-                        val name: String,
-                        @MapDefaultValue("0")
-                        val score: String?
-                    )
-                    """.trimIndent(),
-                ),
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+        given("a built-in String to Int conversion") {
+            val (result, _) =
+                compile(
+                    SourceFile.kotlin(
+                        "C.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        data class CountDomainModel(val n: Int)
+                        @MapTo(CountDomainModel::class)
+                        data class CountDataModel(val n: String)
+                        """.trimIndent(),
+                    ),
+                )
+            result.exitCode shouldBe KotlinCompilation.ExitCode.OK
 
-        val domain =
-            result.invokeMapper(
-                "ProfileRMappersKt",
-                "toProfileD",
-                result.newInstance("ProfileR", "Alice", null as String?),
-            )!!
+            `when`("the source parses cleanly") {
+                then("the converted integer lands in the domain model") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "CountDataModelMappersKt",
+                            "toCountDomainModelResult",
+                            result.newInstance("CountDataModel", "7"),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    outcome.getOrNull()!!.prop("n") shouldBe 7
+                }
+            }
 
-        assertEquals("Alice", domain.prop("name"))
-        assertEquals(0, domain.prop("score"))
-    }
-}
+            `when`("the source is malformed") {
+                then("the raw converter exception is wrapped as TypeConversionFailed — never escapes raw") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "CountDataModelMappersKt",
+                            "toCountDomainModelResult",
+                            result.newInstance("CountDataModel", "abc"),
+                        )
+                    outcome.isFailure.shouldBeTrue()
+                    // If this surfaces a raw NumberFormatException instead, the seam wrapping
+                    // has a hole — a REAL production bug.
+                    outcome
+                        .exceptionOrNull()
+                        .shouldBeInstanceOf<MappingException.TypeConversionFailed>()
+                        .path shouldBe "n"
+                }
+            }
+        }
+
+        given("a target field with a constructor default and a nullable source") {
+            // Old-world intent (@MapDefaultValue substitutes when source is null) carries over:
+            // the default now lives in the TARGET constructor and applies via omit/copy.
+            val (result, _) =
+                compile(
+                    SourceFile.kotlin(
+                        "D.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        data class ProfileDomainModel(val name: String, val score: Int = 0)
+                        @MapTo(ProfileDomainModel::class)
+                        data class ProfileDataModel(
+                            val name: String,
+                            val score: String?
+                        )
+                        """.trimIndent(),
+                    ),
+                )
+            result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+
+            `when`("the source value is absent (null)") {
+                then("the constructor default substitutes silently") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "ProfileDataModelMappersKt",
+                            "toProfileDomainModelResult",
+                            result.newInstance("ProfileDataModel", "Alice", null as String?),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    val domain = outcome.getOrNull()!!
+                    domain.prop("name") shouldBe "Alice"
+                    domain.prop("score") shouldBe 0
+                }
+            }
+
+            `when`("the source value is present") {
+                then("the converted value overrides the default") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "ProfileDataModelMappersKt",
+                            "toProfileDomainModelResult",
+                            result.newInstance("ProfileDataModel", "Alice", "55"),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    outcome.getOrNull()!!.prop("score") shouldBe 55
+                }
+            }
+        }
+    })

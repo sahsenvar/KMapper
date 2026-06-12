@@ -1,129 +1,88 @@
-# Null-Safety ve @MapDefaultValue
+# Null Güvenliği ve Fallback Ladder
 
-KMapper, nullable-to-non-null dönüşümlerini derleme zamanında fark eder ve güvenli kod üretir. `null` hiçbir zaman sessizce yutulmaz.
+Bu sayfa, [zihinsel modelin](../baslarken/zihinsel-model.md) 1. ve 2. kuralının çalışan kod
+halidir.
 
----
+## Dört nullable kombinasyonu
 
-## Dört Nullability Durumu
+Kaynak ile hedef arasında eşlenen bir alan için derleyici dört kombinasyonun hepsini ayrı
+ayrı ele alır:
 
-| Kaynak | Hedef | Üretilen atama |
-|--------|-------|----------------|
-| `T` (zorunlu) | `T` (zorunlu) | Doğrudan atama |
-| `T` (zorunlu) | `T?` (nullable) | Doğrudan atama |
-| `T?` (nullable) | `T?` (nullable) | Doğrudan atama |
-| `T?` (nullable) | `T` (zorunlu) | `?: throw MappingException.RequiredFieldMissing("alan")` veya `@MapDefaultValue` |
+| Kaynak | Hedef | Davranış |
+|--------|-------|----------|
+| `T` | `T` | doğrudan kopya / dönüşüm |
+| `T` | `T?` | doğrudan — non-null değer nullable yuvayı doldurur |
+| `T?` | `T?` | doğrudan — null, null olarak akar |
+| `T?` | `T` | **ilginç olan** — aşağıda |
 
-Yalnızca son satır özel davranış gerektirir. Diğerleri doğrudan atamadır.
-
----
-
-## Nullable → Zorunlu: Varsayılan Hata
-
-Kaynak alan nullable, hedef alan zorunluysa processor otomatik olarak `RequiredFieldMissing` fırlatır:
+## Nullable → non-null: karar ladder'ın
 
 ```kotlin
-@MapTo(OrderDomain::class)
-data class OrderRemote(
-    val id: String?,          // nullable
-    val amount: Double?,      // nullable
+data class User(
+    val email: String,                //  kaçış yok       -> eksiklik hatadır
+    val nickname: String = "anon",    //  default kaçışı  -> eksiklik default'u alır
+    val bio: String?,                 //  nullable kaçışı -> eksiklik null olur
 )
 
-data class OrderDomain(
-    val id: String,           // zorunlu
-    val amount: Double,       // zorunlu
+@MapTo(User::class)
+data class UserResponse(
+    val email: String?,
+    val nickname: String?,
+    val bio: String?,
 )
 ```
 
-Üretilen kod:
+Kaynak alan null geldiğinde:
 
-```kotlin
-public fun OrderRemote.toOrderDomain(): OrderDomain = OrderDomain(
-    id     = id     ?: throw MappingException.RequiredFieldMissing("id"),
-    amount = amount ?: throw MappingException.RequiredFieldMissing("amount"),
-)
+```
+1. (dönüştürülecek değer yok)
+2. hedefin constructor default'u var mı? -> argüman atlanır, default uygulanır  [sessiz]
+3. hedef nullable mı?                    -> null                                 [sessiz]
+4. ikisi de değilse                      -> MappingException.RequiredFieldMissing
 ```
 
-`null` geldiğinde `MappingException.RequiredFieldMissing` fırlatılır; bu bir `RuntimeException` olduğu için catch etmeden önce loglayabilir ya da domain hatasına dönüştürebilirsiniz:
+Eksikliğin beyan edilmiş bir kaçışa akması **sessizdir** — null biyografi veridir, olay
+değildir.
+
+## Bozuk değerler aynı ladder'ı yürür — ama sesli
+
+Değer mevcut ama dönüşümü **fırlatıyorsa** (`"not-a-date"`, bilinmeyen enum değeri) aynı
+kaçışlar geçerlidir; iki farkla:
+
+- emilme, [degradation sink](../gozlemleme/listener.md)'e **raporlanır**
+  (`AbsorbedConversionError`; alan yolu ve nedeniyle birlikte), ve
+- [`@ConvertWith(onFail = OnFail.Throw)`](../tip-donusumu/convert-with.md) ile alan bazında
+  emilmeyi yasaklayabilirsiniz.
 
 ```kotlin
-try {
-    val domain = orderRemote.toOrderDomain()
-} catch (e: MappingException.RequiredFieldMissing) {
-    // e.field → hangi alan null geldi
+// joined: String? -> LocalDate?   değer "garbage" iken
+// -> hedefe null gider, sink'e AbsorbedConversionError(path="joined", cause=TypeConversionFailed) düşer
+```
+
+## Sert taban: RequiredFieldMissing
+
+Kaçış yoksa mapping, yol taşıyan bir exception ile durur — crash olarak değil, `Result`
+hatası olarak teslim edilir:
+
+```kotlin
+val result = UserResponse(email = null, …).toUserResult()
+result.exceptionOrNull()?.message
+// Required field missing: email
+```
+
+## Elle yazılan kod: aynı raylar
+
+`kmapper-core`'un public seam'leri elle yazılmış mapper'lara birebir aynı semantiği verir —
+üretilen kodun çağırdığı fonksiyonlar tam olarak bunlardır:
+
+```kotlin
+val email = response.email.orRequired("email") // null -> RequiredFieldMissing("email")
+val joined = response.joined.convertOrNull("joined", "kotlin.String", "kotlinx.datetime.LocalDate") {
+    LocalDateStringConverter.convertFrom(it) // bozuk -> null + sink raporu
 }
 ```
 
----
+Eksiksiz elle yazılmış bir mapper için [galerideki](../baslarken/ornekler.md)
+`CoreOnlyMapping` örneğine bakın.
 
-## @MapDefaultValue — Varsayılan Değer
-
-Null geldiğinde istisna yerine belirli bir değer kullanmak istiyorsanız `@MapDefaultValue(expression)` ekleyin. `expression`, üretilen kodun içine doğrudan yerleştirilen bir Kotlin ifadesidir — string literal, referans, fonksiyon çağrısı olabilir.
-
-```kotlin
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-
-@MapTo(EventDomain::class)
-data class EventRemote(
-    val title: String?,
-
-    @MapDefaultValue("Clock.System.now()")
-    val createdAt: Instant?,
-
-    @MapDefaultValue("0")
-    val viewCount: Int?,
-)
-
-data class EventDomain(
-    val title: String,
-    val createdAt: Instant,
-    val viewCount: Int,
-)
-```
-
-Üretilen kod:
-
-```kotlin
-public fun EventRemote.toEventDomain(): EventDomain = EventDomain(
-    title     = title     ?: throw MappingException.RequiredFieldMissing("title"),
-    createdAt = createdAt ?: Clock.System.now(),
-    viewCount = viewCount ?: 0,
-)
-```
-
-`title` için `@MapDefaultValue` verilmedi, bu yüzden exception fırlatılır. `createdAt` ve `viewCount` için varsayılan ifadeler kullanılır.
-
----
-
-## Zorunlu → Nullable Hedef
-
-Kaynak alan zorunlu ama hedef nullable ise doğrudan atama yapılır, hiçbir ek kontrol eklenmez:
-
-```kotlin
-@MapTo(UserCache::class)
-data class UserDomain(
-    val email: String,    // zorunlu
-)
-
-data class UserCache(
-    val email: String?,   // nullable — ama kaynak zaten zorunlu
-)
-```
-
-Üretilen:
-
-```kotlin
-public fun UserDomain.toUserCache(): UserCache = UserCache(
-    email = email,        // doğrudan atama
-)
-```
-
----
-
-## Hata Hiyerarşisi
-
-`MappingException.RequiredFieldMissing` ve diğer tiplerin tam listesi için bkz. [Hata Yönetimi](../hata-yonetimi/mapping-exception.md).
-
----
-
-Sonraki adım: [İç İçe Modeller](nested.md)
+> Sıradaki: **[İç İçe Modeller ve Hata Yolları →](nested.md)**

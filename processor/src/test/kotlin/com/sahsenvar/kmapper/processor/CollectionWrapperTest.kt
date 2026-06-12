@@ -15,7 +15,7 @@ class CollectionWrapperTest {
     /**
      * A @CollectionWrapper object in the same compilation, listed in @KMapperConfig.wrappers.
      * A @MapTo model with a PersistentList<TagDomain> target field should generate
-     * W.wrap(tags.map { it.toTagDomain() }) — the wrapper object's wrap() call.
+     * W.wrap(tags.convertEachOrSkip(...) { ... }) — element seams INSIDE the wrap() call.
      */
     @Test
     fun `List maps to PersistentList via CollectionWrapper object`() {
@@ -50,10 +50,13 @@ class CollectionWrapperTest {
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
-        // Must have a .map call for element-level conversion
-        assertTrue(gen.contains(".map") || gen.contains("map·{"), "Expected .map in generated code:\n$gen")
-        // Must call the wrapper object's wrap method
-        assertTrue(gen.contains("W.wrap("), "Expected W.wrap( call in generated code:\n$gen")
+        // Element-level conversion rides the seam rails inside the wrap call
+        assertTrue(gen.contains("convertEachOrSkip(\"tags\""), "Expected convertEachOrSkip in generated code:\n$gen")
+        // The wrap() invocation itself is path-guarded: a wrapper-thrown MappingException
+        // (e.g. EmptyCollection from a non-empty container) must reach the boundary carrying
+        // the field path instead of an empty one.
+        assertTrue(gen.contains("convertOrFail(\"tags\""), "Expected path-guarded wrap call in generated code:\n$gen")
+        assertTrue(gen.contains("W.wrap(it)"), "Expected W.wrap(it) inside the path guard in generated code:\n$gen")
     }
 
     /**
@@ -98,7 +101,7 @@ class CollectionWrapperTest {
         val item2 = r.newInstance("ItemRemote", 20)
         val container = r.newInstance("ContainerRemote", listOf(item1, item2))
 
-        val result = r.invokeMapper("ContainerRemoteMappersKt", "toContainerDomain", container)
+        val result = r.invokeResultMapper("ContainerRemoteMappersKt", "toContainerDomainResult", container).getOrThrow()
         assertNotNull(result)
         val items = result.prop("items")
         assertNotNull(items)

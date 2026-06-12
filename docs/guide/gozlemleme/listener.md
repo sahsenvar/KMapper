@@ -1,122 +1,69 @@
-# Gözlemleme — MappingListener
+# MappingListener ve Degradation Sink
 
-KMapper, ürettiği her mapper'a hafif bir gözlemleme kancası yerleştirir. Dinleyici kayıtlı değilken bu kanca **~sıfır maliyete** sahiptir; production build'lerde herhangi bir overhead bırakmaz.
+Mapping'lerin production'da yaptığı her şeyi iki kanal söyler:
 
-## MappingListener Interface'i
+- **`Result` hataları** — sert hatalar, çağrı noktasında.
+  ([Hata yönetimi](../hata-yonetimi/mapping-exception.md).)
+- **Degradation sink** — *emilen* her esneklik: null'a dönen bozuk tarih, atılan liste
+  elemanı, çakışan map anahtarı. Bu sayfa o kanal.
 
-```kotlin
-// com.sahsenvar.kmapper
-interface MappingListener {
-    fun onMapStart(source: Any, target: KClass<*>) {}
-    fun onMapComplete(source: Any, result: Any) {}
-    fun onError(source: Any, error: MappingException) {}
-}
-```
-
-Tüm metotlar varsayılan no-op implementasyona sahiptir; yalnızca ihtiyacınız olan metotları override edin. Interface ileri-uyumludur: sonraki sürümlerde `onFieldDefaulted`, `onConversion` gibi yeni metotlar eklenebilir — mevcut implementasyonlarınız bozulmaz.
-
-## KMapper — Dinleyici Kaydı
-
-`KMapper` singleton nesnesi dinleyici listesini yönetir:
+## Listener kaydetmek
 
 ```kotlin
-object KMapper {
-    val hasListeners: Boolean
-    fun addListener(listener: MappingListener)
-    fun removeListener(listener: MappingListener)
-    fun dispatch(block: MappingListener.() -> Unit)
-}
-```
+import com.sahsenvar.kmapper.KMapper
+import com.sahsenvar.kmapper.MappingListener
+import com.sahsenvar.kmapper.MappingDegradation
 
-Dinleyiciler copy-on-write semantiğiyle tutulur: `addListener`/`removeListener` çağrıları yeni bir liste oluşturur, mevcut listeyi mutate etmez. Bu, JVM/Android gibi shared-memory ortamlarında veri yarışını atomicfu gibi harici bir bağımlılık gerektirmeden önler.
-
-## Üretilen Kod — Guarded Dispatch
-
-Üretilen her mapper, `KMapper.hasListeners` ile korunan bir guard bloğu içerir:
-
-```kotlin
-fun UserRemote.toUserDomain(): UserDomain {
-    if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toUserDomain, UserDomain::class) }
-    val result = UserDomain(
-        id = id ?: throw MappingException.RequiredFieldMissing("id"),
-    )
-    if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toUserDomain, result) }
-    return result
-}
-```
-
-`hasListeners` false olduğunda (dinleyici yok) `dispatch` hiç çağrılmaz. Production ortamında dinleyici kaydetmediğiniz sürece ek overhead yoktur.
-
-Olaylar **mapper başına** (per-mapper) kaba granülerlikte yayılır — üretilen kod yalın kalır.
-
-## LoggingMappingListener
-
-KMapper, temel bir loglama implementasyonu sunar:
-
-```kotlin
-class LoggingMappingListener(private val log: (String) -> Unit) : MappingListener {
-    override fun onMapStart(source: Any, target: KClass<*>) =
-        log("KMapper start: ${source::class.simpleName} -> ${target.simpleName}")
-
-    override fun onMapComplete(source: Any, result: Any) =
-        log("KMapper done: ${source::class.simpleName} -> ${result::class.simpleName}")
-
-    override fun onError(source: Any, error: MappingException) =
-        log("KMapper error: ${error.message}")
-}
-```
-
-`log` parametresine istediğiniz log fonksiyonunu geçin — `println`, Timber, Napier veya benzeri:
-
-```kotlin
-// Android (Application.onCreate / DI init)
-KMapper.addListener(LoggingMappingListener { message -> Log.d("KMapper", message) })
-
-// Kotlin/Native veya ortak kod
-KMapper.addListener(LoggingMappingListener(::println))
-```
-
-## App Init'te Kayıt
-
-Dinleyiciler uygulama başlangıcında bir kez kayıt edilmelidir. Sık `addListener`/`removeListener` çağrısı için tasarlanmamıştır.
-
-**Android:**
-
-```kotlin
-class MyApplication : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        if (BuildConfig.DEBUG) {
-            KMapper.addListener(LoggingMappingListener { message ->
-                Log.d("KMapper", message)
-            })
-        }
+// bir kez, uygulama açılışında (Application.onCreate / iOS app delegate):
+KMapper.addListener(object : MappingListener {
+    override fun onDegradation(event: MappingDegradation) {
+        telemetry.count("mapping.degradation", event::class.simpleName)
     }
-}
-```
 
-**Koin / DI init:**
-
-```kotlin
-// KoinInitializer veya benzeri yapılanma noktası
-KMapper.addListener(LoggingMappingListener { message -> logger.debug(message) })
-```
-
-**Özel Dinleyici:**
-
-```kotlin
-class MetricsMappingListener(private val tracker: MetricsTracker) : MappingListener {
     override fun onError(source: Any, error: MappingException) {
-        tracker.recordMappingError(
-            sourceType = source::class.simpleName ?: "Unknown",
-            errorType  = error::class.simpleName ?: "Unknown",
-        )
+        log.warn("mapping failed: ${error.message}")
     }
-}
-
-KMapper.addListener(MetricsMappingListener(myTracker))
+})
 ```
 
----
+`MappingListener` izleme için `onMapStart`/`onMapComplete` da sunar. Bütün metotların
+varsayılan no-op gövdeleri var — yalnızca gerekeni override edin. Hazır bir
+`LoggingMappingListener(log)` dahildir.
 
-Sonraki adım: [Çok Modüllü Projeler](../ileri/cok-modullu.md)
+Listener'lar sözleşme gereği saf gözlemcidir: içlerinde fırlayan exception bastırılır;
+mapping'i ya da diğer listener'ları asla etkileyemez. Üretilen kod önce
+`KMapper.hasListeners`'a bakar — kanal kullanılmadığında maliyeti ~sıfırdır.
+
+## Degradation olayları
+
+`MappingDegradation` sealed'dır; her olay alan yolu taşır:
+
+| Olay | Ne zaman |
+|------|----------|
+| `AbsorbedConversionError` | bozuk skaler bir default/null kaçışına emildi ([ladder](../temel-kullanim/null-safety.md) 2./3. basamak) — nedeni taşır |
+| `DroppedBrokenElement` | bozuk koleksiyon elemanı atıldı |
+| `DroppedNullElement` | null eleman non-null eleman tipine sığmadı, atıldı |
+| `DuplicateKey` | iki map anahtarı dönüşüm sonrası çakıştı; son giren kaldı |
+| `ConvergedDuplicateElement` | iki set elemanı dönüşüm sonrası çakıştı |
+
+Akılda tutulacak ayrım ([zihinsel modelin](../baslarken/zihinsel-model.md) 2. kuralı):
+**beyan edilmiş eksiklik sessizdir** — nullable alana null gelmesi olay *değildir*;
+**emilen bozukluk her zaman raporlanır** — veri vardı ve kayboldu, telemetri bilmeli.
+
+## Debug/release kalıbı
+
+```kotlin
+if (BuildConfig.DEBUG) {
+    KMapper.addListener(object : MappingListener {
+        override fun onDegradation(event: MappingDegradation) =
+            error("degradation in debug build: $event") // geliştirirken gürültüyle çök…
+    })
+} else {
+    KMapper.addListener(MetricsListener) // …production'da sessizce gözle
+}
+```
+
+Bir uyarı: `onDegradation` *içinde* mapping çalıştırmayın — tap içindeki bir degrading seam,
+dispatch'i özyinelemeye sokar.
+
+> Sıradaki: **[Çok Modüllü Projeler →](../ileri/cok-modullu.md)**

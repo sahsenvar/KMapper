@@ -10,11 +10,11 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration // used in generateReverseMappingFunction
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
+import com.sahsenvar.kmapper.processor.analyzer.ConverterIntrospector
 import com.sahsenvar.kmapper.processor.analyzer.CycleDetector
 import com.sahsenvar.kmapper.processor.analyzer.FieldAnalyzer
 import com.sahsenvar.kmapper.processor.analyzer.TypeMatcher
 import com.sahsenvar.kmapper.processor.analyzer.discoverWrappersFromConfig
-import com.sahsenvar.kmapper.processor.analyzer.fqn
 import com.sahsenvar.kmapper.processor.generator.FunctionNameGenerator
 import com.sahsenvar.kmapper.processor.generator.MappingCodeGenerator
 import com.sahsenvar.kmapper.processor.model.FieldInfo
@@ -22,8 +22,7 @@ import com.sahsenvar.kmapper.processor.validator.BuiltInConverterValidator
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.MemberName
-import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.buildCodeBlock
 import com.squareup.kotlinpoet.ksp.toTypeName
 
@@ -68,8 +67,11 @@ class MappingProcessor(
 
         // STEP 1: Discover custom converters from @KMapperConfig annotations.
         // Returns (typePair → converterFqn) map plus the raw entries list for duplicate-checking.
-        val (customConverters, globalConverterEntries) = discoverCustomConverters(resolver)
-        typeMatcher = TypeMatcher(logger, customConverters, collectionWrappers)
+        // The introspector is shared between discovery and resolution so both walk the same
+        // superclass chain (parameterized-converter bases resolve identically everywhere).
+        val introspector = ConverterIntrospector(resolver, logger)
+        val (customConverters, globalConverterEntries) = discoverCustomConverters(resolver, introspector)
+        typeMatcher = TypeMatcher(logger, customConverters, collectionWrappers, introspector)
 
         // STEP 1b: Validate the global @KMapperConfig list for duplicate (S,T) pairs.
         // Per-field @UseMapTypeConverter converters are exempt — they are never checked here.
@@ -126,6 +128,7 @@ class MappingProcessor(
      */
     private fun discoverCustomConverters(
         resolver: Resolver,
+        introspector: ConverterIntrospector,
     ): Pair<Map<Pair<String, String>, String>, List<Pair<Pair<String, String>, String>>> {
         val entries = mutableListOf<Pair<Pair<String, String>, String>>()
 
@@ -147,7 +150,7 @@ class MappingProcessor(
                 val converterTypes = convertersArg.value as? List<KSType> ?: return@forEach
 
                 for (converterType in converterTypes) {
-                    val pair = converterType.toConverterPair() ?: continue
+                    val pair = converterType.toConverterPair(introspector) ?: continue
                     entries.add(pair)
                 }
             }
@@ -162,34 +165,16 @@ class MappingProcessor(
     }
 
     /**
-     * Walks a converter type's supertypes to find MapTypeConverter<S,T> and returns
-     * ((sourceFqn to targetFqn) to converterFqn), or null if not a MapTypeConverter.
+     * Resolves a referenced converter type's MapTypeConverter<S, T> pair through
+     * [ConverterIntrospector.typePairOf] (superclass-chain aware — parameterized
+     * converter bases register too) and returns ((sourceFqn to targetFqn) to converterFqn),
+     * or null if the reference never reaches MapTypeConverter.
      */
-    private fun KSType.toConverterPair(): Pair<Pair<String, String>, String>? {
+    private fun KSType.toConverterPair(introspector: ConverterIntrospector): Pair<Pair<String, String>, String>? {
         val converterDecl = declaration as? KSClassDeclaration ?: return null
         val converterFqn = converterDecl.qualifiedName?.asString() ?: return null
-        val mapTypeConverterFqn = "com.sahsenvar.kmapper.converter.MapTypeConverter"
-
-        for (supertype in converterDecl.superTypes) {
-            val resolved = supertype.resolve()
-            val supertypeFqn = resolved.declaration.qualifiedName?.asString() ?: continue
-            if (supertypeFqn == mapTypeConverterFqn) {
-                val sType =
-                    resolved.arguments
-                        .getOrNull(0)
-                        ?.type
-                        ?.resolve() ?: continue
-                val tType =
-                    resolved.arguments
-                        .getOrNull(1)
-                        ?.type
-                        ?.resolve() ?: continue
-                val sFqn = sType.fqn()
-                val tFqn = tType.fqn()
-                return (sFqn to tFqn) to converterFqn
-            }
-        }
-        return null
+        val typePair = introspector.typePairOf(converterDecl) ?: return null
+        return typePair to converterFqn
     }
 
     private fun writeMappingFiles() {
@@ -270,7 +255,8 @@ class MappingProcessor(
             val targetFields = fieldAnalyzer.analyzeConstructorFields(targetClass)
 
             // External field detection
-            // Exclude fields that have constructor default values
+            // Exclude fields whose constructor default is usable by mapping
+            // (@IgnoreDefaultValue masks a declared default → the field becomes external)
             val externalFields =
                 targetFields.filter { targetField ->
                     val hasSourceMapping =
@@ -278,8 +264,8 @@ class MappingProcessor(
                             hasFieldMapping(sourceField, targetField, targetClass)
                         }
 
-                    // External if: no source mapping AND no constructor default
-                    !hasSourceMapping && !targetField.hasDefault
+                    // External if: no source mapping AND no usable constructor default
+                    !hasSourceMapping && !targetField.usesDefaultInMapping
                 }
 
             generateMappingFunction(
@@ -305,8 +291,13 @@ class MappingProcessor(
         val sourceClassFqn = sourceClass.qualifiedName?.asString()
 
         targetFields.forEach { targetField ->
-            val mappedNames = targetField.fieldMapTargets[sourceClassFqn]
-            if (mappedNames != null && mappedNames.size > 1) {
+            // Validate the names that resolution would actually consult for THIS source:
+            // a class-scoped bucket suppresses the wildcard one (same priority as
+            // hasFieldMappingReverse), so specific+wildcard is a legitimate combination —
+            // but two names inside the consulted bucket claim two remote fields at once.
+            val specificNames = targetField.fieldMapTargets[sourceClassFqn].orEmpty()
+            val mappedNames = specificNames.ifEmpty { targetField.fieldMapTargets["*"].orEmpty() }
+            if (mappedNames.size > 1) {
                 logger.error(
                     "@FieldMap on field '${targetField.name}' in ${targetClass.simpleName.asString()} " +
                         "has multiple mappings (${mappedNames.joinToString(
@@ -411,96 +402,168 @@ class MappingProcessor(
                 targetClass.simpleName.asString(),
             )
 
-        val kMapperClass = ClassName("com.sahsenvar.kmapper", "KMapper")
-        val dispatchMember = MemberName("com.sahsenvar.kmapper", "dispatch")
+        // Pre-collect fields that will actually be emitted (skip computed; a defaulted target
+        // field without a source mapping stays OMITTED — the constructor default applies).
+        val fieldsToEmit =
+            targetFields
+                .filter { !it.isComputed }
+                .mapNotNull { targetField ->
+                    val sourceField =
+                        sourceFields.firstOrNull { sf ->
+                            hasFieldMapping(sf, targetField, targetClass)
+                        }
+                    if (sourceField != null || !targetField.usesDefaultInMapping) {
+                        FieldEntry(targetField, sourceField)
+                    } else {
+                        null
+                    }
+                }
 
         val funSpec =
-            FunSpec
-                .builder(functionName)
-                .receiver(sourceClassName)
-                .returns(targetClassName)
-                .apply {
-                    // External parameters
-                    externalFields.forEach { field ->
-                        val typeName = field.type.toTypeName()
-                        if (field.defaultValue != null) {
-                            addParameter(
-                                ParameterSpec
-                                    .builder(field.name, typeName)
-                                    .defaultValue(field.defaultValue)
-                                    .build(),
-                            )
-                        } else {
-                            addParameter(field.name, typeName)
-                        }
-                    }
-                }.addCode(
-                    buildCodeBlock {
-                        // Guarded listener dispatch: onMapStart
-                        addStatement(
-                            "if·(%T.hasListeners)·%T.dispatch·{·onMapStart(this@%N,·%T::class)·}",
-                            kMapperClass,
-                            kMapperClass,
-                            functionName,
-                            targetClassName,
-                        )
+            buildMapperFunSpec(
+                functionName = functionName,
+                sourceClassName = sourceClassName,
+                targetClassName = targetClassName,
+                fieldsToEmit = fieldsToEmit,
+                externalFields = externalFields,
+                isReverse = false,
+            )
 
-                        // Build the Target(...) constructor call into a local variable
-                        add("val·result·=·%T(\n", targetClassName)
+        // Add to mappingFunctions collection
+        val receiverKey = ReceiverKey(packageName, sourceClass.simpleName.asString())
+        mappingFunctions.getOrPut(receiverKey) { mutableListOf() }.add(funSpec)
+    }
+
+    /** A target constructor parameter paired with its resolved source field (null = external). */
+    private data class FieldEntry(
+        val targetField: FieldInfo,
+        val sourceField: FieldInfo?,
+    )
+
+    /**
+     * Builds the generated mapper function with the `Result` boundary and omit/copy defaults:
+     *
+     * ```
+     * public fun Source.toTargetResult(): Result<Target> = runCatching {
+     *   if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toTargetResult, Target::class) }
+     *   val base = Target(<constructor entries — no usable default>)
+     *   val result = base.copy(<defaulted entries with a source mapping>)   // or: val result = base
+     *   if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toTargetResult, result) }
+     *   result
+     * }
+     * ```
+     *
+     * The library never throws at the caller: everything (seam errors, validation, listeners'
+     * surroundings) runs inside `runCatching`, so hard failures surface as `Result.failure`.
+     * Defaulted target fields are OMITTED from the constructor call (the Kotlin default
+     * applies to `base`) and then overridden via `.copy()` where the seam falls back to
+     * `base.<field>` — this works for any default expression, not just annotation-encodable
+     * values. KotlinPoet emits the single `return runCatching { … }` statement as an
+     * expression body (`= runCatching { … }`).
+     */
+    private fun buildMapperFunSpec(
+        functionName: String,
+        sourceClassName: ClassName,
+        targetClassName: ClassName,
+        fieldsToEmit: List<FieldEntry>,
+        externalFields: List<FieldInfo>,
+        isReverse: Boolean,
+    ): FunSpec {
+        val kMapperClass = ClassName("com.sahsenvar.kmapper", "KMapper")
+        val resultTypeName = ClassName("kotlin", "Result").parameterizedBy(targetClassName)
+
+        val constructorEntries = fieldsToEmit.filter { !it.targetField.usesDefaultInMapping }
+        val copyEntries = fieldsToEmit.filter { it.targetField.usesDefaultInMapping && it.sourceField != null }
+
+        return FunSpec
+            .builder(functionName)
+            .receiver(sourceClassName)
+            .returns(resultTypeName)
+            .apply {
+                // External parameters — always required (no annotation-supplied defaults;
+                // @MapDefaultValue is removed in the converter redesign).
+                externalFields.forEach { field ->
+                    addParameter(field.name, field.type.toTypeName())
+                }
+            }.addCode(
+                buildCodeBlock {
+                    beginControlFlow("return·runCatching")
+
+                    // Guarded listener dispatch: onMapStart
+                    addStatement(
+                        "if·(%T.hasListeners)·%T.dispatch·{·onMapStart(this@%N,·%T::class)·}",
+                        kMapperClass,
+                        kMapperClass,
+                        functionName,
+                        targetClassName,
+                    )
+
+                    // Constructor stage: fields without a usable default MUST be constructed.
+                    if (constructorEntries.isEmpty()) {
+                        addStatement("val·base·=·%T()", targetClassName)
+                    } else {
+                        add("val·base·=·%T(\n", targetClassName)
                         indent()
-
-                        // Pre-collect fields that will actually be emitted (skip computed + defaulted)
-                        data class FieldEntry(
-                            val targetField: FieldInfo,
-                            val sourceField: FieldInfo?,
-                        )
-
-                        val fieldsToEmit =
-                            targetFields
-                                .filter { !it.isComputed }
-                                .mapNotNull { targetField ->
-                                    val sourceField =
-                                        sourceFields.firstOrNull { sf ->
-                                            hasFieldMapping(sf, targetField, targetClass)
-                                        }
-                                    if (sourceField != null || !targetField.hasDefault) {
-                                        FieldEntry(targetField, sourceField)
-                                    } else {
-                                        null
-                                    }
-                                }
-
-                        fieldsToEmit.forEachIndexed { index, (targetField, sourceField) ->
-                            val separator = if (index == fieldsToEmit.lastIndex) "\n" else ",\n"
+                        constructorEntries.forEachIndexed { index, (targetField, sourceField) ->
+                            val separator = if (index == constructorEntries.lastIndex) "\n" else ",\n"
                             if (sourceField != null) {
                                 val strategy =
-                                    typeMatcher.determineMappingStrategy(sourceField, targetField)
+                                    typeMatcher.determineMappingStrategy(sourceField, targetField, isReverse)
                                 val mappingCode =
-                                    codeGen.generateFieldMapping(sourceField, targetField, strategy)
+                                    codeGen.generateFieldMapping(
+                                        sourceField,
+                                        targetField,
+                                        strategy,
+                                        isReverse,
+                                        inCopyStage = false,
+                                    )
                                 add("%N·=·%L$separator", targetField.name, mappingCode)
                             } else {
                                 // External field without constructor default
                                 add("%N·=·%N$separator", targetField.name, targetField.name)
                             }
                         }
-
                         unindent()
                         addStatement(")")
+                    }
 
-                        // Guarded listener dispatch: onMapComplete
-                        addStatement(
-                            "if·(%T.hasListeners)·%T.dispatch·{·onMapComplete(this@%N,·result)·}",
-                            kMapperClass,
-                            kMapperClass,
-                            functionName,
-                        )
-                        addStatement("return·result")
-                    },
-                ).build()
+                    // Copy stage: defaulted fields with a source mapping override the default
+                    // through the OrElse seams, falling back to base.<field>.
+                    if (copyEntries.isEmpty()) {
+                        addStatement("val·result·=·base")
+                    } else {
+                        add("val·result·=·base.copy(\n")
+                        indent()
+                        copyEntries.forEachIndexed { index, (targetField, sourceField) ->
+                            val separator = if (index == copyEntries.lastIndex) "\n" else ",\n"
+                            val strategy =
+                                typeMatcher.determineMappingStrategy(sourceField!!, targetField, isReverse)
+                            val mappingCode =
+                                codeGen.generateFieldMapping(
+                                    sourceField,
+                                    targetField,
+                                    strategy,
+                                    isReverse,
+                                    inCopyStage = true,
+                                )
+                            add("%N·=·%L$separator", targetField.name, mappingCode)
+                        }
+                        unindent()
+                        addStatement(")")
+                    }
 
-        // Add to mappingFunctions collection
-        val receiverKey = ReceiverKey(packageName, sourceClass.simpleName.asString())
-        mappingFunctions.getOrPut(receiverKey) { mutableListOf() }.add(funSpec)
+                    // Guarded listener dispatch: onMapComplete
+                    addStatement(
+                        "if·(%T.hasListeners)·%T.dispatch·{·onMapComplete(this@%N,·result)·}",
+                        kMapperClass,
+                        kMapperClass,
+                        functionName,
+                    )
+                    // The runCatching block's value — NOT a return (expression value).
+                    addStatement("result")
+                    endControlFlow()
+                },
+            ).build()
     }
 
     private fun processMapFromAnnotation(
@@ -516,6 +579,23 @@ class MappingProcessor(
                 it.shortName.asString() == "MapFrom"
             }
 
+        // VALIDATION: multiple @MapFrom sources require explicit targetClass in @FieldMap —
+        // a wildcard rename cannot disambiguate which source it talks about (mirror of the
+        // multi-@MapTo rule above).
+        if (mapFromAnnotations.count() > 1) {
+            targetConstructors.forEach { (_, targetFields) ->
+                targetFields.forEach { field ->
+                    if ("*" in field.fieldMapTargets) {
+                        logger.error(
+                            "@FieldMap on field '${field.name}' in ${targetClass.simpleName.asString()} " +
+                                "must specify targetClass parameter when multiple @MapFrom annotations exist. " +
+                                "Example: @FieldMap(fieldName = \"id\", targetClass = UserRemote::class)",
+                        )
+                    }
+                }
+            }
+        }
+
         mapFromAnnotations.forEach { annotation ->
             val sourceType = annotation.arguments.first().value as? KSType ?: return@forEach
             val sourceClass = sourceType.declaration as? KSClassDeclaration ?: return@forEach
@@ -526,18 +606,19 @@ class MappingProcessor(
             targetConstructors.forEach { (constructor, targetFields) ->
                 // VALIDATION: MapFrom does not allow multiple @FieldMap for the same sourceClass
                 validateMapFromFieldMappings(targetClass, targetFields, sourceClass)
-                // External field detection (fields in target not in source)
-                // Exclude fields that have constructor default values
+                // External field detection (fields in target not in source). Uses the SAME
+                // predicate as the fieldsToEmit pairing below — externals and pairing must
+                // never disagree about whether a field has a source mapping.
+                // Exclude fields whose constructor default is usable by mapping.
                 val externalFields =
                     targetFields.filter { targetField ->
                         val hasSourceMapping =
                             sourceFields.any { sourceField ->
-                                sourceField.name == targetField.name ||
-                                    targetField.fieldMapTarget == sourceField.name
+                                hasFieldMappingReverse(sourceField, targetField, sourceClass)
                             }
 
-                        // External if: no source mapping AND no constructor default
-                        !hasSourceMapping && !targetField.hasDefault && !targetField.isComputed
+                        // External if: no source mapping AND no usable constructor default
+                        !hasSourceMapping && !targetField.usesDefaultInMapping && !targetField.isComputed
                     }
 
                 generateReverseMappingFunction(
@@ -571,101 +652,31 @@ class MappingProcessor(
                 targetClass.simpleName.asString(),
             )
 
-        val kMapperClass = ClassName("com.sahsenvar.kmapper", "KMapper")
+        val reverseFieldsToEmit =
+            targetFields
+                .filter { !it.isComputed }
+                .mapNotNull { targetField ->
+                    val sourceField =
+                        sourceFields.firstOrNull { sf ->
+                            hasFieldMappingReverse(sf, targetField, sourceClass)
+                        }
+                    if (sourceField != null || !targetField.usesDefaultInMapping) {
+                        FieldEntry(targetField, sourceField)
+                    } else {
+                        null
+                    }
+                    // Else: field has a usable constructor default and no mapping — omitted
+                }
 
         val funSpec =
-            FunSpec
-                .builder(functionName)
-                .receiver(sourceClassName)
-                .returns(targetClassName)
-                .apply {
-                    // External parameters
-                    externalFields.forEach { field ->
-                        val typeName = field.type.toTypeName()
-                        if (field.defaultValue != null) {
-                            addParameter(
-                                ParameterSpec
-                                    .builder(field.name, typeName)
-                                    .defaultValue(field.defaultValue)
-                                    .build(),
-                            )
-                        } else {
-                            addParameter(field.name, typeName)
-                        }
-                    }
-                }.addCode(
-                    buildCodeBlock {
-                        // Guarded listener dispatch: onMapStart
-                        addStatement(
-                            "if·(%T.hasListeners)·%T.dispatch·{·onMapStart(this@%N,·%T::class)·}",
-                            kMapperClass,
-                            kMapperClass,
-                            functionName,
-                            targetClassName,
-                        )
-
-                        add("val·result·=·%T(\n", targetClassName)
-                        indent()
-
-                        data class ReverseFieldEntry(
-                            val targetField: FieldInfo,
-                            val sourceField: FieldInfo?,
-                        )
-
-                        val reverseFieldsToEmit =
-                            targetFields
-                                .filter { !it.isComputed }
-                                .mapNotNull { targetField ->
-                                    val sourceField =
-                                        sourceFields.firstOrNull { sf ->
-                                            hasFieldMappingReverse(sf, targetField, sourceClass)
-                                        }
-                                    if (sourceField != null || !targetField.hasDefault) {
-                                        ReverseFieldEntry(targetField, sourceField)
-                                    } else {
-                                        null
-                                    }
-                                    // Else: field has constructor default, skip it
-                                }
-
-                        reverseFieldsToEmit.forEachIndexed { index, (targetField, sourceField) ->
-                            val separator = if (index == reverseFieldsToEmit.lastIndex) "\n" else ",\n"
-
-                            if (sourceField != null) {
-                                // Has source mapping
-                                val strategy =
-                                    typeMatcher.determineMappingStrategy(
-                                        sourceField,
-                                        targetField,
-                                        isReverse = true,
-                                    )
-                                val mappingCode =
-                                    codeGen.generateFieldMapping(
-                                        sourceField,
-                                        targetField,
-                                        strategy,
-                                        isReverse = true,
-                                    )
-                                add("%N·=·%L$separator", targetField.name, mappingCode)
-                            } else {
-                                // External field without constructor default
-                                add("%N·=·%N$separator", targetField.name, targetField.name)
-                            }
-                        }
-
-                        unindent()
-                        addStatement(")")
-
-                        // Guarded listener dispatch: onMapComplete
-                        addStatement(
-                            "if·(%T.hasListeners)·%T.dispatch·{·onMapComplete(this@%N,·result)·}",
-                            kMapperClass,
-                            kMapperClass,
-                            functionName,
-                        )
-                        addStatement("return·result")
-                    },
-                ).build()
+            buildMapperFunSpec(
+                functionName = functionName,
+                sourceClassName = sourceClassName,
+                targetClassName = targetClassName,
+                fieldsToEmit = reverseFieldsToEmit,
+                externalFields = externalFields,
+                isReverse = true,
+            )
 
         // Add to mappingFunctions collection
         val receiverKey = ReceiverKey(packageName, sourceClass.simpleName.asString())

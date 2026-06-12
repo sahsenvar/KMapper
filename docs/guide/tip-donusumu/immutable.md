@@ -1,140 +1,45 @@
 # Immutable Koleksiyonlar — converters-immutable
 
-KMapper'in `core` modülü yalnızca stdlib `List`/`Set` eşleştirmesini bilir. `PersistentList`, `ImmutableList`, `ImmutableSet`, `PersistentSet` gibi `kotlinx.collections.immutable` tiplerini hedef olarak kullanmak için **`converters-immutable`** modülünü ekleyin.
-
----
+[kotlinx-collections-immutable](https://github.com/Kotlin/kotlinx.collections.immutable) için
+[`@CollectionWrapper`](ozel-converter.md) object'leri: wire `List`'lerini doğrudan immutable
+domain koleksiyonlarına eşleyin.
 
 ## Kurulum
 
-`converters-immutable` bağımlılığını ilgili modüle ekleyin:
-
 ```kotlin
-// build.gradle.kts
-commonMainImplementation("io.github.sahsenvar:kmapper-converters-immutable:1.0.0")
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-immutable:2.0.0")
+}
 ```
 
-KSP bağımlılığı değişmez. Ancak **wrapper'ları `@KMapperConfig`'in `wrappers` listesinde açıkça belirtmeniz gerekir** (bağımlılığı eklemek yeterli değildir):
+Kullandığınız wrapper'ları [`@KMapperConfig`](kmapperconfig.md)'e kaydedin:
 
 ```kotlin
-import com.sahsenvar.kmapper.annotations.KMapperConfig
-import com.sahsenvar.kmapper.immutable.PersistentListWrapper
-import com.sahsenvar.kmapper.immutable.ImmutableListWrapper
-import com.sahsenvar.kmapper.immutable.ImmutableSetWrapper
-import com.sahsenvar.kmapper.immutable.PersistentSetWrapper
-
-@KMapperConfig(
-    wrappers = [
-        PersistentListWrapper::class,
-        ImmutableListWrapper::class,
-        ImmutableSetWrapper::class,
-        PersistentSetWrapper::class,
-    ]
-)
+@KMapperConfig(wrappers = [PersistentListWrapper::class, PersistentSetWrapper::class])
 object AppMapperConfig
 ```
 
-Yalnızca gerçekten kullandığınız wrapper'ları eklemeniz yeterlidir.
+## Wrapper'lar (`com.sahsenvar.kmapper.immutable`)
 
----
-
-## Sağlanan Wrapper Nesneler
-
-`converters-immutable`, her immutable koleksiyon tipi için `@CollectionWrapper` anotasyonlu dört `object` tanımlar:
-
-```kotlin
-@CollectionWrapper(forType = PersistentList::class)
-object PersistentListWrapper {
-    fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
-}
-
-@CollectionWrapper(forType = ImmutableList::class)
-object ImmutableListWrapper {
-    fun <T> wrap(items: List<T>): ImmutableList<T> = items.toImmutableList()
-}
-
-@CollectionWrapper(forType = ImmutableSet::class)
-object ImmutableSetWrapper {
-    fun <T> wrap(items: List<T>): ImmutableSet<T> = items.toImmutableSet()
-}
-
-@CollectionWrapper(forType = PersistentSet::class)
-object PersistentSetWrapper {
-    fun <T> wrap(items: List<T>): PersistentSet<T> = items.toPersistentSet()
-}
-```
-
-Bu nesneleri doğrudan çağırmazsınız; processor hedef alanın tipini görünce `@KMapperConfig.wrappers` listesinden uygun wrapper'ı seçer ve `wrap(...)` çağrısını üretir.
-
-**Çapraz tür dönüşümü:** Kaynak `List<T>`, `Set<T>` veya `PersistentList<T>` olsa bile, hedef `PersistentSet<T>` ise processor `PersistentSetWrapper.wrap(...)` çağrısını üretir. Kaynak ile hedef koleksiyon türlerinin eşleşmesine gerek yoktur.
-
----
+| Wrapper | `List<T>` ↔ |
+|---------|--------------|
+| `PersistentListWrapper` | `PersistentList<T>` |
+| `ImmutableListWrapper` | `ImmutableList<T>` |
+| `PersistentSetWrapper` | `PersistentSet<T>` |
+| `ImmutableSetWrapper` | `ImmutableSet<T>` |
 
 ## Kullanım
 
-Hedef sınıfta immutable koleksiyon tipi kullanın ve kullandığınız wrapper'ı `@KMapperConfig.wrappers`'a ekleyin:
-
 ```kotlin
-import kotlinx.collections.immutable.PersistentList
+data class User(val tags: PersistentList<Tag>)
 
-@MapTo(ArticleDomain::class)
-data class ArticleRemote(
-    val title: String,
-    val tags: List<TagRemote>,
-)
-
-data class TagDomain(val id: String, val name: String)
-
-data class ArticleDomain(
-    val title: String,
-    val tags: PersistentList<TagDomain>,    // hedef: PersistentList
-)
-
-@KMapperConfig(wrappers = [PersistentListWrapper::class])
-object AppMapperConfig
+@MapTo(User::class)
+data class UserResponse(val tags: List<TagResponse>) // elemanlar Tag alt mapper'ından geçer
 ```
 
-Processor `tags` alanının hedef tipinin `PersistentList` olduğunu görür, `wrappers` listesindeki `PersistentListWrapper`'ı seçer ve şunu üretir:
+Eleman dönüşümü (iç içe `@MapTo` çiftleri ve
+[eleman ladder'ı](../temel-kullanim/koleksiyonlar.md) dahil) değişmez — wrapper yalnızca kabı
+değiştirir. İki yön de çalışır: `PersistentList` kaynağı, ters mapping için `List`'e geri
+açılır.
 
-```kotlin
-public fun ArticleRemote.toArticleDomain(): ArticleDomain = ArticleDomain(
-    title = title,
-    tags  = PersistentListWrapper.wrap(tags.map { it.toTagDomain() }),
-)
-```
-
-`ImmutableList`, `ImmutableSet` ve `PersistentSet` için de aynı mekanizma çalışır.
-
----
-
-## @CollectionWrapper — Nasıl Çalışır?
-
-`@CollectionWrapper(forType = PersistentList::class)` anotasyonu bir `object` üzerine eklenir ve `BINARY` retention ile derlenir. Tüketici modülün KSP çalıştırmasında processor, `@KMapperConfig(wrappers = [...])` listesini okur ve her sınıfın `@CollectionWrapper.forType` değerini bağımlılık artifact'larından çözer — bu standart bir tür+anotasyon çözümlemesidir ve tüm platformlarda (JVM, Android, iOS/Native) çalışır.
-
-`getDeclarationsFromPackage` veya otomatik keşif kullanılmaz; wrapper'ların listede açıkça yer alması gerekir.
-
-Aynı `forType` için `wrappers` listesinde birden fazla wrapper bulunursa processor **derleme hatası** verir.
-
----
-
-## Kendi @CollectionWrapper Nesnenizi Yazmak
-
-Kütüphane tarafından sağlanmayan bir immutable koleksiyon tipi için kendi wrapper'ınızı yazabilirsiniz:
-
-```kotlin
-// kendi modülünüzde:
-@CollectionWrapper(forType = MyImmutableList::class)
-object MyImmutableListWrapper {
-    fun <T> wrap(items: List<T>): MyImmutableList<T> = MyImmutableList.copyOf(items)
-}
-```
-
-Ardından tüketen modülün `@KMapperConfig.wrappers` listesine ekleyin:
-
-```kotlin
-@KMapperConfig(wrappers = [MyImmutableListWrapper::class])
-object AppMapperConfig
-```
-
----
-
-Diğer kaynaklar: [Koleksiyonlar (Temel Kullanım)](../temel-kullanim/koleksiyonlar.md) | [@KMapperConfig](kmapperconfig.md)
+> Sıradaki: **[Arrow →](arrow.md)**

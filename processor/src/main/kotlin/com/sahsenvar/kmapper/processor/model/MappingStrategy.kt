@@ -10,10 +10,12 @@ sealed class MappingStrategy {
     data object Direct : MappingStrategy()
 
     /**
-     * Use a TypeConverter.
+     * Converter call resolved orientation-aware.
      */
     data class Convert(
         val converterFqn: String,
+        /** true → field source/target == converter S/T → convertTo; false → reverse → convertFrom. */
+        val forward: Boolean,
     ) : MappingStrategy()
 
     /**
@@ -24,11 +26,14 @@ sealed class MappingStrategy {
     ) : MappingStrategy()
 
     /**
-     * Collection mapping (map each element).
-     * @param elementStrategy how to map each element
+     * Collection mapping: elements ride the convertEach… element seams, selected by the
+     * (target element shape × onFail) table — e.g.
+     * `tags.convertEachOrSkip("tags", from, to) { … }`. Direct same-type elements keep the
+     * container passthrough (no seam); container-level null handling stays separate
+     * (scope separation: element failure never escalates to the container).
+     * @param elementStrategy how to map each element (feeds the seam's convert lambda)
      * @param isSet true when the TARGET field is a kotlin.collections.Set / MutableSet —
-     *   the generator will append `.toSet()` after `.map { }` to produce the correct type.
-     *   List targets keep isSet = false and emit plain `.map { }`.
+     *   selects the Set-producing seams (convertEachOrSkipToSet / convertEachOrFailToSet).
      */
     data class Collection(
         val elementStrategy: MappingStrategy,
@@ -61,26 +66,31 @@ sealed class MappingStrategy {
     data object EnumToWire : MappingStrategy()
 
     /**
-     * Collection mapping that terminates with a @CollectionWrapper object's wrap() call.
-     * Emits: WrapperObject.wrap(source.map { elementMapping }) (non-null source)
-     *      or source?.map { ... }?.let { WrapperObject.wrap(it) } (nullable source)
+     * Collection mapping whose container shell is handled by a @CollectionWrapper object,
+     * in either direction. Element conversion stays on the normal seam rails:
+     *   forward (wrap):  `WrapperObject.wrap(<element seam chain>)`
+     *   reverse (unwrap): `WrapperObject.unwrap(source).<element seam chain>`
      * @param elementStrategy how to map each element
      * @param wrapperObjectFqn fully-qualified name of the wrapper object (e.g. com.example.PersistentListWrapper)
+     * @param useUnwrap true when the SOURCE field is the registered wrapped type and the
+     *   target is a plain collection — the generator calls unwrap() and feeds the seams.
      */
     data class WrappedCollection(
         val elementStrategy: MappingStrategy,
         val wrapperObjectFqn: String,
+        val useUnwrap: Boolean = false,
     ) : MappingStrategy()
 
     /**
-     * Map<K,V1> → Map<K,V2> mapping by transforming values.
-     * Keys are directly assigned (same type K on both sides).
-     * Emits: source.mapValues { (_, v) -> v.toV2() }    (non-null source, nested values)
-     *        source?.mapValues { (_, v) -> v.toV2() }   (nullable source, nested values)
-     *        source                                      (direct value — same type K, same type V)
-     * Keys must be the same type on both sides. Different key types → Unmappable.
+     * Map<K,V1> → Map<K,V2> mapping: entries ride the convertEntries… seams (per-entry
+     * key/value ladders at keyed paths like `prices["usd"]`), selected by the
+     * (target value shape × onFail) table — e.g.
+     * `prices.convertEntriesOrSkip("prices", keyFrom, keyTo, valueFrom, valueTo, { it }) { … }`.
+     * Keys stay same-type in v1 (the identity lambda fills the seam's convertKey slot);
+     * different key types → Unmappable. Direct same-type values keep the container
+     * passthrough (no seam).
      * Plain kotlin.collections.Map only; PersistentMap/ImmutableMap wrappers are deferred.
-     * @param valueStrategy how to map each value: Direct (same type) or Nested (toV2() call)
+     * @param valueStrategy how to map each value (feeds the seam's convertValue lambda)
      */
     data class MapValues(
         val valueStrategy: MappingStrategy,

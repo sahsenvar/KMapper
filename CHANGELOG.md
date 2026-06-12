@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-06-12
+
+Migration guide: [docs/guide-en/reference/migration-1x.md](docs/guide-en/reference/migration-1x.md)
+(Türkçe: [docs/guide/referans/gecis-1x.md](docs/guide/referans/gecis-1x.md)).
+
+### Changed — converter subsystem redesign (BREAKING)
+
+- **Result boundary:** generated mappers are now `toXResult(): Result<X>` — failures arrive as
+  values, never surprise exceptions (`.getOrThrow()` is the caller's explicit choice).
+- **Fallback ladder** as the default behavior: `converted value > declared constructor default >
+  null/not-a-member > error`; brokenness absorbed by a declared escape is REPORTED to the new
+  degradation sink (`MappingListener.onDegradation`), declared-absence flows stay silent.
+- **Path-carrying errors:** all `MappingException`s carry a field path from the mapping root
+  (`customer.address.zipCode`, `items[3].price`) — R8-safe codegen literals.
+- **Module split:** new `kmapper-annotations` artifact (declaration annotations; depends on
+  `kmapper-core`); the processor publishes as `kmapper-compiler` (was `kmapper-processor`);
+  `kmapper-core` is usable standalone for hand-written mappers via the new public conversion
+  seams (`convertOrFail/OrNull/OrElse`, `convertEachOr*`, `convertEntriesOr*`).
+- **Converter model:** 4-method `MapTypeConverter` (`convertTo`/`convertFrom` totals +
+  sanctioned-null `convertToOrNull`/`convertFromOrNull`); function-level
+  `@UnsupportedDirection(reason)` with compile-time enforcement; richer-first built-in naming
+  (e.g. `IntStringConverter`); 35 built-in pair objects (28 primitive + kotlinx-datetime
+  `Instant`/`LocalDate`/`LocalDateTime`/`LocalTime` + `kotlin.time.Duration`) — every pair
+  either converts or explains why not at compile time.
+- **Annotations:** `@ConvertWith(use, onFail)` (+ direction-scoped `@ConvertTo`/`@ConvertFrom`),
+  `OnFail { Auto, Throw, Skip }`, field-anchored `@Validate`, `@IgnoreMap` (was `@Ignore`),
+  new `@IgnoreDefaultValue`. REMOVED: `@UseMapTypeConverter`, `@MapDefaultValue` (constructor
+  defaults via omit/copy replace it), `@ValidateFrom`/`@ValidateTo`.
+- **Collections:** element-ladder semantics (broken/null elements skip or null-in-place with
+  reporting; `OnFail.Throw` hardens, `OnFail.Skip` compacts), Map key/value ladders with
+  duplicate-key reporting, Set convergence reporting, bidirectional `@CollectionWrapper`
+  (`wrap`/`unwrap`, compile-checked signatures).
+- **Add-on converter audit (BREAKING for `kmapper-converters-bignumber` and
+  `kmapper-converters-datetime`):**
+  - kotlinx-datetime `LocalDate`/`LocalDateTime`/`LocalTime` ↔ `String` moved from
+    `kmapper-converters-datetime` into core built-ins (auto-resolved, no registration);
+    the datetime add-on now contains only the `java.time` converters and bridges.
+  - bignumber lossy directions (`BigDecimal → Double`, `BigInteger → Long`/`Int`,
+    `BigDecimal → BigInteger`, and their `java.math` twins) previously truncated or lost
+    precision SILENTLY — they are now `@UnsupportedDirection` and refuse at compile time;
+    write a custom converter if your domain guarantees the range.
+  - New in `kmapper-converters-okio`: `Base64ByteStringConverter`, `Base64UrlByteStringConverter`,
+    `HexByteStringConverter` (same-pair alternates to the UTF-8 converter — select per-field
+    or per-config).
+  - New in `kmapper-converters-datetime`: `StringJavaDurationConverter` and the
+    `KotlinJavaDurationConverter` bridge.
+- **Validator library:**
+  - Core `validation.builtin` grows from 3 to 16 entries: `Positive`/`NonNegative` ×
+    `Int`/`Long`/`Double`, `FiniteDoubleValidator`, and parameterized open bases
+    (`RegexValidator`, `StringLengthValidator`, `IntRangeValidator`/`LongRangeValidator`/
+    `DoubleRangeValidator`, `CollectionSizeValidator`) that you subclass as `object`s with
+    your own bounds — the same recipe as parameterized converters.
+  - `kmapper-validators` add-on grows from 2 to 16: `PhoneE164Validator`, `Ipv4Validator`,
+    `Ipv6Validator`, `HostnameValidator`, `UuidStringValidator`, `SlugValidator`,
+    `Base64Validator`, `HexStringValidator`, `LatitudeValidator`, `LongitudeValidator`,
+    `PortNumberValidator`, `CreditCardNumberValidator` (Luhn), alongside the existing
+    `EmailValidator`/`UrlValidator`.
+
 ## [1.0.0] - 2026-06-05
 
 ### Added
@@ -117,5 +175,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/sahsenvar/KMapper/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/sahsenvar/KMapper/releases/tag/v1.0.0

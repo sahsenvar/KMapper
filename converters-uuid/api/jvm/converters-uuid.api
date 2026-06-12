@@ -1,24 +1,24 @@
 public final class com/sahsenvar/kmapper/uuid/JavaStringUuidConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/uuid/JavaStringUuidConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Ljava/util/UUID;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Ljava/util/UUID;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/util/UUID;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Ljava/util/UUID;
 }
 
 public final class com/sahsenvar/kmapper/uuid/KotlinJavaUuidConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/uuid/KotlinJavaUuidConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Ljava/util/UUID;)Lkotlin/uuid/Uuid;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Lkotlin/uuid/Uuid;)Ljava/util/UUID;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Ljava/util/UUID;)Lkotlin/uuid/Uuid;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Lkotlin/uuid/Uuid;)Ljava/util/UUID;
 }
 
 public final class com/sahsenvar/kmapper/uuid/StringUuidConverter : com/sahsenvar/kmapper/converter/MapTypeConverter {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/uuid/StringUuidConverter;
-	public synthetic fun convertFromNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertFromNonNull (Lkotlin/uuid/Uuid;)Ljava/lang/String;
-	public synthetic fun convertToNonNull (Ljava/lang/Object;)Ljava/lang/Object;
-	public fun convertToNonNull (Ljava/lang/String;)Lkotlin/uuid/Uuid;
+	public synthetic fun convertFrom (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertFrom (Lkotlin/uuid/Uuid;)Ljava/lang/String;
+	public synthetic fun convertTo (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun convertTo (Ljava/lang/String;)Lkotlin/uuid/Uuid;
 }
 

@@ -1,121 +1,59 @@
-# Büyük Sayı Converter'ları — converters-bignumber
+# Büyük Sayılar — converters-bignumber
 
-`converters-bignumber` modülü, `BigDecimal` ve `BigInteger` tiplerini `String`/`Double`/`Long`/`Int` ile eşlemek için **scalar converter'lar** sağlar. `@KMapperConfig(converters = [...])` listesine eklenmeleri gerekir — otomatik keşfedilmezler.
-
----
+Keyfi hassasiyetli sayılar için converter'lar:
+[ionspin kotlin-multiplatform-bignum](https://github.com/ionspin/kotlin-multiplatform-bignum)
+(`commonMain`, tüm hedefler) ve `java.math` (JVM/Android).
 
 ## Kurulum
 
 ```kotlin
-// build.gradle.kts (tüketen modül)
-kotlin {
-    sourceSets {
-        commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
-            implementation("io.github.sahsenvar:kmapper-converters-bignumber:1.0.0")
-        }
-    }
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.0.0")
 }
 ```
 
----
-
-## Platform Desteği
-
-| Converter grubu | Modül kaynağı | Çalışır |
-|-----------------|--------------|---------|
-| ionspin converter'ları | `commonMain` | Tüm platformlar (JVM, Android, iOS, JS, WASM) |
-| java.math converter'ları | `jvmAndroidMain` | Yalnızca JVM ve Android |
-
----
-
-## ionspin Converter'ları (commonMain)
-
-`com.ionspin.kotlin.bignum` kütüphanesi — tüm platformlarda kullanılabilir.
-
-| Converter | Kaynak | Hedef |
-|-----------|--------|-------|
-| `StringBigDecimalConverter` | `String` | `com.ionspin.kotlin.bignum.decimal.BigDecimal` |
-| `StringBigIntegerConverter` | `String` | `com.ionspin.kotlin.bignum.integer.BigInteger` |
-| `DoubleBigDecimalConverter` | `Double` | `com.ionspin.kotlin.bignum.decimal.BigDecimal` |
-| `LongBigIntegerConverter` | `Long` | `com.ionspin.kotlin.bignum.integer.BigInteger` |
-| `IntBigIntegerConverter` | `Int` | `com.ionspin.kotlin.bignum.integer.BigInteger` |
-| `BigIntegerBigDecimalConverter` | `BigInteger` (ionspin) | `com.ionspin.kotlin.bignum.decimal.BigDecimal` |
-
-> **Not:** `StringBigDecimalConverter.convertFromNonNull` genişletilmiş gösterim (`toStringExpanded()`) kullanır; bilimsel gösterim (`1.23E+5`) üretmez.
-
----
-
-## java.math Converter'ları (jvmAndroidMain)
-
-`java.math` — yalnızca JVM ve Android'de kullanılabilir. İsimlendirme: `Java`-öneki veya `Java` içeren isimlerle ionspin'den ayrışır.
-
-| Converter | Kaynak | Hedef |
-|-----------|--------|-------|
-| `StringJavaBigDecimalConverter` | `String` | `java.math.BigDecimal` |
-| `StringJavaBigIntegerConverter` | `String` | `java.math.BigInteger` |
-| `DoubleJavaBigDecimalConverter` | `Double` | `java.math.BigDecimal` |
-| `LongJavaBigIntegerConverter` | `Long` | `java.math.BigInteger` |
-| `JavaBigIntegerBigDecimalConverter` | `java.math.BigInteger` | `java.math.BigDecimal` |
-
----
-
-## Kullanım
-
-Scalar converter'ları `@KMapperConfig(converters = [...])` listesine ekleyin:
-
 ```kotlin
-import com.sahsenvar.kmapper.annotations.KMapperConfig
-import com.sahsenvar.kmapper.bignumber.StringBigDecimalConverter
-import com.sahsenvar.kmapper.bignumber.StringBigIntegerConverter
-
-@KMapperConfig(converters = [StringBigDecimalConverter::class, StringBigIntegerConverter::class])
-object MyMappers
+@KMapperConfig(converters = [StringBigDecimalConverter::class])
+object AppMapperConfig
 ```
 
-Ardından modellerinizde bu tipleri doğrudan kullanın:
+## Converter'lar (`com.sahsenvar.kmapper.bignumber`)
+
+ionspin (KMP):
+
+| Object | Çift | Not |
+|--------|------|-----|
+| `StringBigDecimalConverter` | `String ↔ BigDecimal` | para/hassasiyet için önerilen wire formatı |
+| `StringBigIntegerConverter` | `String ↔ BigInteger` | |
+| `DoubleBigDecimalConverter` | `Double → BigDecimal` | ters yön **reddedilir** (aşağıda) |
+| `LongBigIntegerConverter` | `Long → BigInteger` | tersi **reddedilir** |
+| `IntBigIntegerConverter` | `Int → BigInteger` | tersi **reddedilir** |
+| `BigIntegerBigDecimalConverter` | `BigInteger → BigDecimal` | tersi **reddedilir** |
+
+`java.math` (JVM/Android): `StringJavaBigDecimalConverter` (düz string, asla bilimsel
+gösterim değil), `StringJavaBigIntegerConverter`, `DoubleJavaBigDecimalConverter`,
+`LongJavaBigIntegerConverter`, `JavaBigIntegerBigDecimalConverter` — aynı çiftler, aynı ret
+politikası.
+
+## Bazı yönler neden reddediliyor?
+
+`BigDecimal → Double` hassasiyet kaybeder; `BigInteger → Long`/`Int` taşar;
+`BigDecimal → BigInteger` kesri atar. Önceki sürümler bunları **sessizce** kırpıyordu — tam
+da KMapper'ın yok etmek için var olduğu "makul görünen yanlış değer" hata sınıfı. Artık
+[`@UnsupportedDirection`](ozel-converter.md): bu yönlerden birine ihtiyaç duyan mapping,
+gerekçe ve seçeneklerle birlikte **derleme zamanında** düşer.
+
+Domain'iniz aralığı gerçekten garanti ediyorsa kararı üç satırlık custom converter'la açıkça
+üstlenin:
 
 ```kotlin
-import com.ionspin.kotlin.bignum.decimal.BigDecimal
-import com.ionspin.kotlin.bignum.integer.BigInteger
-
-@MapTo(InvoiceDomain::class)
-data class InvoiceRemote(
-    val id: String,
-    val totalAmount: String,    // "12345.67"
-    val quantity: String,       // "9999999999999999"
-)
-
-data class InvoiceDomain(
-    val id: String,
-    val totalAmount: BigDecimal,
-    val quantity: BigInteger,
-)
+object CentsBigIntegerConverter : MapTypeConverter<Long, BigInteger>(Long::class, BigInteger::class) {
+    override fun convertTo(source: Long): BigInteger = BigInteger.fromLong(source)
+    override fun convertFrom(target: BigInteger): Long = target.longValue(exactRequired = true) // taşmada fırlatır
+}
 ```
 
-Üretilen eşleme:
+String çiftleri birebir gidip döner — wire'da para için `Double`'dan geçen her şeye karşı
+`String ↔ BigDecimal`'ı tercih edin.
 
-```kotlin
-public fun InvoiceRemote.toInvoiceDomain(): InvoiceDomain = InvoiceDomain(
-    id          = id,
-    totalAmount = StringBigDecimalConverter.convertToNonNull(totalAmount),
-    quantity    = StringBigIntegerConverter.convertToNonNull(quantity),
-)
-```
-
----
-
-## Hangi Converter'ı Seçmeli?
-
-| Model tipi | Öneri |
-|------------|-------|
-| `com.ionspin.kotlin.bignum.decimal.BigDecimal` | `StringBigDecimalConverter`, `DoubleBigDecimalConverter` |
-| `com.ionspin.kotlin.bignum.integer.BigInteger` | `StringBigIntegerConverter`, `LongBigIntegerConverter`, `IntBigIntegerConverter` |
-| `java.math.BigDecimal` (yalnızca JVM/Android) | `StringJavaBigDecimalConverter`, `DoubleJavaBigDecimalConverter` |
-| `java.math.BigInteger` (yalnızca JVM/Android) | `StringJavaBigIntegerConverter`, `LongJavaBigIntegerConverter` |
-
-KMP projesinde iOS'u da desteklemeniz gerekiyorsa yalnızca ionspin converter'larını kullanın.
-
----
-
-Sonraki adım: [@KMapperConfig ve @UseMapTypeConverter →](kmapperconfig.md) | Diğer kaynaklar: [Kendi Converter'ını Yazmak](ozel-converter.md)
+> Sıradaki: **[UUID →](uuid.md)**

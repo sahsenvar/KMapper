@@ -7,31 +7,31 @@
 
 // Library unique name: <io.github.sahsenvar:converters-bignumber>
 final object com.sahsenvar.kmapper.bignumber/BigIntegerBigDecimalConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<com.ionspin.kotlin.bignum.integer/BigInteger, com.ionspin.kotlin.bignum.decimal/BigDecimal> { // com.sahsenvar.kmapper.bignumber/BigIntegerBigDecimalConverter|null[0]
-    final fun convertFromNonNull(com.ionspin.kotlin.bignum.decimal/BigDecimal): com.ionspin.kotlin.bignum.integer/BigInteger // com.sahsenvar.kmapper.bignumber/BigIntegerBigDecimalConverter.convertFromNonNull|convertFromNonNull(com.ionspin.kotlin.bignum.decimal.BigDecimal){}[0]
-    final fun convertToNonNull(com.ionspin.kotlin.bignum.integer/BigInteger): com.ionspin.kotlin.bignum.decimal/BigDecimal // com.sahsenvar.kmapper.bignumber/BigIntegerBigDecimalConverter.convertToNonNull|convertToNonNull(com.ionspin.kotlin.bignum.integer.BigInteger){}[0]
+    final fun convertFrom(com.ionspin.kotlin.bignum.decimal/BigDecimal): com.ionspin.kotlin.bignum.integer/BigInteger // com.sahsenvar.kmapper.bignumber/BigIntegerBigDecimalConverter.convertFrom|convertFrom(com.ionspin.kotlin.bignum.decimal.BigDecimal){}[0]
+    final fun convertTo(com.ionspin.kotlin.bignum.integer/BigInteger): com.ionspin.kotlin.bignum.decimal/BigDecimal // com.sahsenvar.kmapper.bignumber/BigIntegerBigDecimalConverter.convertTo|convertTo(com.ionspin.kotlin.bignum.integer.BigInteger){}[0]
 }
 
 final object com.sahsenvar.kmapper.bignumber/DoubleBigDecimalConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/Double, com.ionspin.kotlin.bignum.decimal/BigDecimal> { // com.sahsenvar.kmapper.bignumber/DoubleBigDecimalConverter|null[0]
-    final fun convertFromNonNull(com.ionspin.kotlin.bignum.decimal/BigDecimal): kotlin/Double // com.sahsenvar.kmapper.bignumber/DoubleBigDecimalConverter.convertFromNonNull|convertFromNonNull(com.ionspin.kotlin.bignum.decimal.BigDecimal){}[0]
-    final fun convertToNonNull(kotlin/Double): com.ionspin.kotlin.bignum.decimal/BigDecimal // com.sahsenvar.kmapper.bignumber/DoubleBigDecimalConverter.convertToNonNull|convertToNonNull(kotlin.Double){}[0]
+    final fun convertFrom(com.ionspin.kotlin.bignum.decimal/BigDecimal): kotlin/Double // com.sahsenvar.kmapper.bignumber/DoubleBigDecimalConverter.convertFrom|convertFrom(com.ionspin.kotlin.bignum.decimal.BigDecimal){}[0]
+    final fun convertTo(kotlin/Double): com.ionspin.kotlin.bignum.decimal/BigDecimal // com.sahsenvar.kmapper.bignumber/DoubleBigDecimalConverter.convertTo|convertTo(kotlin.Double){}[0]
 }
 
 final object com.sahsenvar.kmapper.bignumber/IntBigIntegerConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/Int, com.ionspin.kotlin.bignum.integer/BigInteger> { // com.sahsenvar.kmapper.bignumber/IntBigIntegerConverter|null[0]
-    final fun convertFromNonNull(com.ionspin.kotlin.bignum.integer/BigInteger): kotlin/Int // com.sahsenvar.kmapper.bignumber/IntBigIntegerConverter.convertFromNonNull|convertFromNonNull(com.ionspin.kotlin.bignum.integer.BigInteger){}[0]
-    final fun convertToNonNull(kotlin/Int): com.ionspin.kotlin.bignum.integer/BigInteger // com.sahsenvar.kmapper.bignumber/IntBigIntegerConverter.convertToNonNull|convertToNonNull(kotlin.Int){}[0]
+    final fun convertFrom(com.ionspin.kotlin.bignum.integer/BigInteger): kotlin/Int // com.sahsenvar.kmapper.bignumber/IntBigIntegerConverter.convertFrom|convertFrom(com.ionspin.kotlin.bignum.integer.BigInteger){}[0]
+    final fun convertTo(kotlin/Int): com.ionspin.kotlin.bignum.integer/BigInteger // com.sahsenvar.kmapper.bignumber/IntBigIntegerConverter.convertTo|convertTo(kotlin.Int){}[0]
 }
 
 final object com.sahsenvar.kmapper.bignumber/LongBigIntegerConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/Long, com.ionspin.kotlin.bignum.integer/BigInteger> { // com.sahsenvar.kmapper.bignumber/LongBigIntegerConverter|null[0]
-    final fun convertFromNonNull(com.ionspin.kotlin.bignum.integer/BigInteger): kotlin/Long // com.sahsenvar.kmapper.bignumber/LongBigIntegerConverter.convertFromNonNull|convertFromNonNull(com.ionspin.kotlin.bignum.integer.BigInteger){}[0]
-    final fun convertToNonNull(kotlin/Long): com.ionspin.kotlin.bignum.integer/BigInteger // com.sahsenvar.kmapper.bignumber/LongBigIntegerConverter.convertToNonNull|convertToNonNull(kotlin.Long){}[0]
+    final fun convertFrom(com.ionspin.kotlin.bignum.integer/BigInteger): kotlin/Long // com.sahsenvar.kmapper.bignumber/LongBigIntegerConverter.convertFrom|convertFrom(com.ionspin.kotlin.bignum.integer.BigInteger){}[0]
+    final fun convertTo(kotlin/Long): com.ionspin.kotlin.bignum.integer/BigInteger // com.sahsenvar.kmapper.bignumber/LongBigIntegerConverter.convertTo|convertTo(kotlin.Long){}[0]
 }
 
 final object com.sahsenvar.kmapper.bignumber/StringBigDecimalConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, com.ionspin.kotlin.bignum.decimal/BigDecimal> { // com.sahsenvar.kmapper.bignumber/StringBigDecimalConverter|null[0]
-    final fun convertFromNonNull(com.ionspin.kotlin.bignum.decimal/BigDecimal): kotlin/String // com.sahsenvar.kmapper.bignumber/StringBigDecimalConverter.convertFromNonNull|convertFromNonNull(com.ionspin.kotlin.bignum.decimal.BigDecimal){}[0]
-    final fun convertToNonNull(kotlin/String): com.ionspin.kotlin.bignum.decimal/BigDecimal // com.sahsenvar.kmapper.bignumber/StringBigDecimalConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+    final fun convertFrom(com.ionspin.kotlin.bignum.decimal/BigDecimal): kotlin/String // com.sahsenvar.kmapper.bignumber/StringBigDecimalConverter.convertFrom|convertFrom(com.ionspin.kotlin.bignum.decimal.BigDecimal){}[0]
+    final fun convertTo(kotlin/String): com.ionspin.kotlin.bignum.decimal/BigDecimal // com.sahsenvar.kmapper.bignumber/StringBigDecimalConverter.convertTo|convertTo(kotlin.String){}[0]
 }
 
 final object com.sahsenvar.kmapper.bignumber/StringBigIntegerConverter : com.sahsenvar.kmapper.converter/MapTypeConverter<kotlin/String, com.ionspin.kotlin.bignum.integer/BigInteger> { // com.sahsenvar.kmapper.bignumber/StringBigIntegerConverter|null[0]
-    final fun convertFromNonNull(com.ionspin.kotlin.bignum.integer/BigInteger): kotlin/String // com.sahsenvar.kmapper.bignumber/StringBigIntegerConverter.convertFromNonNull|convertFromNonNull(com.ionspin.kotlin.bignum.integer.BigInteger){}[0]
-    final fun convertToNonNull(kotlin/String): com.ionspin.kotlin.bignum.integer/BigInteger // com.sahsenvar.kmapper.bignumber/StringBigIntegerConverter.convertToNonNull|convertToNonNull(kotlin.String){}[0]
+    final fun convertFrom(com.ionspin.kotlin.bignum.integer/BigInteger): kotlin/String // com.sahsenvar.kmapper.bignumber/StringBigIntegerConverter.convertFrom|convertFrom(com.ionspin.kotlin.bignum.integer.BigInteger){}[0]
+    final fun convertTo(kotlin/String): com.ionspin.kotlin.bignum.integer/BigInteger // com.sahsenvar.kmapper.bignumber/StringBigIntegerConverter.convertTo|convertTo(kotlin.String){}[0]
 }

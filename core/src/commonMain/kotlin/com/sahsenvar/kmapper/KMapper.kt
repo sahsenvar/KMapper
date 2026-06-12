@@ -5,6 +5,10 @@ import com.sahsenvar.kmapper.converter.TypeConverterRegistry
 import kotlin.concurrent.Volatile
 import kotlin.reflect.KClass
 
+/**
+ * Listeners are observers: an exception thrown by a listener is suppressed and never affects
+ * the mapping or other listeners.
+ */
 interface MappingListener {
     fun onMapStart(
         source: Any,
@@ -20,7 +24,12 @@ interface MappingListener {
         source: Any,
         error: MappingException,
     ) {}
-    // forward-compatible (default no-op): onFieldDefaulted / onConversion added in a later round
+
+    /**
+     * Absorbed-leniency tap (skips, broken→null/default absorptions, duplicate keys). Default no-op.
+     * Do not run mappings inside the tap — a degrading seam inside onDegradation recurses dispatch.
+     */
+    fun onDegradation(event: MappingDegradation) {}
 }
 
 object KMapper {
@@ -50,7 +59,14 @@ object KMapper {
     }
 
     fun dispatch(block: MappingListener.() -> Unit) {
-        listeners.toList().forEach(block)
+        listeners.toList().forEach { listener ->
+            try {
+                listener.block()
+            } catch (_: Throwable) {
+                // Observation must never change mapping behavior: a throwing listener is
+                // isolated and suppressed by contract (see MappingListener KDoc).
+            }
+        }
     }
 
     /** Runtime escape-hatch (NOT compile-time safe; prefer @KMapperConfig). */

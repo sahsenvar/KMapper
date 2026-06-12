@@ -21,17 +21,25 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.kotlinx.datetime)
+            // api, not implementation: built-in converter signatures expose Instant/LocalDate/...
+            api(libs.kotlinx.datetime)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotest.assertions)
             implementation(libs.kotest.property)
+            // kotest-framework-engine also provides io.kotest.datatest.withData (merged in Kotest 6.x)
+            implementation(libs.kotest.framework.engine)
         }
         jvmTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.kotest.runner.junit5)
         }
     }
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
 
 mavenPublishing {
@@ -42,7 +50,7 @@ mavenPublishing {
     pom {
         name.set("KMapper core")
         description.set(
-            "KMP-friendly compile-time object mapper (KSP). Core module: annotations, MappingException, MapTypeConverter registry, built-in converters, MappableEnum.",
+            "KMP-friendly compile-time object mapper (KSP). Core module: MappingException, MapTypeConverter registry, built-in converters, MappableEnum — standalone runtime, usable without code generation.",
         )
         inceptionYear.set("2026")
         url.set("https://github.com/sahsenvar/KMapper")

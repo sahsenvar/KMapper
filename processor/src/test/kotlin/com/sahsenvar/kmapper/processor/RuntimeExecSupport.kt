@@ -2,9 +2,36 @@
 
 package com.sahsenvar.kmapper.processor
 
+import com.sahsenvar.kmapper.KMapper
+import com.sahsenvar.kmapper.MappingDegradation
+import com.sahsenvar.kmapper.MappingListener
 import com.tschuchort.compiletesting.JvmCompilationResult
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import java.lang.reflect.InvocationTargetException
+
+/**
+ * Records every [MappingDegradation] dispatched through the shared [KMapper] listener registry.
+ * The kctfork classloader resolves core types parent-first, so generated code and the test
+ * observe the SAME KMapper object — registration here taps generated-code dispatches.
+ */
+class RecordingDegradationListener : MappingListener {
+    val events = mutableListOf<MappingDegradation>()
+
+    override fun onDegradation(event: MappingDegradation) {
+        events.add(event)
+    }
+}
+
+/** Runs [block] with a registered recording listener, always unregistering afterwards. */
+inline fun <T> withRecordingListener(block: (RecordingDegradationListener) -> T): T {
+    val listener = RecordingDegradationListener()
+    KMapper.addListener(listener)
+    return try {
+        block(listener)
+    } finally {
+        KMapper.removeListener(listener)
+    }
+}
 
 /**
  * Invokes a KSP-generated top-level extension function via reflection.
@@ -28,6 +55,42 @@ fun JvmCompilationResult.invokeMapper(
         m.invoke(null, receiver)
     } catch (e: InvocationTargetException) {
         throw e.targetException
+    }
+}
+
+/**
+ * Invokes a generated Result-boundary mapper (`fun Src.toXResult(): Result<X>`) reflectively
+ * and re-boxes the JVM-level return into a typed [Result].
+ *
+ * `kotlin.Result` is a value class over `Any?`, so the compiled static method's name carries
+ * a value-class mangling suffix (e.g. `toXResult-IoAF18A`) and its erased return value is the
+ * UNBOXED underlying value: the success value itself, or the internal `kotlin.Result$Failure`
+ * wrapper carrying the exception. This helper matches the mangled name with a prefix check and
+ * detects the failure wrapper by class name (the stdlib is shared parent-first across the
+ * kctfork classloader, but `Result.Failure` is internal — reflection keeps us decoupled).
+ */
+fun JvmCompilationResult.invokeResultMapper(
+    fileKtClass: String,
+    fnName: String,
+    receiver: Any?,
+    vararg extraArgs: Any?,
+): Result<Any?> {
+    val method =
+        classLoader
+            .loadClass(fileKtClass)
+            .declaredMethods
+            .first { it.name == fnName || it.name.startsWith("$fnName-") }
+    val rawReturn =
+        try {
+            method.invoke(null, receiver, *extraArgs)
+        } catch (e: InvocationTargetException) {
+            throw e.targetException
+        }
+    return if (rawReturn != null && rawReturn.javaClass.name == "kotlin.Result\$Failure") {
+        val exceptionField = rawReturn.javaClass.getDeclaredField("exception").apply { isAccessible = true }
+        Result.failure(exceptionField.get(rawReturn) as Throwable)
+    } else {
+        Result.success(rawReturn)
     }
 }
 

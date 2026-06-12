@@ -8,5 +8,5 @@ import com.sahsenvar.kmapper.annotations.CollectionWrapper
 @CollectionWrapper(forType = NonEmptySet::class)
 object NonEmptySetWrapper {
     fun <T> wrap(items: List<T>): NonEmptySet<T> = items.toNonEmptySetOrNull()
-        ?: throw MappingException.EmptyCollection("NonEmptySet source was empty")
+        ?: throw MappingException.EmptyCollection(path = "", detail = "NonEmptySet source was empty")
 }
