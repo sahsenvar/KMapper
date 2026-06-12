@@ -20,7 +20,7 @@ class SetCollectionMappingTest {
      * Non-null Set<TagRemote> → Set<TagDomain> where TagRemote is @MapTo(TagDomain::class).
      * Generated code must:
      *   - compile (exit code OK)
-     *   - contain `.map { it.toTagDomain() }.toSet()` (non-safe form, non-null source)
+     *   - contain `.map { it.toTagDomainResult().getOrThrow() }.toSet()` (non-safe form, non-null source)
      *   - NOT be a bare `.map { }` without `.toSet()` (that would produce List, not Set)
      */
     @Test
@@ -46,8 +46,8 @@ class SetCollectionMappingTest {
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
 
         // Must call the element mapper
-        assert(gen.contains("toTagDomain()")) {
-            "Expected toTagDomain() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
+            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
         }
         // Must append .toSet() so the result type is Set, not List
         assert(gen.contains(".toSet()")) {
@@ -61,7 +61,7 @@ class SetCollectionMappingTest {
 
     /**
      * Nullable Set<TagRemote>? → Set<TagDomain>?: null-safe form.
-     * Generated code must use `?.map { it.toTagDomain() }?.toSet()`.
+     * Generated code must use `?.map { it.toTagDomainResult().getOrThrow() }?.toSet()`.
      */
     @Test
     fun `nullable Set of mapped elements emits safe-call map toSet`() {
@@ -86,8 +86,8 @@ class SetCollectionMappingTest {
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
 
         // Must call the element mapper
-        assert(gen.contains("toTagDomain()")) {
-            "Expected toTagDomain() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
+            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
         }
         // Nullable source must use ?.map
         assert(gen.contains("?.map")) {
@@ -126,8 +126,8 @@ class SetCollectionMappingTest {
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
 
         // Must call the element mapper
-        assert(gen.contains("toTagDomain()")) {
-            "Expected toTagDomain() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
+            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
         }
         // Must NOT append .toSet() for List target
         assert(!gen.contains(".toSet()")) {

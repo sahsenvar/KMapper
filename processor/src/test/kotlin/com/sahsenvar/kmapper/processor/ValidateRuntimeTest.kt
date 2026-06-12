@@ -2,225 +2,225 @@
 
 package com.sahsenvar.kmapper.processor
 
+import com.sahsenvar.kmapper.MappingException
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFails
-import kotlin.test.assertTrue
 
 /**
- * Runtime-execution tests for the @ValidateFrom / @ValidateTo validation seam.
+ * Runtime-execution tests for field-anchored @Validate at the Result boundary.
  *
  * Each test compiles source strings that embed tiny inline Validator object definitions
- * (so :processor tests have no extra module dependency), then classloads the result
- * and invokes the generated mapper via reflection helpers.
+ * (so :processor tests have no extra module dependency), classloads the result and invokes
+ * the generated mapper via [invokeResultMapper]. Validation failures are hard: they surface
+ * as `Result.failure` carrying [MappingException.ValidationFailed].
  */
-class ValidateRuntimeTest {
-    // -----------------------------------------------------------------------
-    // @ValidateFrom on non-null String — blank source throws ValidationFailed
-    // -----------------------------------------------------------------------
+class ValidateRuntimeTest :
+    BehaviorSpec({
 
-    @Test
-    fun `ValidateFrom blank source throws ValidationFailed at runtime`() {
-        val (result, _) =
-            compile(
-                SourceFile.kotlin(
-                    "VFR1.kt",
-                    """
-                    import com.sahsenvar.kmapper.annotations.MapTo
-                    import com.sahsenvar.kmapper.annotations.ValidateFrom
-                    import com.sahsenvar.kmapper.validation.Validator
+        given("@Validate on a non-null SOURCE field") {
+            val (result, _) =
+                compile(
+                    SourceFile.kotlin(
+                        "VFR1.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        import com.sahsenvar.kmapper.annotations.Validate
+                        import com.sahsenvar.kmapper.validation.Validator
 
-                    data class TitleDomain(val title: String)
+                        data class TitleDomainModel(val title: String)
 
-                    object NotBlankValidator : Validator<String>(String::class) {
-                        override fun validate(value: String): String? =
-                            if (value.isBlank()) "must not be blank" else null
-                    }
+                        object NotBlankValidator : Validator<String>(String::class) {
+                            override fun validate(value: String): String? =
+                                if (value.isBlank()) "must not be blank" else null
+                        }
 
-                    @MapTo(TitleDomain::class)
-                    data class TitleRemote(
-                        @ValidateFrom(NotBlankValidator::class) val title: String
-                    )
-                    """.trimIndent(),
-                ),
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
-
-        // Blank string should throw
-        val ex =
-            assertFails {
-                result.invokeMapper(
-                    "TitleRemoteMappersKt",
-                    "toTitleDomain",
-                    result.newInstance("TitleRemote", "   "),
+                        @MapTo(TitleDomainModel::class)
+                        data class TitleDataModel(
+                            @Validate(NotBlankValidator::class) val title: String
+                        )
+                        """.trimIndent(),
+                    ),
                 )
+            result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+
+            `when`("the source value is blank") {
+                then("the mapping fails with ValidationFailed") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "TitleDataModelMappersKt",
+                            "toTitleDomainModelResult",
+                            result.newInstance("TitleDataModel", "   "),
+                        )
+                    outcome.isFailure.shouldBeTrue()
+                    outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.ValidationFailed>()
+                }
             }
-        assertTrue(
-            ex::class.qualifiedName!!.contains("ValidationFailed"),
-            "Expected ValidationFailed but got: ${ex::class.qualifiedName} — ${ex.message}",
-        )
 
-        // Valid string should succeed
-        val domain =
-            result.invokeMapper(
-                "TitleRemoteMappersKt",
-                "toTitleDomain",
-                result.newInstance("TitleRemote", "hello"),
-            )!!
-        assertEquals("hello", domain.prop("title"))
-    }
+            `when`("the source value is valid") {
+                then("the mapping succeeds") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "TitleDataModelMappersKt",
+                            "toTitleDomainModelResult",
+                            result.newInstance("TitleDataModel", "hello"),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    outcome.getOrNull()!!.prop("title") shouldBe "hello"
+                }
+            }
+        }
 
-    // -----------------------------------------------------------------------
-    // @ValidateTo on non-null String — invalid result throws ValidationFailed
-    // -----------------------------------------------------------------------
+        given("@Validate on a non-null TARGET field") {
+            val (result, _) =
+                compile(
+                    SourceFile.kotlin(
+                        "VTR1.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        import com.sahsenvar.kmapper.annotations.Validate
+                        import com.sahsenvar.kmapper.validation.Validator
 
-    @Test
-    fun `ValidateTo invalid result throws ValidationFailed at runtime`() {
-        val (result, _) =
-            compile(
-                SourceFile.kotlin(
-                    "VTR1.kt",
-                    """
-                    import com.sahsenvar.kmapper.annotations.MapTo
-                    import com.sahsenvar.kmapper.annotations.ValidateTo
-                    import com.sahsenvar.kmapper.validation.Validator
+                        object NotBlankValidator : Validator<String>(String::class) {
+                            override fun validate(value: String): String? =
+                                if (value.isBlank()) "must not be blank" else null
+                        }
 
-                    data class CodeDomain(val code: String)
+                        data class CodeDomainModel(
+                            @Validate(NotBlankValidator::class) val code: String
+                        )
 
-                    object NotBlankValidator : Validator<String>(String::class) {
-                        override fun validate(value: String): String? =
-                            if (value.isBlank()) "must not be blank" else null
-                    }
-
-                    @MapTo(CodeDomain::class)
-                    data class CodeRemote(
-                        @ValidateTo(NotBlankValidator::class) val code: String
-                    )
-                    """.trimIndent(),
-                ),
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
-
-        // Blank string (maps direct String→String, result is blank) should throw
-        val ex =
-            assertFails {
-                result.invokeMapper(
-                    "CodeRemoteMappersKt",
-                    "toCodeDomain",
-                    result.newInstance("CodeRemote", "  "),
+                        @MapTo(CodeDomainModel::class)
+                        data class CodeDataModel(val code: String)
+                        """.trimIndent(),
+                    ),
                 )
+            result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+
+            `when`("the produced result value is invalid") {
+                then("the mapping fails with ValidationFailed") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "CodeDataModelMappersKt",
+                            "toCodeDomainModelResult",
+                            result.newInstance("CodeDataModel", "  "),
+                        )
+                    outcome.isFailure.shouldBeTrue()
+                    outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.ValidationFailed>()
+                }
             }
-        assertTrue(
-            ex::class.qualifiedName!!.contains("ValidationFailed"),
-            "Expected ValidationFailed but got: ${ex::class.qualifiedName} — ${ex.message}",
-        )
 
-        // Valid string should succeed
-        val domain =
-            result.invokeMapper(
-                "CodeRemoteMappersKt",
-                "toCodeDomain",
-                result.newInstance("CodeRemote", "VALID"),
-            )!!
-        assertEquals("VALID", domain.prop("code"))
-    }
+            `when`("the produced result value is valid") {
+                then("the mapping succeeds") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "CodeDataModelMappersKt",
+                            "toCodeDomainModelResult",
+                            result.newInstance("CodeDataModel", "VALID"),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    outcome.getOrNull()!!.prop("code") shouldBe "VALID"
+                }
+            }
+        }
 
-    // -----------------------------------------------------------------------
-    // @ValidateFrom on nullable source — null skips validation, blank throws
-    // -----------------------------------------------------------------------
+        given("@Validate on a nullable SOURCE field whose target declares a default") {
+            val (result, _) =
+                compile(
+                    SourceFile.kotlin(
+                        "VFR2.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        import com.sahsenvar.kmapper.annotations.Validate
+                        import com.sahsenvar.kmapper.validation.Validator
 
-    @Test
-    fun `ValidateFrom nullable source - null skips validation`() {
-        val (result, _) =
-            compile(
-                SourceFile.kotlin(
-                    "VFR2.kt",
-                    """
-                    import com.sahsenvar.kmapper.annotations.MapTo
-                    import com.sahsenvar.kmapper.annotations.ValidateFrom
-                    import com.sahsenvar.kmapper.annotations.MapDefaultValue
-                    import com.sahsenvar.kmapper.validation.Validator
+                        data class LabelDomainModel(val label: String = "default")
 
-                    data class LabelDomain(val label: String)
+                        object NotBlankValidator : Validator<String>(String::class) {
+                            override fun validate(value: String): String? =
+                                if (value.isBlank()) "must not be blank" else null
+                        }
 
-                    object NotBlankValidator : Validator<String>(String::class) {
-                        override fun validate(value: String): String? =
-                            if (value.isBlank()) "must not be blank" else null
-                    }
-
-                    @MapTo(LabelDomain::class)
-                    data class LabelRemote(
-                        @ValidateFrom(NotBlankValidator::class)
-                        @MapDefaultValue("\"default\"")
-                        val label: String?
-                    )
-                    """.trimIndent(),
-                ),
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
-
-        // null source — should NOT throw (validation skipped), returns default
-        val domainFromNull =
-            result.invokeMapper(
-                "LabelRemoteMappersKt",
-                "toLabelDomain",
-                result.newInstance("LabelRemote", null as String?),
-            )!!
-        assertEquals("default", domainFromNull.prop("label"))
-
-        // non-blank non-null — should succeed
-        val domainFromValid =
-            result.invokeMapper(
-                "LabelRemoteMappersKt",
-                "toLabelDomain",
-                result.newInstance("LabelRemote", "hello"),
-            )!!
-        assertEquals("hello", domainFromValid.prop("label"))
-
-        // blank non-null — should throw
-        val ex =
-            assertFails {
-                result.invokeMapper(
-                    "LabelRemoteMappersKt",
-                    "toLabelDomain",
-                    result.newInstance("LabelRemote", "  "),
+                        @MapTo(LabelDomainModel::class)
+                        data class LabelDataModel(
+                            @Validate(NotBlankValidator::class)
+                            val label: String?
+                        )
+                        """.trimIndent(),
+                    ),
                 )
+            result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+
+            `when`("the source value is null") {
+                then("validation is SKIPPED and the constructor default applies") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "LabelDataModelMappersKt",
+                            "toLabelDomainModelResult",
+                            result.newInstance("LabelDataModel", null as String?),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    outcome.getOrNull()!!.prop("label") shouldBe "default"
+                }
             }
-        assertTrue(
-            ex::class.qualifiedName!!.contains("ValidationFailed"),
-            "Expected ValidationFailed but got: ${ex::class.qualifiedName} — ${ex.message}",
-        )
-    }
 
-    // -----------------------------------------------------------------------
-    // No validation annotations — existing behaviour unchanged (regression)
-    // -----------------------------------------------------------------------
+            `when`("the source value is valid") {
+                then("the value passes through") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "LabelDataModelMappersKt",
+                            "toLabelDomainModelResult",
+                            result.newInstance("LabelDataModel", "hello"),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    outcome.getOrNull()!!.prop("label") shouldBe "hello"
+                }
+            }
 
-    @Test
-    fun `no validation annotations - mapper works as before`() {
-        val (result, _) =
-            compile(
-                SourceFile.kotlin(
-                    "NoValR.kt",
-                    """
-                    import com.sahsenvar.kmapper.annotations.MapTo
-                    data class SimpleDomain(val x: String)
-                    @MapTo(SimpleDomain::class)
-                    data class SimpleRemote(val x: String)
-                    """.trimIndent(),
-                ),
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+            `when`("the source value is present but blank") {
+                then("the mapping fails with ValidationFailed") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "LabelDataModelMappersKt",
+                            "toLabelDomainModelResult",
+                            result.newInstance("LabelDataModel", "  "),
+                        )
+                    outcome.isFailure.shouldBeTrue()
+                    outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.ValidationFailed>()
+                }
+            }
+        }
 
-        val domain =
-            result.invokeMapper(
-                "SimpleRemoteMappersKt",
-                "toSimpleDomain",
-                result.newInstance("SimpleRemote", "hello"),
-            )!!
-        assertEquals("hello", domain.prop("x"))
-    }
-}
+        given("a mapping with no validation annotations") {
+            val (result, _) =
+                compile(
+                    SourceFile.kotlin(
+                        "NoValR.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        data class SimpleDomainModel(val x: String)
+                        @MapTo(SimpleDomainModel::class)
+                        data class SimpleDataModel(val x: String)
+                        """.trimIndent(),
+                    ),
+                )
+            result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+
+            `when`("the mapper runs") {
+                then("behaviour is unchanged — plain success") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "SimpleDataModelMappersKt",
+                            "toSimpleDomainModelResult",
+                            result.newInstance("SimpleDataModel", "hello"),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    outcome.getOrNull()!!.prop("x") shouldBe "hello"
+                }
+            }
+        }
+    })

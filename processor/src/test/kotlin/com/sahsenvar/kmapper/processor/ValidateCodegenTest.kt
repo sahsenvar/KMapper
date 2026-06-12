@@ -2,199 +2,194 @@
 
 package com.sahsenvar.kmapper.processor
 
-import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
 /**
- * Compile-only (generated-source) tests for the @ValidateFrom / @ValidateTo codegen.
+ * Compile-only (generated-source) tests for the field-anchored @Validate codegen.
+ *
+ * A field's validators fire whenever it participates in a mapping: annotated on the SOURCE
+ * field they run on the source value BEFORE conversion; annotated on the TARGET field they
+ * run on `__result` AFTER. (Replaces the old mapping-side @ValidateFrom/@ValidateTo pair.)
  * Each test inspects the KSP-generated .kt file for the expected emission shape.
  */
-class ValidateCodegenTest {
-    // -----------------------------------------------------------------------
-    // @ValidateFrom — non-null source field
-    // -----------------------------------------------------------------------
+class ValidateCodegenTest :
+    BehaviorSpec({
 
-    @Test
-    fun `ValidateFrom on non-null field emits non-null validate call`() {
-        val src =
-            SourceFile.kotlin(
-                "VF1.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapTo
-                import com.sahsenvar.kmapper.annotations.ValidateFrom
-                import com.sahsenvar.kmapper.validation.Validator
+        given("@Validate on a non-null SOURCE field") {
+            val source =
+                SourceFile.kotlin(
+                    "VF1.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.Validate
+                    import com.sahsenvar.kmapper.validation.Validator
 
-                data class NameDomain(val name: String)
+                    data class NameDomainModel(val name: String)
 
-                object TestNotBlank : Validator<String>(String::class) {
-                    override fun validate(value: String): String? =
-                        if (value.isBlank()) "must not be blank" else null
+                    object TestNotBlank : Validator<String>(String::class) {
+                        override fun validate(value: String): String? =
+                            if (value.isBlank()) "must not be blank" else null
+                    }
+
+                    @MapTo(NameDomainModel::class)
+                    data class NameDataModel(
+                        @Validate(TestNotBlank::class) val name: String
+                    )
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(source, "NameDataModelMappers.kt")
+
+                then("a run block fires the validator directly on the non-null source value") {
+                    generated shouldContain "run {"
+                    generated shouldContain "TestNotBlank.validate"
+                    generated shouldContain "ValidationFailed"
+                    // Non-null form: no ?.let wrapper around the validate call
+                    generated shouldNotContain "name?.let { __s ->"
+                }
+            }
+        }
+
+        given("@Validate on a nullable SOURCE field whose target declares a default") {
+            val source =
+                SourceFile.kotlin(
+                    "VF2.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.Validate
+                    import com.sahsenvar.kmapper.validation.Validator
+
+                    data class TagDomainModel(val tag: String = "unknown")
+
+                    object TestNotBlank : Validator<String>(String::class) {
+                        override fun validate(value: String): String? =
+                            if (value.isBlank()) "must not be blank" else null
+                    }
+
+                    @MapTo(TagDomainModel::class)
+                    data class TagDataModel(
+                        @Validate(TestNotBlank::class)
+                        val tag: String?
+                    )
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(source, "TagDataModelMappers.kt")
+
+                then("the nullable guard skips validation for absent values") {
+                    generated shouldContain "?.let { __s ->"
+                    generated shouldContain "TestNotBlank.validate"
+                    generated shouldContain "ValidationFailed"
                 }
 
-                @MapTo(NameDomain::class)
-                data class NameRemote(
-                    @ValidateFrom(TestNotBlank::class) val name: String
-                )
-                """.trimIndent(),
-            )
-        val (result, compilation) = compile(src)
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
-
-        val gen = compilation.generatedFile("NameRemoteMappers.kt")
-        // Must contain a run { } block
-        assert(gen.contains("run {")) { "Expected 'run {' in:\n$gen" }
-        // Must validate the source field
-        assert(gen.contains("TestNotBlank.validate")) { "Expected TestNotBlank.validate in:\n$gen" }
-        // Non-null form: no ?.let wrapper around the validate call
-        assert(gen.contains("ValidationFailed")) { "Expected ValidationFailed in:\n$gen" }
-        // Must NOT wrap with ?.let for a non-null source
-        assert(!gen.contains("name?.let { __s ->")) { "Should NOT have nullable guard for non-null source:\n$gen" }
-    }
-
-    // -----------------------------------------------------------------------
-    // @ValidateFrom — nullable source field
-    // -----------------------------------------------------------------------
-
-    @Test
-    fun `ValidateFrom on nullable source field emits nullable guard`() {
-        val src =
-            SourceFile.kotlin(
-                "VF2.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapTo
-                import com.sahsenvar.kmapper.annotations.ValidateFrom
-                import com.sahsenvar.kmapper.annotations.MapDefaultValue
-                import com.sahsenvar.kmapper.validation.Validator
-
-                data class TagDomain(val tag: String)
-
-                object TestNotBlank : Validator<String>(String::class) {
-                    override fun validate(value: String): String? =
-                        if (value.isBlank()) "must not be blank" else null
+                then("the defaulted target still rides the copy stage") {
+                    generated shouldContain "base.copy("
                 }
+            }
+        }
 
-                @MapTo(TagDomain::class)
-                data class TagRemote(
-                    @ValidateFrom(TestNotBlank::class)
-                    @MapDefaultValue("\"unknown\"")
-                    val tag: String?
+        given("@Validate on a non-null TARGET field") {
+            // Old-world @ValidateTo (declared on the source field, fired on the result) is now
+            // anchored on the TARGET field — semantic relocation, same emission intent.
+            val source =
+                SourceFile.kotlin(
+                    "VT1.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.Validate
+                    import com.sahsenvar.kmapper.validation.Validator
+
+                    object TestNotEmpty : Validator<String>(String::class) {
+                        override fun validate(value: String): String? =
+                            if (value.isEmpty()) "must not be empty" else null
+                    }
+
+                    data class EmailDomainModel(
+                        @Validate(TestNotEmpty::class) val email: String
+                    )
+
+                    @MapTo(EmailDomainModel::class)
+                    data class EmailDataModel(val email: String)
+                    """.trimIndent(),
                 )
-                """.trimIndent(),
-            )
-        val (result, compilation) = compile(src)
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
-        val gen = compilation.generatedFile("TagRemoteMappers.kt")
-        // Nullable form: wraps with ?.let { __s ->
-        assert(gen.contains("?.let { __s ->")) { "Expected nullable guard '?.let { __s ->' in:\n$gen" }
-        assert(gen.contains("TestNotBlank.validate")) { "Expected TestNotBlank.validate in:\n$gen" }
-        assert(gen.contains("ValidationFailed")) { "Expected ValidationFailed in:\n$gen" }
-    }
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(source, "EmailDataModelMappers.kt")
 
-    // -----------------------------------------------------------------------
-    // @ValidateTo — non-null target field
-    // -----------------------------------------------------------------------
-
-    @Test
-    fun `ValidateTo on non-null target field emits non-null validate call on __result`() {
-        val src =
-            SourceFile.kotlin(
-                "VT1.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapTo
-                import com.sahsenvar.kmapper.annotations.ValidateTo
-                import com.sahsenvar.kmapper.validation.Validator
-
-                data class EmailDomain(val email: String)
-
-                object TestNotEmpty : Validator<String>(String::class) {
-                    override fun validate(value: String): String? =
-                        if (value.isEmpty()) "must not be empty" else null
+                then("the validator fires on the captured __result after the mapping expr") {
+                    generated shouldContain "run {"
+                    generated shouldContain "val __result ="
+                    generated shouldContain "TestNotEmpty.validate"
+                    generated shouldContain "ValidationFailed"
+                    // non-null target: no ?.let { __r -> guard
+                    generated shouldNotContain "__result?.let { __r ->"
                 }
+            }
+        }
 
-                @MapTo(EmailDomain::class)
-                data class EmailRemote(
-                    @ValidateTo(TestNotEmpty::class) val email: String
+        given("a field with no validation annotations") {
+            val source =
+                SourceFile.kotlin(
+                    "NoVal.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+
+                    data class PlainDomainModel(val value: String)
+
+                    @MapTo(PlainDomainModel::class)
+                    data class PlainDataModel(val value: String)
+                    """.trimIndent(),
                 )
-                """.trimIndent(),
-            )
-        val (result, compilation) = compile(src)
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
-        val gen = compilation.generatedFile("EmailRemoteMappers.kt")
-        assert(gen.contains("run {")) { "Expected 'run {' in:\n$gen" }
-        assert(gen.contains("val __result =")) { "Expected 'val __result =' in:\n$gen" }
-        assert(gen.contains("TestNotEmpty.validate")) { "Expected TestNotEmpty.validate in:\n$gen" }
-        assert(gen.contains("ValidationFailed")) { "Expected ValidationFailed in:\n$gen" }
-        // non-null target: no ?.let { __r -> guard
-        assert(!gen.contains("__result?.let { __r ->")) { "Should NOT have nullable guard for non-null target:\n$gen" }
-    }
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(source, "PlainDataModelMappers.kt")
 
-    // -----------------------------------------------------------------------
-    // No annotations → zero-cost passthrough (regression)
-    // -----------------------------------------------------------------------
-
-    @Test
-    fun `field with no validation annotations generates unchanged code`() {
-        val src =
-            SourceFile.kotlin(
-                "NoVal.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapTo
-
-                data class PlainDomain(val value: String)
-
-                @MapTo(PlainDomain::class)
-                data class PlainRemote(val value: String)
-                """.trimIndent(),
-            )
-        val (result, compilation) = compile(src)
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
-
-        val gen = compilation.generatedFile("PlainRemoteMappers.kt")
-        // No run{} block, no validation noise
-        assert(!gen.contains("run {")) { "Unexpected 'run {' block for no-validation field:\n$gen" }
-        assert(!gen.contains("ValidationFailed")) { "Unexpected ValidationFailed for no-validation field:\n$gen" }
-    }
-
-    // -----------------------------------------------------------------------
-    // Exception field arg is TARGET field name
-    // -----------------------------------------------------------------------
-
-    @Test
-    fun `ValidationFailed uses target field name in thrown exception`() {
-        val src =
-            SourceFile.kotlin(
-                "TargetName.kt",
-                """
-                import com.sahsenvar.kmapper.annotations.MapTo
-                import com.sahsenvar.kmapper.annotations.ValidateFrom
-                import com.sahsenvar.kmapper.annotations.FieldMap
-                import com.sahsenvar.kmapper.validation.Validator
-
-                data class OrderDomain(val orderId: String)
-
-                object TestNotBlank : Validator<String>(String::class) {
-                    override fun validate(value: String): String? =
-                        if (value.isBlank()) "must not be blank" else null
+                then("no validation scaffolding is emitted — zero-cost passthrough") {
+                    generated shouldNotContain "run {"
+                    generated shouldNotContain "ValidationFailed"
                 }
+            }
+        }
 
-                @MapTo(OrderDomain::class)
-                data class OrderRemote(
-                    @FieldMap(fieldName = "orderId", targetClass = OrderDomain::class)
-                    @ValidateFrom(TestNotBlank::class)
-                    val id: String
+        given("@Validate on a source field renamed via @FieldMap") {
+            val source =
+                SourceFile.kotlin(
+                    "TargetName.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.Validate
+                    import com.sahsenvar.kmapper.annotations.FieldMap
+                    import com.sahsenvar.kmapper.validation.Validator
+
+                    data class OrderDomainModel(val orderId: String)
+
+                    object TestNotBlank : Validator<String>(String::class) {
+                        override fun validate(value: String): String? =
+                            if (value.isBlank()) "must not be blank" else null
+                    }
+
+                    @MapTo(OrderDomainModel::class)
+                    data class OrderDataModel(
+                        @FieldMap(fieldName = "orderId", targetClass = OrderDomainModel::class)
+                        @Validate(TestNotBlank::class)
+                        val id: String
+                    )
+                    """.trimIndent(),
                 )
-                """.trimIndent(),
-            )
-        val (result, compilation) = compile(src)
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
-        val gen = compilation.generatedFile("OrderRemoteMappers.kt")
-        // The exception field arg must be "orderId" (target), not "id" (source)
-        assert(gen.contains("\"orderId\"")) { "Expected target field name 'orderId' in exception:\n$gen" }
-    }
-}
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(source, "OrderDataModelMappers.kt")
+
+                then("the thrown ValidationFailed carries the TARGET field name") {
+                    // The exception path arg must be "orderId" (target), not "id" (source)
+                    generated shouldContain "\"orderId\""
+                }
+            }
+        }
+    })

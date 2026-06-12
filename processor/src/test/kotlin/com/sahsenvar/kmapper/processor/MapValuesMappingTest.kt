@@ -7,7 +7,6 @@ import com.tschuchort.compiletesting.SourceFile
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
 
 /**
  * Compile + runtime tests for Map<K,V> value mapping (Task 6, spec §4).
@@ -111,7 +110,7 @@ class MapValuesMappingTest {
                 .first { it.parameterCount == 1 }
                 .newInstance(inputMap)
 
-        val domain = result.invokeMapper("ContainerRMappersKt", "toContainerD", instance)!!
+        val domain = result.invokeResultMapper("ContainerRMappersKt", "toContainerDResult", instance).getOrThrow()!!
 
         @Suppress("UNCHECKED_CAST")
         val resultMap = domain.prop("items") as Map<String, Any>
@@ -144,7 +143,7 @@ class MapValuesMappingTest {
         val inputMap = mapOf("x" to "foo", "y" to "bar")
         val instance = result.newInstance("BagR", inputMap)
 
-        val domain = result.invokeMapper("BagRMappersKt", "toBagD", instance)!!
+        val domain = result.invokeResultMapper("BagRMappersKt", "toBagDResult", instance).getOrThrow()!!
 
         @Suppress("UNCHECKED_CAST")
         val resultMap = domain.prop("tags") as Map<String, String>
@@ -165,16 +164,15 @@ class MapValuesMappingTest {
     }
 
     @Test
-    fun `nullable map source null throws RequiredFieldMissing at runtime`() {
+    fun `nullable map source null fails with RequiredFieldMissing at the Result boundary`() {
         val (result, _) = compile(nullableValueSrc)
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
         val instance = result.newInstance("BoxR", null as Any?)
 
-        val ex =
-            assertFails {
-                result.invokeMapper("BoxRMappersKt", "toBoxD", instance)
-            }
+        val outcome = result.invokeResultMapper("BoxRMappersKt", "toBoxDResult", instance)
+        assert(outcome.isFailure) { "Expected Result.failure for absent required map" }
+        val ex = outcome.exceptionOrNull()!!
         assert(ex.javaClass.name.contains("RequiredFieldMissing")) {
             "Expected RequiredFieldMissing but got: ${ex.javaClass.name}: ${ex.message}"
         }
@@ -191,7 +189,7 @@ class MapValuesMappingTest {
 
         val instance = result.newInstance("BoxR", inputMap as Any?)
 
-        val domain = result.invokeMapper("BoxRMappersKt", "toBoxD", instance)!!
+        val domain = result.invokeResultMapper("BoxRMappersKt", "toBoxDResult", instance).getOrThrow()!!
 
         @Suppress("UNCHECKED_CAST")
         val resultMap = domain.prop("m") as Map<String, Any>

@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 class CollectionNestedMappingTest {
     /**
      * Non-null List<NestedSource> → List<NestedDomain> where NestedSource is itself @MapTo-mapped.
-     * Generated code must use `.map { it.toTagDomain() }` (no safe-call `?.map`).
+     * Generated code must use `.map { it.toTagDomainResult().getOrThrow() }` (no safe-call `?.map`).
      */
     @Test
     fun `non-null list of mapped elements uses map not safe-call map`() {
@@ -42,14 +42,14 @@ class CollectionNestedMappingTest {
             "Generated code must NOT use ?.map for non-null List source:\n$gen"
         }
         // Must call the element mapper
-        assert(gen.contains("toTagDomain()")) {
-            "Expected toTagDomain() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
+            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
         }
     }
 
     /**
      * Nullable List<NestedSource>? → List<NestedDomain>?: null passthrough via ?.map.
-     * Generated code must use `?.map { it.toTagDomain() }`.
+     * Generated code must use `?.map { it.toTagDomainResult().getOrThrow() }`.
      */
     @Test
     fun `nullable list of mapped elements uses safe-call map`() {
@@ -76,8 +76,8 @@ class CollectionNestedMappingTest {
         assert(gen.contains("?.map")) {
             "Expected ?.map for nullable List source:\n$gen"
         }
-        assert(gen.contains("toTagDomain()")) {
-            "Expected toTagDomain() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
+            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
         }
     }
 }
