@@ -5,8 +5,7 @@ import arrow.core.NonEmptySet
 import com.sahsenvar.kmapper.MappableEnum
 import com.sahsenvar.kmapper.annotations.KMapperConfig
 import com.sahsenvar.kmapper.annotations.MapTo
-import com.sahsenvar.kmapper.annotations.ValidateFrom
-import com.sahsenvar.kmapper.annotations.ValidateTo
+import com.sahsenvar.kmapper.annotations.Validate
 import com.sahsenvar.kmapper.arrow.NonEmptyListWrapper
 import com.sahsenvar.kmapper.arrow.NonEmptySetWrapper
 import com.sahsenvar.kmapper.datetime.StringLocalDateConverter
@@ -73,13 +72,15 @@ data class UserR(
 
 data class ContactD(
     val name: String,
-    val label: String?,
+    // Field-anchored: as TARGET field, validated AFTER mapping (skipped when null)
+    @Validate(NotBlankValidator::class) val label: String?,
 )
 
 @MapTo(ContactD::class)
 data class ContactR(
-    @ValidateFrom(NotBlankValidator::class) val name: String, // validated before mapping
-    @ValidateTo(NotBlankValidator::class) val label: String?, // validated after mapping (skipped when null)
+    // Field-anchored: as SOURCE field, validated BEFORE mapping
+    @Validate(NotBlankValidator::class) val name: String,
+    val label: String?,
 )
 
 // ─── Map<K,V> E2E models (Group F) ──────────────────────────────────────────

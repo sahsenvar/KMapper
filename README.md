@@ -10,7 +10,7 @@ Full guide on **GitBook**: **https://kmapper.gitbook.io/docs** (Türkçe)
 
 Source Markdown in the repo: **[English](docs/guide-en/README.md)** · **[Türkçe](docs/guide/README.md)**.
 
-Covers installation, `@MapTo`/`@MapFrom`, field mapping, null-safety, type converters, validation (`@ValidateFrom`/`@ValidateTo`), `MappableEnum`, error handling, observability, multi-module setup, and the full annotation reference.
+Covers installation, `@MapTo`/`@MapFrom`, field mapping, null-safety, type converters, field-anchored validation (`@Validate`), `MappableEnum`, error handling, observability, multi-module setup, and the full annotation reference.
 
 Group `io.github.sahsenvar`:
 
@@ -18,7 +18,7 @@ Group `io.github.sahsenvar`:
 |----------|----------|---------|
 | `kmapper-core` | KMP | Standalone runtime: `MappingException`, `MapTypeConverter` + registry, built-in primitive converters, `MappableEnum`, `KMapper`/`MappingListener` — usable without code generation |
 | `kmapper-annotations` | KMP | Mapping declaration annotations (`@MapTo`/`@MapFrom`/`@FieldMap`/`@KMapperConfig`/…); depends on `kmapper-core` |
-| `kmapper-compiler` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()` extensions) |
+| `kmapper-compiler` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toXResult()` extensions) |
 | `kmapper-converters-immutable` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet`/`PersistentSet` wrappers (listed in `@KMapperConfig(wrappers)`) |
 | `kmapper-converters-arrow` | KMP | `List` → `NonEmptyList` wrapper; empty source throws `MappingException.EmptyCollection` (listed in `@KMapperConfig(wrappers)`) |
 | `kmapper-converters-datetime` | KMP (kotlinx) / JVM+Android (java.time, bridges) | Scalar converters: `String`/`Long` ↔ `LocalDate`, `LocalDateTime`, `LocalTime`, `ZonedDateTime`, `OffsetDateTime`, `Instant` |
@@ -26,7 +26,7 @@ Group `io.github.sahsenvar`:
 | `kmapper-converters-uuid` | KMP (commonMain) / JVM+Android | Scalar converters: `String` ↔ `kotlin.uuid.Uuid`; `String`/`kotlin.uuid.Uuid` ↔ `java.util.UUID` (JVM/Android) |
 | `kmapper-converters-okio` | KMP | Scalar converters: `String`/`ByteArray` ↔ `okio.ByteString`; `String` ↔ `okio.Path` |
 | `kmapper-converters-uri` | JVM / Android / iOS (platform-split) | Scalar converters: `String` ↔ `java.net.URI` (JVM), `android.net.Uri` (Android), `platform.Foundation.NSURL` (iOS) |
-| `kmapper-validators` | KMP | `EmailValidator`, `UrlValidator` for use with `@ValidateFrom`/`@ValidateTo` field validation |
+| `kmapper-validators` | KMP | `EmailValidator`, `UrlValidator` for use with field-anchored `@Validate` validation |
 
 **Latest release:** `1.0.0` — on [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core) (all 10 modules). See the [installation guide](docs/guide-en/getting-started/installation.md).
 
