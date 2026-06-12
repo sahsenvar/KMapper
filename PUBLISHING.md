@@ -1,8 +1,9 @@
 # Publishing Runbook — Maven Central (Central Portal)
 
-This document covers the **manual steps** required before the automated Gradle publishing
-command can succeed. None of these steps can be automated — they require a browser, GPG tooling,
-and your local `~/.gradle/gradle.properties` file.
+This document covers the **one-time manual setup** (Steps 1–5) required before automated
+publishing can succeed — whether tag-driven from CI (the primary path, see Step 6) or run
+locally as a fallback. None of the setup steps can be automated — they require a browser,
+GPG tooling, and your local `~/.gradle/gradle.properties` file.
 
 ---
 
@@ -134,30 +135,51 @@ Check that artifacts appear under:
 
 ## Step 6 — Release to Maven Central
 
+The primary release path is **tag-driven CI**: pushing a `vX.Y.Z` tag triggers
+`.github/workflows/publish.yml`, which runs `./gradlew publishAndReleaseToMavenCentral` and
+releases the deployment on the Central Portal automatically — no manual portal interaction and
+no local credentials needed. CI reads its credentials from the repository's GitHub Actions
+secrets (`MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `SIGNING_IN_MEMORY_KEY`,
+`SIGNING_IN_MEMORY_KEY_ID`, `SIGNING_IN_MEMORY_KEY_PASSWORD`), which mirror the Step 4
+properties via the `ORG_GRADLE_PROJECT_` prefix.
+
 1. **Bump the version** in `build.gradle.kts` (root `allprojects` block):
    - Change `0.1.0-SNAPSHOT` → `0.1.0`
    - SNAPSHOT versions are deployed to the Central Portal staging area and are not released
      to consumers automatically.
 
-2. **Run the publish command:**
-
-```bash
-./gradlew publishAndReleaseToMavenCentral --no-configuration-cache
-```
-
-   This uploads the artifacts, monitors the deployment status, and releases them automatically
-   once all checks pass (POM completeness, signing, Javadoc presence).
-
-3. **After release**, tag the commit:
+2. **Commit and push** the release commit to `main`, then **tag it and push the tag**:
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-4. **Bump to next SNAPSHOT** in `build.gradle.kts`:
+   The tag push triggers two independent workflows:
+   - `publish.yml` — publishes all 11 modules and releases them to Maven Central.
+   - `release.yml` — creates the GitHub Release with the matching `CHANGELOG.md` section.
+
+3. **Bump to next SNAPSHOT** in `build.gradle.kts`:
    - Change `0.1.0` → `0.2.0-SNAPSHOT` (or whichever next version)
    - Commit and push.
+
+### Fallback — manual release from a local machine
+
+If CI is unavailable, release locally instead (requires the Step 4 credentials in
+`~/.gradle/gradle.properties`):
+
+```bash
+./gradlew publishAndReleaseToMavenCentral --no-configuration-cache
+```
+
+This uploads the artifacts, monitors the deployment status, and releases them automatically
+once all checks pass (POM completeness, signing, Javadoc presence).
+
+> **Warning:** after a manual release, do **not** push a `v*` tag for that version — the tag
+> would trigger `publish.yml` for a version that is already released, and the CI job will fail
+> on the duplicate Central Portal deployment. If you still want the tag (e.g. for the GitHub
+> Release created by `release.yml`), push it knowing the publish job's failure is expected and
+> harmless in that case.
 
 ---
 
