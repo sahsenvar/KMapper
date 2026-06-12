@@ -1,0 +1,70 @@
+# KMapper
+
+> KMapper is a compile-time object mapping library for Kotlin Multiplatform (KSP, no reflection). Generated mappers return Result<T> with path-carrying typed errors; a fallback ladder (value > constructor default > null > error) contains bad wire data while reporting every absorbed error to an observability sink; lossy conversions are refused at compile time. Maven coordinates: io.github.sahsenvar:kmapper-core / kmapper-annotations / kmapper-compiler (+ converter/validator add-ons).
+
+## Overview
+
+- [Introduction](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/README.md): Compile-time object mapping for Kotlin Multiplatform.
+
+## Getting Started
+
+- [Installation](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/getting-started/installation.md): KMapper is three artifacts working together, plus optional add-ons.
+- [Your First Mapper](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/getting-started/first-mapper.md): Five minutes from an API response to a safely mapped domain object — including your first mapping error, on purpose.
+- [The Mental Model](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/getting-started/mental-model.md): Everything KMapper does follows from three rules.
+- [Example Gallery](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/getting-started/examples.md): The repository ships a sample module with 25 runnable, self-contained examples — every feature of the library, ordered from basic to advanced within each category.
+
+## Basic Usage
+
+- [@MapTo and @MapFrom](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/basic-usage/mapto-mapfrom.md): Both annotations declare the same thing — "generate a mapping between these two classes" — they only differ in which class carries the declaration.
+- [Field Mapping and the Ignore Family](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/basic-usage/field-mapping.md): Name matching covers most fields for free.
+- [Null-Safety and the Fallback Ladder](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/basic-usage/null-safety.md): This page is Rule 1 and Rule 2 of the mental model in working code.
+- [Nested Models and Error Paths](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/basic-usage/nested-models.md): When a field's type is itself a mapped pair, KMapper routes it through the generated sub-mapper automatically — and stitches error paths together so failures stay addressable.
+- [Collections](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/basic-usage/collections.md): List, Set, and Map fields map element-by-element, and each element rides its own fallback ladder.
+
+## Type Conversion
+
+- [Built-in Converters](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion/built-in.md): When a matched field pair has different types, KMapper resolves a converter at compile time.
+- [Writing a Custom Converter](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion/custom-converter.md): A converter is an object extending MapTypeConverter<S, T>.
+- [@KMapperConfig — Registration and Discovery](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion/kmapperconfig.md): @KMapperConfig is your module's one-stop registration point: list converter objects and collection wrappers once, and every mapping in the module can use them — no per-field annotation needed.
+- [@ConvertWith — Per-Field Overrides and OnFail](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion/convert-with.md): Auto-discovery handles the rule; @ConvertWith handles the exception.
+- [Immutable Collections (converters-immutable)](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion/immutable.md): @CollectionWrapper objects for kotlinx-collections-immutable: map wire Lists straight into immutable domain collections.
+- [Arrow (converters-arrow)](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion/arrow.md): Wrappers and processor support for Arrow types: non-empty collections as a mapping-time guarantee, and Option as an explicit-absence type.
+- [Date and Time (converters-datetime)](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion/datetime.md): Register what you use in @KMapperConfig (add-on converters are not auto-discovered):
+- [Big Numbers (converters-bignumber)](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion/bignumber.md): Converters for arbitrary-precision numbers: ionspin kotlin-multiplatform-bignum (commonMain, all targets) and java.math (JVM/Android).
+- [UUID (converters-uuid)](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion/uuid.md): Converters for kotlin.uuid.Uuid (KMP) and java.util.UUID (JVM/Android).
+- [Okio (converters-okio)](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion/okio.md): Converters for Okio types (ByteString, Path), including three same-pair encoding alternates for String ↔ ByteString.
+- [URI (converters-uri)](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion/uri.md): String ↔ the platform's URI type, one converter per platform — for KMP apps whose domain models carry real URI types instead of raw strings.
+
+## Validation
+
+- [@Validate — Field-Anchored Validation](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/validation/validate.md): Conversion answers "can this value become that type?".
+- [The Validator Library](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/validation/validators.md): Two tiers, one split rule: structural, dependency-free checks live in core (com.sahsenvar.kmapper.validation.builtin, no extra artifact); opinionated format knowledge lives in the kmapper-validators add-on (com.sahsenvar.kmapper.validators).
+
+## Enum Mapping
+
+- [MappableEnum](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/enum/mappable-enum.md): Enums opt into mapping by declaring their wire value explicitly.
+
+## Error Handling
+
+- [The Result Boundary and MappingException](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/error-handling/mapping-exception.md): KMapper's error contract in one sentence: everything that can fail at runtime arrives as a Result failure holding a path-carrying MappingException; everything that can be known earlier fails the build instead.
+
+## Observability
+
+- [MappingListener and the Degradation Sink](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/observability/listener.md): Two channels tell you everything mappings do in production:
+
+## Advanced
+
+- [Multi-Module Projects](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/advanced/multi-module.md): The rule of thumb: the compiler goes where mappings are declared; the runtime goes where generated code is called.
+- [Architecture: How It Works](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/advanced/architecture.md): A look under the hood — useful for debugging builds, reviewing generated code, and trusting what runs in production.
+
+## Reference
+
+- [Annotation Reference](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/reference/annotations.md): All annotations live in com.sahsenvar.kmapper.annotations (kmapper-annotations artifact).
+- [Migrating from 1.x](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/reference/migration-1x.md): 2.0 is the converter-subsystem redesign: failures became values, the fallback ladder became the default behavior, and the converter/validation/observability surfaces were rebuilt for user–author parity.
+- [Limitations & Roadmap](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/reference/limitations.md): Honest edges of the current release, with the reasoning — most are deliberate scope decisions, recorded in the project's design ledger.
+- [FAQ](https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/reference/faq.md): Because wire data will be malformed eventually, and a mapper that throws turns someone else's bad deploy into your crash.
+
+## Optional
+
+- [Consumer cheat sheet for AI agents](https://github.com/sahsenvar/KMapper/blob/main/docs/AGENTS.md): compact rules, annotation table, and compile-error fixes for coding agents.
+- [CHANGELOG](https://github.com/sahsenvar/KMapper/blob/main/CHANGELOG.md): release history including the 1.x -> 2.0 breaking redesign.

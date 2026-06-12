@@ -1,0 +1,2311 @@
+# KMapper — complete documentation (single file for LLM ingestion)
+
+> KMapper is a compile-time object mapping library for Kotlin Multiplatform (KSP, no reflection). Generated mappers return Result<T> with path-carrying typed errors; a fallback ladder (value > constructor default > null > error) contains bad wire data while reporting every absorbed error to an observability sink; lossy conversions are refused at compile time. Maven coordinates: io.github.sahsenvar:kmapper-core / kmapper-annotations / kmapper-compiler (+ converter/validator add-ons).
+
+Generated from docs/guide-en in reading order by scripts/generate-llms-txt.py.
+
+
+==============================================================================
+SECTION: Overview — Introduction  (README.md)
+==============================================================================
+
+# KMapper
+
+**Compile-time object mapping for Kotlin Multiplatform.** You annotate your wire models; KMapper
+generates the mapping functions at build time with KSP — no reflection, no runtime registry, no
+hand-written boilerplate to keep in sync.
+
+```kotlin
+data class User(val id: Long, val joined: LocalDate)
+
+@MapTo(User::class)
+data class UserResponse(val id: Long, val joined: String)
+
+// Generated for you at compile time:
+val user: Result<User> = UserResponse(7, "2026-06-12").toUserResult()
+```
+
+Three things make that snippet different from every mapper you have hand-written:
+
+1. **Failures are values.** The generated function returns `Result<User>` — malformed wire data
+   surfaces as a typed `MappingException`, never as a surprise crash deep in a parsing stack.
+2. **Errors carry a path.** A bad date three objects deep reports
+   `Cannot convert order.customer.joined: …` — you know *which field of which record* broke.
+3. **The conversion is visible and replaceable.** `String → LocalDate` resolved to a built-in
+   converter object. Your own converters plug into *the same* resolution, with the same
+   priority rules and the same compile-time checks.
+
+## Why KMapper?
+
+- **No reflection, KMP-native.** Generated Kotlin runs on Android, JVM, and iOS alike. Declare
+  mappings once in `commonMain`.
+- **Compile-time safety.** A missing converter, an unmappable field, or a conversion that would
+  silently lose data is a **build error with a guiding message** — not a production incident.
+- **Honest error handling by design.** The *fallback ladder* keeps one malformed field from
+  destroying a whole payload, while every absorbed error is reported to an observability sink.
+  Nothing fails silently; nothing crashes by default.
+- **User–author parity.** Every capability the library uses internally — converter objects,
+  validators, collection wrappers, even "this direction is intentionally unsupported" — is
+  available to your code through the exact same API.
+
+## The design principle behind everything
+
+> **A silently wrong value is worse than an error.**
+
+KMapper never invents data (no `ordinal`-based enum mapping, no truncating `Long → Int`) and
+never hides a failure (every leniency is declared in the type or an annotation, and every
+absorbed error is observable). When something can't be done safely, you hear about it at
+compile time.
+
+## Artifacts
+
+Group `io.github.sahsenvar`:
+
+| Artifact | Platform | Purpose |
+|----------|----------|---------|
+| `kmapper-core` | KMP | Standalone runtime: exceptions, converter base + built-ins, validators, seams, observability. Usable without code generation. |
+| `kmapper-annotations` | KMP | Declaration annotations (`@MapTo`, `@FieldMap`, `@ConvertWith`, …) |
+| `kmapper-compiler` | JVM (KSP) | The code generator |
+| `kmapper-converters-immutable` | KMP | kotlinx-collections-immutable wrappers |
+| `kmapper-converters-arrow` | KMP | Arrow `NonEmptyList`/`NonEmptySet` wrappers, `Option` |
+| `kmapper-converters-datetime` | JVM/Android | `java.time` converters and kotlinx ↔ java bridges |
+| `kmapper-converters-bignumber` | KMP / JVM+Android | ionspin and `java.math` big numbers |
+| `kmapper-converters-uuid` | KMP / JVM+Android | `kotlin.uuid.Uuid` and `java.util.UUID` |
+| `kmapper-converters-okio` | KMP | `ByteString` (UTF-8/Base64/Hex), `Path` |
+| `kmapper-converters-uri` | JVM / Android / iOS | platform URI types |
+| `kmapper-validators` | KMP | Email, phone, IP, UUID, Luhn… for `@Validate` |
+
+## Where to start
+
+- New here? **[Installation](getting-started/installation.md)** →
+  **[Your First Mapper](getting-started/first-mapper.md)** — running in five minutes.
+- Want the philosophy in three rules? **[The Mental Model](getting-started/mental-model.md)**.
+- Prefer reading code? The **[runnable example gallery](getting-started/examples.md)** covers
+  every feature, ordered basic → advanced.
+
+==============================================================================
+SECTION: Getting Started — Installation  (getting-started/installation.md)
+==============================================================================
+
+# Installation
+
+KMapper is three artifacts working together, plus optional add-ons. All are on
+[Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core) under
+the group `io.github.sahsenvar`.
+
+| Artifact | You need it when… |
+|----------|-------------------|
+| `kmapper-core` | always — the runtime (exceptions, converters, validators, seams) |
+| `kmapper-annotations` | you declare mappings with annotations (almost always) |
+| `kmapper-compiler` | same as above — it is the KSP processor that reads them |
+
+> `kmapper-core` alone is also a valid setup: it gives you the same conversion seams the
+> generated code uses, for hand-written mappers without KSP. See the
+> [`CoreOnlyMapping` example](examples.md).
+
+## JVM / Android (single platform)
+
+```kotlin
+// build.gradle.kts
+plugins {
+    kotlin("jvm") version "2.3.10" // or com.android.application / kotlin("android")
+    id("com.google.devtools.ksp") version "2.3.10-2.0.5"
+}
+
+dependencies {
+    implementation("io.github.sahsenvar:kmapper-core:2.0.0")
+    implementation("io.github.sahsenvar:kmapper-annotations:2.0.0")
+    ksp("io.github.sahsenvar:kmapper-compiler:2.0.0")
+}
+```
+
+## Kotlin Multiplatform
+
+Declare models and mappings in `commonMain`; register the processor per compilation target:
+
+```kotlin
+// build.gradle.kts
+plugins {
+    kotlin("multiplatform") version "2.3.10"
+    id("com.google.devtools.ksp") version "2.3.10-2.0.5"
+}
+
+kotlin {
+    jvm()
+    iosArm64()
+    iosSimulatorArm64()
+
+    sourceSets {
+        commonMain.dependencies {
+            implementation("io.github.sahsenvar:kmapper-core:2.0.0")
+            implementation("io.github.sahsenvar:kmapper-annotations:2.0.0")
+        }
+    }
+}
+
+dependencies {
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:2.0.0")
+    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:2.0.0")
+    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:2.0.0")
+    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:2.0.0")
+}
+
+// Make every compilation see the commonMain-generated sources:
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
+    }
+}
+```
+
+## Add-ons (optional)
+
+Each add-on is an independent KMP artifact; add only what your models use:
+
+```kotlin
+implementation("io.github.sahsenvar:kmapper-converters-immutable:2.0.0") // PersistentList & co.
+implementation("io.github.sahsenvar:kmapper-converters-arrow:2.0.0")     // NonEmptyList, Option
+implementation("io.github.sahsenvar:kmapper-converters-datetime:2.0.0")  // java.time + bridges
+implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.0.0") // BigDecimal/BigInteger
+implementation("io.github.sahsenvar:kmapper-converters-uuid:2.0.0")      // Uuid / java.util.UUID
+implementation("io.github.sahsenvar:kmapper-converters-okio:2.0.0")      // ByteString, Path
+implementation("io.github.sahsenvar:kmapper-converters-uri:2.0.0")       // URI / Uri / NSURL
+implementation("io.github.sahsenvar:kmapper-validators:2.0.0")           // Email, E.164, IP, …
+```
+
+kotlinx-datetime types (`LocalDate`, `Instant`, …) need no add-on — their `String`/`Long`
+converters are core built-ins, and `kmapper-core` brings kotlinx-datetime in as an API
+dependency.
+
+## Version compatibility
+
+| KMapper | Kotlin | KSP |
+|---------|--------|-----|
+| 2.x | 2.3+ | KSP2 (`2.3.x-2.x`) |
+
+In multi-module projects only modules that *declare* mappings need the compiler; modules that
+merely call generated functions need just the runtime. Details:
+[Multi-Module Projects](../advanced/multi-module.md).
+
+> Next: **[Your First Mapper →](first-mapper.md)**
+
+==============================================================================
+SECTION: Getting Started — Your First Mapper  (getting-started/first-mapper.md)
+==============================================================================
+
+# Your First Mapper
+
+Five minutes from an API response to a safely mapped domain object — including your first
+mapping error, on purpose.
+
+## 1. Two models
+
+A wire model (what the API sends) and a domain model (what your app wants):
+
+```kotlin
+import com.sahsenvar.kmapper.annotations.MapTo
+import kotlinx.datetime.LocalDate
+
+data class User(
+    val id: Long,
+    val email: String,
+    val joined: LocalDate,
+)
+
+@MapTo(User::class)
+data class UserResponse(
+    val id: Long,
+    val email: String,
+    val joined: String, // ISO date on the wire
+)
+```
+
+`@MapTo` lives on the **wire model** — the side you don't control is the side that declares
+how it becomes the side you do control.
+
+## 2. Build
+
+```bash
+./gradlew build
+```
+
+KSP generates an extension function:
+
+```kotlin
+fun UserResponse.toUserResult(): Result<User>
+```
+
+Two fields copied straight across; `joined` routed through the built-in
+`LocalDateStringConverter` (`String ↔ LocalDate` is one of 35 built-in pairs — no
+registration needed).
+
+## 3. Use it
+
+```kotlin
+val user: User = UserResponse(7, "grace@navy.mil", "2026-06-12")
+    .toUserResult()
+    .getOrThrow()
+```
+
+The generated function returns `Result<User>`: *you* decide at the call site whether a failure
+throws (`getOrThrow`), falls back (`getOrElse`), or branches (`fold`).
+
+## 4. Break it — on purpose
+
+```kotlin
+val broken = UserResponse(7, "grace@navy.mil", "not-a-date").toUserResult()
+
+println(broken.exceptionOrNull()?.message)
+// Cannot convert joined: String -> LocalDate failed for value "not-a-date" …
+```
+
+No crash — the failure arrived as a value, naming the exact field. In nested models the path
+grows with it (`customer.address.zipCode`); see
+[Nested Models](../basic-usage/nested-models.md).
+
+## 5. What if the wire value is missing?
+
+Make the domain field tell KMapper what "missing" should mean:
+
+```kotlin
+data class User(
+    val id: Long,
+    val email: String,
+    val joined: LocalDate? = null, // nullable: absent/broken date becomes null
+)
+```
+
+A nullable or defaulted target field is a *declared escape*: absence flows into it silently,
+and a **broken** value is absorbed into it too — but every absorption is reported to the
+observability sink, so production telemetry still sees it. That ranking
+(`value > default > null > error`) is the **fallback ladder**, the heart of KMapper.
+
+> Next: **[The Mental Model →](mental-model.md)** — the three rules that explain everything
+> you just saw.
+
+==============================================================================
+SECTION: Getting Started — The Mental Model  (getting-started/mental-model.md)
+==============================================================================
+
+# The Mental Model
+
+Everything KMapper does follows from three rules. Internalize these and every page in this
+guide becomes a footnote.
+
+## Rule 1 — Absence follows the type
+
+When a source value is **missing** (a nullable source field is `null`), the *target field's
+type* decides what happens. No annotation needed:
+
+| Target field | Result of absence |
+|--------------|-------------------|
+| `val x: T? ` | `null` |
+| `val x: T = default` | the constructor default (the argument is simply omitted) |
+| `val x: T` (neither) | `MappingException.RequiredFieldMissing` |
+
+Declared absence is **silent** — a nullable field being null is normal data, not an incident.
+
+## Rule 2 — Brokenness is loud, but contained
+
+When a source value is **present but broken** (a date that doesn't parse, an enum value the
+app doesn't know), KMapper walks the **fallback ladder**:
+
+```
+converted value  >  constructor default  >  null  >  error
+```
+
+A broken value may be absorbed by a declared escape (default or nullable) — but unlike
+absence, **every absorption is reported** to the
+[degradation sink](../observability/listener.md). The whole mapping returns
+`Result<T>`, so even a hard error never crashes your app unless you call `.getOrThrow()`.
+
+The distinction matters: *absence is data, brokenness is a signal.* You keep serving users
+from the 99 good fields while your telemetry tells you about the 1 bad one.
+
+## Rule 3 — Leniency is explicit, local, and compiler-checked
+
+Nothing above can be made *more* lenient globally — there is no "ignore errors" switch.
+Adjustments are per-field annotations, visible in the model:
+
+```kotlin
+@ConvertWith(onFail = OnFail.Throw)  // this field is too important to absorb
+@ConvertWith(onFail = OnFail.Skip)   // drop broken elements of this collection
+```
+
+And anything that *cannot* be done safely — a converter that would truncate, a direction
+nobody wrote — fails **at compile time** with a message that names the fix.
+
+## The parity principle
+
+One more thing that isn't a rule but a promise: **whatever the library can do, you can do.**
+Built-in converters, validators, and collection wrappers are ordinary public classes on the
+same rails as yours. If `LocalDate ↔ String` gets a built-in converter object resolved by
+type pair, your `Money ↔ String` converter is registered, resolved, overridden, and
+compile-checked in exactly the same way. There is no privileged author-only mechanism.
+
+## Where each concept lives
+
+| Concept | Page |
+|---------|------|
+| the ladder on scalars | [Null-Safety](../basic-usage/null-safety.md) |
+| the ladder on collection elements | [Collections](../basic-usage/collections.md) |
+| converters and discovery | [Built-ins](../type-conversion/built-in.md), [@KMapperConfig](../type-conversion/kmapperconfig.md) |
+| per-field policy | [@ConvertWith and OnFail](../type-conversion/convert-with.md) |
+| invariants | [@Validate](../validation/validate.md) |
+| the report channel | [Observability](../observability/listener.md) |
+
+> Next: **[Example Gallery →](examples.md)**
+
+==============================================================================
+SECTION: Getting Started — Example Gallery  (getting-started/examples.md)
+==============================================================================
+
+# Example Gallery
+
+The repository ships a [sample module](https://github.com/sahsenvar/KMapper/tree/main/sample)
+with **25 runnable, self-contained examples** — every feature of the library, ordered from
+basic to advanced within each category. If you want to know how to do something, there is an
+example that shows it.
+
+Run everything:
+
+```bash
+./gradlew sample:runSample
+```
+
+…or open any file in the IDE and hit ▶ next to its `main`.
+
+## Learning path
+
+| # | Category | You will learn |
+|---|----------|----------------|
+| 1 | **Basics** | `@MapTo`, the `toXResult(): Result<X>` boundary, `@MapFrom`, one source → many targets |
+| 2 | **Fields** | `@FieldMap` renaming, `@IgnoreMap`, `@IgnoreDefaultValue`, caller-supplied parameters |
+| 3 | **Nullability & defaults** | the fallback ladder, production `Result` handling patterns |
+| 4 | **Converters** | auto-discovery, custom converters, `@ConvertWith(use, onFail)`, sanctioned null, parameterized converters, `@UnsupportedDirection` |
+| 5 | **Collections** | element ladder, Set/Map semantics, `OnFail.Throw`/`Skip` on elements, `@CollectionWrapper` |
+| 6 | **Nested objects** | sub-mappers, deep error paths, bounding the blast radius |
+| 7 | **Enums** | `MappableEnum`, unknown wire values |
+| 8 | **Validation** | field-anchored `@Validate`, the validator library, custom validators |
+| 9 | **Observability** | `MappingListener`, the degradation sink, "crash in debug, observe in prod" |
+| 10 | **Hand-written mappers** | `kmapper-core` standalone — the same seams generated code uses |
+
+Each example file documents its expected output in comments, and the gallery is compiled by
+the regular project build — the examples can't silently drift from the library's API.
+
+> Next: **[@MapTo and @MapFrom →](../basic-usage/mapto-mapfrom.md)**
+
+==============================================================================
+SECTION: Basic Usage — @MapTo and @MapFrom  (basic-usage/mapto-mapfrom.md)
+==============================================================================
+
+# @MapTo and @MapFrom
+
+Both annotations declare the same thing — "generate a mapping between these two classes" —
+they only differ in **which class carries the declaration**.
+
+## @MapTo — declared on the source
+
+```kotlin
+@MapTo(User::class)
+data class UserResponse(val id: Long, val name: String)
+
+// generates: fun UserResponse.toUserResult(): Result<User>
+```
+
+## @MapFrom — declared on the target
+
+Sometimes the source class isn't yours to annotate (another module, generated code). Declare
+on the target instead; the generated function is identical:
+
+```kotlin
+@MapFrom(UserResponse::class)
+data class User(val id: Long, val name: String)
+
+// generates the same: fun UserResponse.toUserResult(): Result<User>
+```
+
+## Which side should you annotate?
+
+Prefer **`@MapTo` on the wire model**. Wire models are the volatile side — when the API
+changes, the model and its mapping rules change in the same file. Reach for `@MapFrom` when
+the source class is outside your control.
+
+## Both are repeatable
+
+One source can map to several targets, and one target can accept several sources:
+
+```kotlin
+@MapTo(User::class)
+@MapTo(UserListItem::class)
+data class UserResponse(val id: Long, val name: String, val avatarUrl: String?)
+
+// fun UserResponse.toUserResult(): Result<User>
+// fun UserResponse.toUserListItemResult(): Result<UserListItem>
+```
+
+Field-level directives can be scoped to one of the targets where it matters — see
+[`@FieldMap(targetClass = …)`](field-mapping.md).
+
+## What gets matched
+
+Fields are matched **by name** between the source's properties and the target's primary
+constructor parameters. For each matched pair, in order:
+
+1. same type → copied
+2. different type → a [converter](../type-conversion/built-in.md) is resolved at compile time
+3. nested `@MapTo`/`@MapFrom` pair → routed through the generated sub-mapper
+4. nothing fits → **compile error** naming the field and the missing piece
+
+Unmatched *target* fields with no default become required parameters of the generated
+function (see [caller-supplied parameters](field-mapping.md#caller-supplied-parameters)).
+
+> Next: **[Field Mapping and the Ignore Family →](field-mapping.md)**
+
+==============================================================================
+SECTION: Basic Usage — Field Mapping and the Ignore Family  (basic-usage/field-mapping.md)
+==============================================================================
+
+# Field Mapping and the Ignore Family
+
+Name matching covers most fields for free. These are the tools for the rest.
+
+## @FieldMap — different names
+
+```kotlin
+@MapTo(User::class)
+data class UserResponse(
+    @FieldMap("displayName")
+    val user_name: String, // wire snake_case -> domain displayName
+)
+```
+
+With several `@MapTo` targets, scope a rename to one target:
+
+```kotlin
+@MapTo(User::class)
+@MapTo(AuditEntry::class)
+data class UserResponse(
+    @FieldMap("displayName", targetClass = User::class)
+    @FieldMap("actorName", targetClass = AuditEntry::class)
+    val user_name: String,
+)
+```
+
+## @IgnoreMap — break the match on purpose
+
+`@IgnoreMap` makes the mapper pretend the field doesn't exist for auto-matching. Its value
+never flows through the mapping; the target slot falls back to its constructor default — or,
+with no default, becomes a **required parameter** of the generated function:
+
+```kotlin
+data class Account(
+    val email: String,
+    val passwordHash: String, // no default…
+)
+
+@MapTo(Account::class)
+data class SignUpRequest(
+    val email: String,
+    @IgnoreMap
+    val passwordHash: String, // same name, but you do NOT want this copied raw
+)
+
+// generated: fun SignUpRequest.toAccountResult(passwordHash: String): Result<Account>
+val account = request.toAccountResult(passwordHash = hash(request.passwordHash))
+```
+
+## @IgnoreDefaultValue — "the default is not a wire fallback"
+
+A constructor default normally doubles as rung 2 of the [ladder](null-safety.md): absence
+quietly becomes the default. Sometimes the default is just construction convenience and the
+wire **must** send the value. `@IgnoreDefaultValue` (on the target field) makes mapping treat
+the default as nonexistent — absence is a hard `RequiredFieldMissing` again:
+
+```kotlin
+data class Account(
+    @IgnoreDefaultValue
+    val plan: String = "FREE", // Account() in code defaults to FREE; the wire must always send a plan
+)
+```
+
+## Caller-supplied parameters
+
+A target field with **no matching source field and no default** doesn't compile-error — it
+becomes a required parameter of the generated function. That's the mechanism for context the
+wire can't know:
+
+```kotlin
+data class Payment(
+    val id: Long,
+    val fetchedAt: Instant, // not on the wire
+)
+
+@MapTo(Payment::class)
+data class PaymentResponse(val id: Long)
+
+// generated:
+fun PaymentResponse.toPaymentResult(fetchedAt: Instant): Result<Payment>
+```
+
+## Constructor defaults are the fallback mechanism
+
+There is no `@MapDefaultValue`-style annotation: **the Kotlin constructor default *is* the
+fallback**, and KMapper uses it by *omitting the argument* — the same default your hand-written
+code sees, defined once, in one place:
+
+```kotlin
+data class Settings(
+    val theme: String = "system", // absent/broken theme on the wire -> "system"
+)
+```
+
+> Next: **[Null-Safety and the Fallback Ladder →](null-safety.md)**
+
+==============================================================================
+SECTION: Basic Usage — Null-Safety and the Fallback Ladder  (basic-usage/null-safety.md)
+==============================================================================
+
+# Null-Safety and the Fallback Ladder
+
+This page is Rule 1 and Rule 2 of the [mental model](../getting-started/mental-model.md) in
+working code.
+
+## The four nullability cases
+
+For a field mapped between source and target, the compiler handles all four combinations
+exhaustively:
+
+| Source | Target | Behavior |
+|--------|--------|----------|
+| `T` | `T` | direct copy / conversion |
+| `T` | `T?` | direct — a non-null value satisfies a nullable slot |
+| `T?` | `T?` | direct — null flows through as null |
+| `T?` | `T` | **the interesting one** — see below |
+
+## Nullable → non-null: the ladder decides
+
+```kotlin
+data class User(
+    val email: String,                //  no escape       -> absence is an error
+    val nickname: String = "anon",    //  default escape  -> absence takes the default
+    val bio: String?,                 //  nullable escape -> absence becomes null
+)
+
+@MapTo(User::class)
+data class UserResponse(
+    val email: String?,
+    val nickname: String?,
+    val bio: String?,
+)
+```
+
+When a source field is null:
+
+```
+1. (no value to convert)
+2. target has a constructor default?  -> omit the argument, default applies   [silent]
+3. target is nullable?               -> null                                  [silent]
+4. neither                           -> MappingException.RequiredFieldMissing
+```
+
+Absence taking a declared escape is **silent** — null bios are data, not incidents.
+
+## Broken values ride the same ladder — loudly
+
+When the value is present but its conversion **throws** (`"not-a-date"`, unknown enum value),
+the same escapes apply, with two differences:
+
+- the absorption is **reported** to the [degradation sink](../observability/listener.md)
+  (`AbsorbedConversionError`, with field path and cause), and
+- you can forbid absorption per field with
+  [`@ConvertWith(onFail = OnFail.Throw)`](../type-conversion/convert-with.md).
+
+```kotlin
+// joined: String? -> LocalDate?   with value "garbage"
+// -> target gets null, sink gets AbsorbedConversionError(path="joined", cause=TypeConversionFailed)
+```
+
+## The hard floor: RequiredFieldMissing
+
+With no escape, mapping stops with a path-carrying exception — delivered as a `Result`
+failure, not a crash:
+
+```kotlin
+val result = UserResponse(email = null, …).toUserResult()
+result.exceptionOrNull()?.message
+// Required field missing: email
+```
+
+## Hand-written code: the same rails
+
+`kmapper-core`'s public seams give hand-written mappers identical semantics — this is
+literally what generated code calls:
+
+```kotlin
+val email = response.email.orRequired("email") // null -> RequiredFieldMissing("email")
+val joined = response.joined.convertOrNull("joined", "kotlin.String", "kotlinx.datetime.LocalDate") {
+    LocalDateStringConverter.convertFrom(it) // broken -> null + sink report
+}
+```
+
+See the `CoreOnlyMapping` example in the [gallery](../getting-started/examples.md) for a
+complete hand-written mapper.
+
+> Next: **[Nested Models and Error Paths →](nested-models.md)**
+
+==============================================================================
+SECTION: Basic Usage — Nested Models and Error Paths  (basic-usage/nested-models.md)
+==============================================================================
+
+# Nested Models and Error Paths
+
+When a field's type is itself a mapped pair, KMapper routes it through the generated
+sub-mapper automatically — and stitches error paths together so failures stay addressable.
+
+## Nesting just works
+
+```kotlin
+data class Order(val id: Long, val customer: Customer)
+data class Customer(val name: String, val address: Address)
+data class Address(val street: String, val zipCode: Int)
+
+@MapTo(Order::class)
+data class OrderResponse(val id: Long, val customer: CustomerResponse)
+
+@MapTo(Customer::class)
+data class CustomerResponse(val name: String, val address: AddressResponse)
+
+@MapTo(Address::class)
+data class AddressResponse(val street: String, val zipCode: String)
+```
+
+Each level needs its own `@MapTo` (every pair is an explicit declaration — no structural
+guessing), and the top-level call maps the whole tree:
+
+```kotlin
+val order = orderResponse.toOrderResult().getOrThrow()
+```
+
+## Errors carry the full path
+
+When `zipCode` is `"ABC"` three levels deep:
+
+```
+Cannot convert customer.address.zipCode: String -> Int failed for value "ABC" …
+```
+
+The path is built from **compile-time string literals** in the generated code — it survives
+R8/ProGuard obfuscation untouched. Collections add an index segment: `items[3].price`.
+
+## Bounding the blast radius
+
+By default a hard failure anywhere fails the whole `toOrderResult()` — one `Result`, one
+boundary. If a *section* of the payload is optional, declare it so, and the failure stops
+there:
+
+```kotlin
+data class Order(
+    val id: Long,
+    val customer: Customer? , // a broken customer no longer kills the order
+)
+```
+
+A broken sub-mapping then absorbs at the nullable escape (with an `AbsorbedConversionError`
+report carrying the nested path), and the rest of the order maps normally. The ladder
+composes: the escape *nearest to the failure* wins.
+
+> Next: **[Collections →](collections.md)**
+
+==============================================================================
+SECTION: Basic Usage — Collections  (basic-usage/collections.md)
+==============================================================================
+
+# Collections
+
+`List`, `Set`, and `Map` fields map element-by-element, and **each element rides its own
+fallback ladder**. The design goal: one malformed element out of a hundred should cost you
+that element, not the payload — and never silently.
+
+## Lists
+
+```kotlin
+data class Sensors(val readings: List<Int>)
+
+@MapTo(Sensors::class)
+data class SensorsResponse(val readings: List<String>) // "42" -> 42 per element
+```
+
+Element behavior when a value is broken or null, by **target element type**:
+
+| Target element | Broken/null element becomes | Reported as |
+|----------------|------------------------------|-------------|
+| `List<T?>` | `null` in place (size preserved) | `AbsorbedConversionError` / position kept |
+| `List<T>` | dropped (list compacts) | `DroppedBrokenElement` / `DroppedNullElement` |
+
+Same philosophy as scalars: the type declares the escape, the sink hears about every use of
+it.
+
+## Per-field element policy: OnFail
+
+[`@ConvertWith(onFail = …)`](../type-conversion/convert-with.md) tunes a single collection
+field. The annotation goes on the **source field of the generating direction**:
+
+```kotlin
+@MapTo(Measurements::class)
+data class MeasurementsResponse(
+    @ConvertWith(onFail = OnFail.Throw)
+    val invoiceLines: List<String>, // all-or-nothing: any broken line fails the mapping
+
+    @ConvertWith(onFail = OnFail.Skip)
+    val tagIds: List<String?>, // compact: drop broken/null elements even into List<T?>
+)
+```
+
+- `OnFail.Throw` — hardens the field: first broken element fails the whole mapping with
+  `items[i]`-style path.
+- `OnFail.Skip` — compacts: broken/null elements are dropped (and reported), even where the
+  target could hold nulls.
+- `OnFail.Auto` (default) — the table above.
+
+## Sets
+
+Same ladder. One extra wrinkle: converting elements can make two distinct source elements
+equal in the target (`"01"` and `"1"` both → `1`). The set keeps one and reports
+`ConvergedDuplicateElement` — silent data loss isn't a thing, even when it's set semantics.
+
+## Maps
+
+Keys and values each ride the ladder. Two map-specific rules:
+
+- a **broken key** drops the whole entry (a value without an address is meaningless) —
+  reported as `DroppedBrokenElement`;
+- two source keys converting to the same target key keep the **last** entry and report
+  `DuplicateKey`.
+
+`Map<String, String> → Map<String, String>` with matching types passes through untouched.
+
+## Beyond stdlib collections: wrappers
+
+`PersistentList`, `NonEmptyList`, and friends are one `@CollectionWrapper` registration away —
+the same element semantics, a different container. See
+[Immutable Collections](../type-conversion/immutable.md) and
+[Arrow](../type-conversion/arrow.md), or write your own wrapper for your own container type
+([custom converter guide](../type-conversion/custom-converter.md#collection-wrappers)).
+
+> Next: **[Built-in Converters →](../type-conversion/built-in.md)**
+
+==============================================================================
+SECTION: Type Conversion — Built-in Converters  (type-conversion/built-in.md)
+==============================================================================
+
+# Built-in Converters
+
+When a matched field pair has different types, KMapper resolves a converter **at compile
+time**. 35 type pairs ship in core and are auto-resolved with **no registration** — and, just
+as importantly, the directions that would corrupt data are *refused* at compile time.
+
+## The catalog
+
+All built-ins live in `com.sahsenvar.kmapper.converter.builtin` as public objects, named
+**richer type first** (the type that can hold more comes first: `LongIntConverter`,
+`InstantStringConverter`).
+
+**Numeric widening (12 pairs)** — the lossless direction converts; the narrowing direction is
+refused (see below):
+
+| Richer | Poorer |
+|--------|--------|
+| `Short`, `Int`, `Long`, `Float`, `Double` | `Byte` |
+| `Int`, `Long`, `Float`, `Double` | `Short` |
+| `Long`, `Double` | `Int` |
+| `Double` | `Float` |
+
+**String pairs (7)** — `Byte`, `Short`, `Int`, `Long`, `Float`, `Double`, `Boolean` ↔
+`String`. Formatting is total; parsing throws on malformed input (and rides the
+[ladder](../basic-usage/null-safety.md)). `Boolean` parsing is strict: `"true"`/`"false"`
+only — `"TRUE"`, `"1"`, `"yes"` are refused as ambiguous wire formats.
+
+**Cross pairs (9)** — `Float ↔ Int`, `Float ↔ Long`, `Double ↔ Long` (lossless direction
+converts), and `Boolean` ↔ every numeric type. The `Boolean`/numeric pairs are special: **both
+directions are refused** — `Byte → Boolean` has no canonical semantics (is `2` true?) and
+`Boolean → Byte` has no canonical encoding (`0/1`? `-1`?). They exist in the registry so that
+instead of a generic "no converter" error you get the *reasoned* refusal and write a one-line
+converter encoding **your** wire's convention.
+
+**kotlinx-datetime (5)** — `Instant ↔ String` (ISO-8601), `Instant ↔ Long` (epoch millis),
+`LocalDate ↔ String`, `LocalDateTime ↔ String`, `LocalTime ↔ String`.
+
+**kotlin.time (2)** — `Duration ↔ String` (ISO-8601, e.g. `PT1H30M`), `Duration ↔ Long`
+(whole milliseconds; sub-millisecond precision truncates — documented trade-off matching
+`Instant ↔ Long`).
+
+## Refused directions are a feature
+
+`LongIntConverter` converts `Int → Long` happily. Ask for `Long → Int` and the **build
+fails**:
+
+```
+Long -> Int conversion is unsupported! This relates to our policy on lossy conversions
+(e.g. Long -> Int, Double -> Float). What you can do:
+  1. Check the converter add-ons
+  2. Create your own converter
+  3. Rethink your source or target type using supported types.
+```
+
+That's `@UnsupportedDirection` — a declared, reasoned refusal instead of a silent
+truncation. If your domain *does* guarantee the range, you write the three-line custom
+converter and own that decision explicitly. The same mechanism is yours to use in
+[your own converters](custom-converter.md#refusing-a-direction).
+
+## Resolution order
+
+For a field needing `A → B`:
+
+1. field-level [`@ConvertWith`](convert-with.md) — explicit override wins
+2. your [`@KMapperConfig` converters](kmapperconfig.md) — a custom pair **shadows** a
+   built-in for the same pair
+3. core built-ins (this page)
+4. nothing? → compile error `MissingConverter`, naming the pair and where to register one
+
+> Next: **[Writing a Custom Converter →](custom-converter.md)**
+
+==============================================================================
+SECTION: Type Conversion — Writing a Custom Converter  (type-conversion/custom-converter.md)
+==============================================================================
+
+# Writing a Custom Converter
+
+A converter is an `object` extending `MapTypeConverter<S, T>`. Yours runs on **exactly the
+same rails** as the built-ins: same discovery, same overrides, same compile-time checks, same
+error taxonomy. This page is the complete contract.
+
+## The shape
+
+```kotlin
+import com.sahsenvar.kmapper.converter.MapTypeConverter
+
+object MoneyStringConverter : MapTypeConverter<Money, String>(Money::class, String::class) {
+    override fun convertTo(source: Money): String = source.format()        // Money  -> String
+    override fun convertFrom(target: String): Money = Money.parse(target)  // String -> Money
+}
+```
+
+Conventions:
+
+- **`object`, not class** — generated code calls `MoneyStringConverter.convertFrom(x)` as a
+  direct FQN reference; no instantiation, no reflection.
+- **Richer type first** (`<Money, String>`): `convertTo` goes *toward* the second type,
+  `convertFrom` comes back from it.
+- **Throw on bad input.** `convertFrom("garbage")` should throw (an
+  `IllegalArgumentException` is fine) — the [ladder](../basic-usage/null-safety.md) and
+  `Result` boundary turn it into a typed, path-carrying failure. Never return a guessed value.
+
+Register it once in [@KMapperConfig](kmapperconfig.md) — after that, every
+`Money`/`String` field pair in the module resolves to it automatically.
+
+## The two optional methods: sanctioned null
+
+`convertToOrNull` / `convertFromOrNull` exist for conversions where **null is a valid
+answer, not a failure** — e.g. a lookup that may legitimately find nothing. By default they
+delegate to the total methods; override when "no result" is meaningful:
+
+```kotlin
+object CountryCodeConverter : MapTypeConverter<Country, String>(Country::class, String::class) {
+    override fun convertTo(source: Country): String = source.isoCode
+    override fun convertFrom(target: String): Country =
+        Country.byIso(target) ?: throw IllegalArgumentException("Unknown ISO code: $target")
+
+    // sanctioned null: unknown code is an expected outcome here, not an error
+    override fun convertFromOrNull(target: String): Country? = Country.byIso(target)
+}
+```
+
+Generated code calls the `OrNull` variant when the target field is nullable — so an unknown
+country flows as `null` *without* a degradation report (it's sanctioned, not broken).
+
+## Refusing a direction
+
+When one direction can't be implemented honestly, **refuse it loudly** instead of
+approximating — the same mechanism built-ins use:
+
+```kotlin
+import com.sahsenvar.kmapper.converter.UnsupportedDirection
+
+object SearchQueryConverter : MapTypeConverter<SearchQuery, String>(SearchQuery::class, String::class) {
+    override fun convertTo(source: SearchQuery): String = source.serialize()
+
+    @UnsupportedDirection("parsing a raw query string is lossy; build SearchQuery via the DSL instead")
+    override fun convertFrom(target: String): SearchQuery = unsupported()
+}
+```
+
+If a mapping ever *needs* the refused direction, the **build fails** with your reason in the
+message. (Detection is by the annotation; `unsupported()` provides the consistent runtime
+backstop. Mark the total method, not the `OrNull` one — the compiler guides you if you get it
+backwards.)
+
+## Parameterized converters
+
+`@KMapperConfig`/`@ConvertWith` reference objects, so parameterization happens through an
+**abstract base class with constructor parameters**, subclassed as one-line objects — define
+the rule once, stamp named variants:
+
+```kotlin
+abstract class FormattedDoubleStringConverter(
+    private val decimalDigits: Int,
+    private val suffix: String = "",
+) : MapTypeConverter<Double, String>(Double::class, String::class) {
+    override fun convertTo(source: Double): String = source.format(decimalDigits) + suffix
+    override fun convertFrom(target: String): Double = target.removeSuffix(suffix).trim().toDouble()
+}
+
+/** 12.345 -> "12.35"  */ object PriceFormatConverter : FormattedDoubleStringConverter(decimalDigits = 2)
+/** 12.345 -> "12.3%" */ object PercentFormatConverter : FormattedDoubleStringConverter(decimalDigits = 1, suffix = "%")
+```
+
+Each variant is a named, testable thing, selected per field with
+`@ConvertWith(use = PriceFormatConverter::class)` — no annotation-argument magic. (Full
+runnable version: `ParameterizedConverters.kt` in the
+[gallery](../getting-started/examples.md).) The
+[validator library](../validation/validators.md) uses the identical recipe
+(`RegexValidator`, `IntRangeValidator`, …).
+
+## Collection wrappers
+
+To map `List<T>` into your own container type, declare a wrapper with `@CollectionWrapper`:
+
+```kotlin
+@CollectionWrapper(forType = PersistentList::class)
+object PersistentListWrapper {
+    fun <T> wrap(source: List<T>): PersistentList<T> = source.toPersistentList()
+    fun <T> unwrap(source: PersistentList<T>): List<T> = source.toList()
+}
+```
+
+Both directions are required and **compile-checked** (signature convention validated by the
+processor). Register in `@KMapperConfig(wrappers = [...])`. Element conversion still rides
+the normal element ladder — wrappers only change the container.
+
+> Next: **[@KMapperConfig →](kmapperconfig.md)**
+
+==============================================================================
+SECTION: Type Conversion — @KMapperConfig — Registration and Discovery  (type-conversion/kmapperconfig.md)
+==============================================================================
+
+# @KMapperConfig — Registration and Discovery
+
+`@KMapperConfig` is your module's one-stop registration point: list converter objects and
+collection wrappers once, and every mapping in the module can use them — **no per-field
+annotation needed**.
+
+```kotlin
+import com.sahsenvar.kmapper.annotations.KMapperConfig
+
+@KMapperConfig(
+    converters = [MoneyStringConverter::class],
+    wrappers = [PersistentListWrapper::class, NonEmptyListWrapper::class],
+)
+object AppMapperConfig
+```
+
+The carrier (`AppMapperConfig`) is just an anchor for the annotation — any object works, one
+per module is the pattern.
+
+## Discovery is by type pair
+
+You never say *which field* uses `MoneyStringConverter`. The processor sees a field pair
+`Money → String` (either direction), finds a registered converter whose `(S, T)` types match,
+and wires it in. Declaration order doesn't matter.
+
+```kotlin
+@MapTo(Invoice::class)
+data class InvoiceResponse(
+    val total: String, // String -> Money: resolved automatically via the config
+)
+
+data class Invoice(val total: Money)
+```
+
+## Resolution and shadowing
+
+For each field pair, first match wins:
+
+1. **[`@ConvertWith`](convert-with.md)** on the field — the explicit override
+2. **`@KMapperConfig` converters** — *your* `Instant ↔ String` converter shadows the
+   built-in one for the whole module (e.g. to switch the wire format to epoch strings)
+3. **[core built-ins](built-in.md)**
+4. **compile error** — `MissingConverter`, naming the pair
+
+Two registered converters claiming the **same pair** is a compile error, not a coin toss: the
+registry must stay unambiguous. Format *variants* of one pair (UTF-8 vs Base64
+`String ↔ ByteString`) belong in per-field `@ConvertWith` instead.
+
+## Wrappers
+
+`wrappers = [...]` registers [`@CollectionWrapper`](custom-converter.md#collection-wrappers)
+objects that teach collection mapping new container types:
+
+```kotlin
+data class UserD(
+    val tags: PersistentList<Tag>,  // List<TagR> -> PersistentList<Tag>: wrapper + element mapping
+    val roles: NonEmptyList<String>, // empty wire list -> MappingException.EmptyCollection
+)
+```
+
+Add-ons ship ready wrappers — [immutable](immutable.md), [arrow](arrow.md) — and your own
+container types register through the identical mechanism.
+
+## Scope
+
+One `@KMapperConfig` covers the **compilation module** it lives in. In a multi-module build,
+each module that declares mappings has its own config (a tiny object usually) — see
+[Multi-Module Projects](../advanced/multi-module.md).
+
+> Next: **[@ConvertWith and OnFail →](convert-with.md)**
+
+==============================================================================
+SECTION: Type Conversion — @ConvertWith — Per-Field Overrides and OnFail  (type-conversion/convert-with.md)
+==============================================================================
+
+# @ConvertWith — Per-Field Overrides and OnFail
+
+Auto-discovery handles the rule; `@ConvertWith` handles the exception. It does two
+independent jobs, usable together or alone:
+
+```kotlin
+annotation class ConvertWith(
+    val use: KClass<out MapTypeConverter<*, *>> = /* keep auto-discovery */,
+    val onFail: OnFail = OnFail.Auto,
+)
+```
+
+## Job 1 — `use`: pick a different converter for THIS field
+
+```kotlin
+@MapTo(Document::class)
+data class DocumentResponse(
+    val title: String,            // String -> ByteString: module-wide UTF-8 converter
+    @ConvertWith(use = Base64ByteStringConverter::class)
+    val payload: String,          // …but THIS field's wire format is Base64
+)
+```
+
+`@ConvertWith` is **override-only**: you never need it for the normal case — registration in
+[`@KMapperConfig`](kmapperconfig.md) plus discovery covers that. Reach for it when one field
+deviates from the module-wide rule (format variants, [parameterized
+converters](custom-converter.md#parameterized-converters)).
+
+## Job 2 — `onFail`: tune this field's failure policy
+
+| Policy | Scalar field | Collection field |
+|--------|--------------|------------------|
+| `Auto` (default) | the [ladder](../basic-usage/null-safety.md) | the [element ladder](../basic-usage/collections.md) |
+| `Throw` | never absorb — broken value fails the mapping even into a nullable/defaulted slot | first broken element fails the mapping (all-or-nothing) |
+| `Skip` | — compile error (skipping a scalar would *fabricate absence*) | drop broken/null elements, compact, report |
+
+```kotlin
+@MapTo(Measurements::class)
+data class MeasurementsResponse(
+    @ConvertWith(onFail = OnFail.Throw)
+    val invoiceLines: List<String>, // money: refuse partial success
+
+    @ConvertWith(onFail = OnFail.Skip)
+    val tagIds: List<String?>,      // tags: best-effort, compacted
+)
+```
+
+## Direction-scoped variants
+
+`@ConvertTo(target, use, onFail)` and `@ConvertFrom(source, use, onFail)` are `@ConvertWith`
+scoped to one mapping direction/target — for when the same field needs different treatment in
+different generated mappings. `@ConvertWith` applies to all directions the field participates
+in.
+
+## The placement rule (worth memorizing)
+
+Directives are read from the **source field of the direction being generated**. With
+`@MapTo` on the wire model, annotate the *wire* field — an annotation on the domain side is
+invisible to that direction. (Anchored-to-the-field `@Validate` is the deliberate exception:
+it fires whichever side of a mapping its field is on.)
+
+> Next: **[Immutable Collections →](immutable.md)**
+
+==============================================================================
+SECTION: Type Conversion — Immutable Collections (converters-immutable)  (type-conversion/immutable.md)
+==============================================================================
+
+# Immutable Collections — converters-immutable
+
+[`@CollectionWrapper`](custom-converter.md#collection-wrappers) objects for
+[kotlinx-collections-immutable](https://github.com/Kotlin/kotlinx.collections.immutable):
+map wire `List`s straight into immutable domain collections.
+
+## Setup
+
+```kotlin
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-immutable:2.0.0")
+}
+```
+
+Register the wrappers you use in [`@KMapperConfig`](kmapperconfig.md):
+
+```kotlin
+@KMapperConfig(wrappers = [PersistentListWrapper::class, PersistentSetWrapper::class])
+object AppMapperConfig
+```
+
+## Wrappers (`com.sahsenvar.kmapper.immutable`)
+
+| Wrapper | Maps `List<T>` ↔ |
+|---------|------------------|
+| `PersistentListWrapper` | `PersistentList<T>` |
+| `ImmutableListWrapper` | `ImmutableList<T>` |
+| `PersistentSetWrapper` | `PersistentSet<T>` |
+| `ImmutableSetWrapper` | `ImmutableSet<T>` |
+
+## Usage
+
+```kotlin
+data class User(val tags: PersistentList<Tag>)
+
+@MapTo(User::class)
+data class UserResponse(val tags: List<TagResponse>) // elements map via the Tag sub-mapper
+```
+
+Element conversion (including nested `@MapTo` pairs and the
+[element ladder](../basic-usage/collections.md)) is unchanged — wrappers only swap the
+container. Both directions work: a `PersistentList` source unwraps back to `List` for the
+reverse mapping.
+
+> Next: **[Arrow →](arrow.md)**
+
+==============================================================================
+SECTION: Type Conversion — Arrow (converters-arrow)  (type-conversion/arrow.md)
+==============================================================================
+
+# Arrow — converters-arrow
+
+Wrappers and processor support for [Arrow](https://arrow-kt.io) types: non-empty collections
+as a *mapping-time guarantee*, and `Option` as an explicit-absence type.
+
+## Setup
+
+```kotlin
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-arrow:2.0.0")
+}
+```
+
+```kotlin
+@KMapperConfig(wrappers = [NonEmptyListWrapper::class, NonEmptySetWrapper::class])
+object AppMapperConfig
+```
+
+## NonEmptyList / NonEmptySet
+
+```kotlin
+data class Role(val permissions: NonEmptySet<Permission>)
+
+@MapTo(Role::class)
+data class RoleResponse(val permissions: List<PermissionResponse>)
+```
+
+An **empty wire list fails the mapping** with `MappingException.EmptyCollection` — that is
+the point: the domain type promises non-emptiness, so mapping enforces it at the boundary
+instead of letting an impossible value in. The failure arrives as a `Result` like every other
+mapping error.
+
+## Option
+
+With the add-on on the classpath, the processor maps nullable sources into `Option` targets
+directly — including nested mapped pairs:
+
+```kotlin
+data class Profile(
+    val nickname: Option<String>,  // String?  -> Option<String>
+    val badge: Option<Badge>,      // BadgeR?  -> Option<Badge> (sub-mapper inside)
+)
+
+@MapTo(Profile::class)
+data class ProfileResponse(
+    val nickname: String?,
+    val badge: BadgeResponse?,
+)
+```
+
+`null` becomes `None`; present values become `Some(mapped)` — declared absence stays silent,
+exactly like the [nullable escape](../basic-usage/null-safety.md).
+
+> The accumulated-error boundary (`toXAccumulated(): IorNel<…>`) is designed and parked for a
+> follow-up release — see [Limitations & Roadmap](../reference/limitations.md).
+
+> Next: **[Date and Time →](datetime.md)**
+
+==============================================================================
+SECTION: Type Conversion — Date and Time (converters-datetime)  (type-conversion/datetime.md)
+==============================================================================
+
+# Date and Time — converters-datetime
+
+> **kotlinx-datetime needs no add-on.** `Instant`, `LocalDate`, `LocalDateTime`, `LocalTime`
+> (↔ `String`/`Long`) and `kotlin.time.Duration` are [core built-ins](built-in.md) —
+> auto-resolved, zero registration. This add-on exists for **`java.time`** models and for
+> bridging the two worlds on JVM/Android.
+
+## Setup
+
+```kotlin
+dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-datetime:2.0.0")
+}
+```
+
+Register what you use in [`@KMapperConfig`](kmapperconfig.md) (add-on converters are not
+auto-discovered):
+
+```kotlin
+@KMapperConfig(converters = [StringJavaInstantConverter::class, KotlinJavaDurationConverter::class])
+object AppMapperConfig
+```
+
+## `java.time` scalar converters (JVM/Android)
+
+Package `com.sahsenvar.kmapper.datetime`; all parse/format ISO-8601 via the type's own
+`parse`/`toString`:
+
+| Object | Pair |
+|--------|------|
+| `StringJavaInstantConverter` | `String ↔ java.time.Instant` |
+| `LongJavaInstantConverter` | `Long` (epoch ms) `↔ java.time.Instant` |
+| `StringJavaLocalDateConverter` | `String ↔ java.time.LocalDate` |
+| `StringJavaLocalDateTimeConverter` | `String ↔ java.time.LocalDateTime` |
+| `StringJavaLocalTimeConverter` | `String ↔ java.time.LocalTime` |
+| `StringJavaZonedDateTimeConverter` | `String ↔ java.time.ZonedDateTime` |
+| `StringJavaOffsetDateTimeConverter` | `String ↔ java.time.OffsetDateTime` |
+| `StringJavaDurationConverter` | `String` (`"PT1H30M"`) `↔ java.time.Duration` |
+
+## Bridges: kotlinx ↔ java
+
+For codebases straddling both libraries (a kotlinx-datetime KMP domain, a java.time
+persistence layer):
+
+| Object | Pair | Notes |
+|--------|------|-------|
+| `KotlinJavaInstantConverter` | `kotlinx Instant ↔ java Instant` | exact |
+| `KotlinJavaLocalDateConverter` | `kotlinx LocalDate ↔ java LocalDate` | exact |
+| `KotlinJavaDurationConverter` | `kotlin.time.Duration ↔ java.time.Duration` | exact for finite values within ±146 years at ns precision |
+
+## Choosing a wire format per field
+
+`String ↔ Instant` (ISO) and `Long ↔ Instant` (epoch millis) are different pairs, so both can
+coexist via discovery. Two *formats of the same pair* (say ISO string and epoch-as-string)
+are a per-field decision — see
+[parameterized converters](custom-converter.md#parameterized-converters) and
+[@ConvertWith](convert-with.md).
+
+> Next: **[Big Numbers →](bignumber.md)**
+
+==============================================================================
+SECTION: Type Conversion — Big Numbers (converters-bignumber)  (type-conversion/bignumber.md)
+==============================================================================
+
+# Big Numbers — converters-bignumber
+
+Converters for arbitrary-precision numbers:
+[ionspin kotlin-multiplatform-bignum](https://github.com/ionspin/kotlin-multiplatform-bignum)
+(`commonMain`, all targets) and `java.math` (JVM/Android).
+
+## Setup
+
+```kotlin
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.0.0")
+}
+```
+
+```kotlin
+@KMapperConfig(converters = [StringBigDecimalConverter::class])
+object AppMapperConfig
+```
+
+## Converters (`com.sahsenvar.kmapper.bignumber`)
+
+ionspin (KMP):
+
+| Object | Pair | Notes |
+|--------|------|-------|
+| `StringBigDecimalConverter` | `String ↔ BigDecimal` | the recommended money/precision wire format |
+| `StringBigIntegerConverter` | `String ↔ BigInteger` | |
+| `DoubleBigDecimalConverter` | `Double → BigDecimal` | reverse direction **refused** (see below) |
+| `LongBigIntegerConverter` | `Long → BigInteger` | reverse **refused** |
+| `IntBigIntegerConverter` | `Int → BigInteger` | reverse **refused** |
+| `BigIntegerBigDecimalConverter` | `BigInteger → BigDecimal` | reverse **refused** |
+
+`java.math` (JVM/Android): `StringJavaBigDecimalConverter` (plain string, never scientific
+notation), `StringJavaBigIntegerConverter`, `DoubleJavaBigDecimalConverter`,
+`LongJavaBigIntegerConverter`, `JavaBigIntegerBigDecimalConverter` — same pairs, same refusal
+policy.
+
+## Why some directions are refused
+
+`BigDecimal → Double` loses precision; `BigInteger → Long`/`Int` overflows; `BigDecimal →
+BigInteger` drops the fraction. Earlier versions truncated these **silently** — exactly the
+"plausible wrong value" failure mode KMapper exists to kill. They are now
+[`@UnsupportedDirection`](custom-converter.md#refusing-a-direction): a mapping that needs one
+fails **at compile time** with the reason and the options.
+
+If your domain genuinely guarantees the range, own that decision in a three-line custom
+converter:
+
+```kotlin
+object CentsBigIntegerConverter : MapTypeConverter<Long, BigInteger>(Long::class, BigInteger::class) {
+    override fun convertTo(source: Long): BigInteger = BigInteger.fromLong(source)
+    override fun convertFrom(target: BigInteger): Long = target.longValue(exactRequired = true) // throws on overflow
+}
+```
+
+The string pairs round-trip exactly — for money on the wire, prefer
+`String ↔ BigDecimal` over anything passing through `Double`.
+
+> Next: **[UUID →](uuid.md)**
+
+==============================================================================
+SECTION: Type Conversion — UUID (converters-uuid)  (type-conversion/uuid.md)
+==============================================================================
+
+# UUID — converters-uuid
+
+Converters for `kotlin.uuid.Uuid` (KMP) and `java.util.UUID` (JVM/Android).
+
+## Setup
+
+```kotlin
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-uuid:2.0.0")
+}
+```
+
+```kotlin
+@KMapperConfig(converters = [StringUuidConverter::class])
+object AppMapperConfig
+```
+
+## Converters (`com.sahsenvar.kmapper.uuid`)
+
+| Object | Pair | Platform |
+|--------|------|----------|
+| `StringUuidConverter` | `String ↔ kotlin.uuid.Uuid` | all (commonMain) |
+| `JavaStringUuidConverter` | `String ↔ java.util.UUID` | JVM/Android |
+| `KotlinJavaUuidConverter` | `kotlin.uuid.Uuid ↔ java.util.UUID` | JVM/Android |
+
+Parsing accepts the canonical 8-4-4-4-12 hex form; malformed input throws and rides the
+[ladder](../basic-usage/null-safety.md). To *validate* a UUID-shaped string without
+converting the type, use
+[`UuidStringValidator`](../validation/validators.md) from `kmapper-validators` instead.
+
+## Why isn't `Uuid ↔ String` a core built-in?
+
+`kotlin.uuid.Uuid` is still `@ExperimentalUuidApi` in Kotlin 2.3. A core built-in is wired
+into generated code automatically, which would force the experimental opt-in onto every
+consumer. The add-on keeps that choice yours; the pair graduates to core when the API does.
+
+> Next: **[Okio →](okio.md)**
+
+==============================================================================
+SECTION: Type Conversion — Okio (converters-okio)  (type-conversion/okio.md)
+==============================================================================
+
+# Okio — converters-okio
+
+Converters for [Okio](https://square.github.io/okio/) types (`ByteString`, `Path`), including
+three **same-pair encoding alternates** for `String ↔ ByteString`.
+
+## Setup
+
+```kotlin
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-okio:2.0.0")
+}
+```
+
+```kotlin
+@KMapperConfig(converters = [StringByteStringConverter::class, StringPathConverter::class])
+object AppMapperConfig
+```
+
+## Converters (`com.sahsenvar.kmapper.okio`)
+
+| Object | Pair | Encoding |
+|--------|------|----------|
+| `StringByteStringConverter` | `String ↔ ByteString` | UTF-8 |
+| `ByteArrayByteStringConverter` | `ByteArray ↔ ByteString` | — |
+| `StringPathConverter` | `String ↔ Path` | — |
+| `Base64ByteStringConverter` | `String ↔ ByteString` | Base64 (RFC 4648; decode accepts URL-safe too) |
+| `Base64UrlByteStringConverter` | `String ↔ ByteString` | URL-safe Base64 |
+| `HexByteStringConverter` | `String ↔ ByteString` | hex (lower-case out, either case in) |
+
+## Same pair, different encodings — how to choose
+
+`UTF-8`, `Base64`, and `Hex` all claim `String ↔ ByteString`, and
+[discovery](kmapperconfig.md) allows only one converter per pair. So: register the
+**module-wide default** in `@KMapperConfig`, select alternates **per field**:
+
+```kotlin
+@MapTo(Document::class)
+data class DocumentResponse(
+    val title: String,    // module default: UTF-8
+    @ConvertWith(use = Base64ByteStringConverter::class)
+    val payload: String,  // this wire field is Base64
+    @ConvertWith(use = HexByteStringConverter::class)
+    val checksum: String, // and this one is hex
+)
+```
+
+Malformed Base64/hex input throws `IllegalArgumentException` and rides the
+[ladder](../basic-usage/null-safety.md). To validate the *string shape* without converting,
+see [`Base64Validator` / `HexStringValidator`](../validation/validators.md).
+
+> Next: **[URI →](uri.md)**
+
+==============================================================================
+SECTION: Type Conversion — URI (converters-uri)  (type-conversion/uri.md)
+==============================================================================
+
+# URI — converters-uri
+
+`String ↔` the platform's URI type, one converter per platform — for KMP apps whose domain
+models carry real URI types instead of raw strings.
+
+## Setup
+
+```kotlin
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-uri:2.0.0")
+}
+```
+
+## Converters (`com.sahsenvar.kmapper.uri`)
+
+| Object | Pair | Source set |
+|--------|------|------------|
+| `JavaStringUriConverter` | `String ↔ java.net.URI` | jvmMain |
+| `AndroidStringUriConverter` | `String ↔ android.net.Uri` | androidMain |
+| `NsUrlStringConverter` | `String ↔ platform.Foundation.NSURL` | iosMain |
+
+Because the URI type itself differs per platform, these are registered in **platform**
+source sets (an `expect`/`actual` config object, or per-platform mapping declarations) rather
+than in a single `commonMain` `@KMapperConfig`.
+
+Malformed URIs throw the platform's native exception and ride the
+[ladder](../basic-usage/null-safety.md); to validate URL-shaped strings in `commonMain`
+without a platform type, use [`UrlValidator`](../validation/validators.md).
+
+> Next: **[@Validate →](../validation/validate.md)**
+
+==============================================================================
+SECTION: Validation — @Validate — Field-Anchored Validation  (validation/validate.md)
+==============================================================================
+
+# @Validate — Field-Anchored Validation
+
+Conversion answers *"can this value become that type?"*. Validation answers a different
+question: *"is this value acceptable for this field?"* — an email that must look like an
+email, a quantity that must be positive. `@Validate` anchors that rule to the **field**.
+
+## Declaring
+
+```kotlin
+import com.sahsenvar.kmapper.annotations.Validate
+import com.sahsenvar.kmapper.validation.builtin.NotBlankValidator
+import com.sahsenvar.kmapper.validators.EmailValidator
+
+data class Member(
+    @Validate(NotBlankValidator::class)
+    val displayName: String,
+    val email: String,
+)
+
+@MapTo(Member::class)
+data class RegistrationForm(
+    val displayName: String,
+    @Validate(EmailValidator::class)
+    val email: String,
+)
+```
+
+`@Validate` takes any number of validator objects; they run in order, first failure wins.
+
+## Field-anchored: one declaration, every direction
+
+The validator belongs to the field, not to a mapping direction. Whenever its field
+participates in *any* generated mapping:
+
+- as a **source** field → the value is validated **before** conversion;
+- as a **target** field → the produced value is validated **after** conversion.
+
+Put validators on the model that **owns the rule** — usually the domain model. One
+declaration then guards both `data → domain` and `domain → presentation`.
+
+## Failure is always hard
+
+```kotlin
+val result = RegistrationForm("Grace", "not-an-email").toMemberResult()
+println(result.exceptionOrNull()?.message)
+// Validation failed for 'email': must be a valid email
+```
+
+A failed validator is `MappingException.ValidationFailed` — path-carrying, delivered through
+the `Result` boundary, and **never absorbed by the
+[fallback ladder](../basic-usage/null-safety.md)**. A validation rule is a declared
+invariant; a value that violates it has no business in your model, not even as `null`.
+
+Two more semantics worth knowing:
+
+- **Null skips validation.** Validators receive non-null values only; absence is the
+  [ladder](../basic-usage/null-safety.md)'s job, presence-quality is validation's.
+- **Mapping-time only.** Hand-constructing the class doesn't run validators — they guard the
+  *boundary*, not the constructor.
+
+## Writing your own
+
+Any `object` extending `Validator<T>` works — return `null` for valid, a reason for invalid:
+
+```kotlin
+object EvenQuantityValidator : Validator<Int>(Int::class) {
+    override fun validate(value: Int): String? =
+        if (value % 2 == 0) null else "must be an even quantity (was $value)"
+}
+```
+
+For parameterized rules (length bounds, regexes, ranges), subclass the
+[built-in open bases](validators.md#parameterized-bases) instead of starting from scratch.
+
+> Next: **[The Validator Library →](validators.md)**
+
+==============================================================================
+SECTION: Validation — The Validator Library  (validation/validators.md)
+==============================================================================
+
+# The Validator Library
+
+Two tiers, one split rule: **structural, dependency-free checks live in core**
+(`com.sahsenvar.kmapper.validation.builtin`, no extra artifact); **opinionated format
+knowledge lives in the `kmapper-validators` add-on** (`com.sahsenvar.kmapper.validators`).
+
+## Core built-ins — ready objects
+
+| Validator | Type | Rejects |
+|-----------|------|---------|
+| `NotBlankValidator` | `String` | blank/whitespace-only |
+| `NotEmptyStringValidator` | `String` | `""` |
+| `NotEmptyCollectionValidator` | `Collection<*>` | empty collections |
+| `PositiveIntValidator` / `PositiveLongValidator` / `PositiveDoubleValidator` | numeric | `<= 0` (and `NaN`) |
+| `NonNegativeIntValidator` / `NonNegativeLongValidator` / `NonNegativeDoubleValidator` | numeric | `< 0` (and `NaN`) |
+| `FiniteDoubleValidator` | `Double` | `NaN`, `±Infinity` |
+
+## Core built-ins — parameterized bases
+
+Open classes with constructor parameters; subclass as an `object` with **your** bounds (the
+same recipe as [parameterized
+converters](../type-conversion/custom-converter.md#parameterized-converters)):
+
+| Base | Rule |
+|------|------|
+| `RegexValidator(pattern, reason)` | value must match the whole pattern |
+| `StringLengthValidator(minLength, maxLength)` | length in range |
+| `IntRangeValidator(range)` / `LongRangeValidator(range)` | value in range |
+| `DoubleRangeValidator(min, max)` | value in range (NaN always rejected) |
+| `CollectionSizeValidator(minSize, maxSize)` | size in range |
+
+```kotlin
+object UsernameLengthValidator : StringLengthValidator(minLength = 3, maxLength = 20)
+object QuantityValidator : IntRangeValidator(1..999)
+object SkuValidator : RegexValidator(Regex("[A-Z]{3}-\\d{4}"), "must be a SKU like ABC-1234")
+
+data class Product(
+    @Validate(SkuValidator::class) val sku: String,
+    @Validate(QuantityValidator::class) val quantity: Int,
+)
+```
+
+Misconfigured bounds (`min > max`, negative length) fail **at construction** — a broken
+validator can't sit silently in a model.
+
+## The kmapper-validators add-on
+
+```kotlin
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-validators:2.0.0")
+}
+```
+
+All operate on `String` unless noted:
+
+| Validator | Accepts |
+|-----------|---------|
+| `EmailValidator` | pragmatic RFC-style emails |
+| `UrlValidator` | `http(s)://…` URLs |
+| `PhoneE164Validator` | `+905551112233` — canonical E.164, no separators |
+| `Ipv4Validator` | strict dotted decimal, no leading zeros |
+| `Ipv6Validator` | full/`::`-compressed groups, embedded IPv4 tail |
+| `HostnameValidator` | RFC 1123 hostnames |
+| `UuidStringValidator` | canonical 8-4-4-4-12 UUID, either case |
+| `SlugValidator` | `lower-case-hyphen-slugs` |
+| `Base64Validator` | standard or URL-safe alphabet, padded or unpadded |
+| `HexStringValidator` | even-length hex |
+| `LatitudeValidator` (`Double`) | `-90.0..90.0` |
+| `LongitudeValidator` (`Double`) | `-180.0..180.0` |
+| `PortNumberValidator` (`Int`) | `1..65535` |
+| `CreditCardNumberValidator` | 12-19 digits passing the Luhn check (spaces/dashes tolerated) |
+
+Validate-vs-convert rule of thumb: if the *domain type* should be richer (a real `Uuid`, a
+real `ByteString`), use a [converter](../type-conversion/built-in.md) — conversion already
+rejects malformed input. Use a validator when the field **stays a string/number** but must
+hold a particular shape.
+
+> Next: **[MappableEnum →](../enum/mappable-enum.md)**
+
+==============================================================================
+SECTION: Enum Mapping — MappableEnum  (enum/mappable-enum.md)
+==============================================================================
+
+# MappableEnum
+
+Enums opt into mapping by declaring their **wire value** explicitly. KMapper never maps an
+enum by `name` or `ordinal` — renaming a constant or reordering the enum can therefore never
+silently corrupt data.
+
+## Declaring
+
+```kotlin
+import com.sahsenvar.kmapper.MappableEnum
+
+enum class OrderStatus(override val wireValue: String) : MappableEnum<String> {
+    PENDING("pending"),
+    SHIPPED("shipped"),
+    DELIVERED("delivered"),
+}
+```
+
+`MappableEnum<W>` is generic over the wire type — string wires are typical, but `Int` codes
+work the same way.
+
+## Mapping
+
+A `String ↔ OrderStatus` field pair now converts in both directions with no further setup —
+formatting writes `wireValue`, parsing matches against it:
+
+```kotlin
+@MapTo(TrackedOrder::class)
+data class OrderEvent(val id: Long, val status: String)
+
+data class TrackedOrder(val id: Long, val status: OrderStatus)
+```
+
+## Unknown wire values: you choose the policy with the type
+
+An unknown value (`"teleported"`) is brokenness, and rides the
+[ladder](../basic-usage/null-safety.md) like any other brokenness:
+
+```kotlin
+data class TrackedOrder(val status: OrderStatus)   // strict: unknown -> UnknownEnumValue failure
+data class OrderPreview(val status: OrderStatus?)  // tolerant: unknown -> null + sink report
+```
+
+```
+strict fails    -> Unknown wire value 'teleported' for enum OrderStatus at status
+preview absorbs -> OrderPreview(id=2, status=null)   (+ AbsorbedConversionError to the sink)
+```
+
+The nullable variant is the standard **forward-compatibility pattern**: the server may add
+new statuses before your app ships, your UI shows "unknown", your telemetry counts how often.
+
+Enum elements inside collections get the same treatment per element — see
+[Collections](../basic-usage/collections.md).
+
+> Next: **[The Result Boundary and MappingException →](../error-handling/mapping-exception.md)**
+
+==============================================================================
+SECTION: Error Handling — The Result Boundary and MappingException  (error-handling/mapping-exception.md)
+==============================================================================
+
+# The Result Boundary and MappingException
+
+KMapper's error contract in one sentence: **everything that can fail at runtime arrives as a
+`Result` failure holding a path-carrying `MappingException`; everything that can be known
+earlier fails the build instead.**
+
+## The Result boundary
+
+Every generated mapper returns `Result<T>`:
+
+```kotlin
+val result: Result<User> = response.toUserResult()
+```
+
+You choose the failure policy *at the call site*, with stdlib tools:
+
+```kotlin
+// crash-on-bad-data (tests, debug builds, truly-required data):
+val user = result.getOrThrow()
+
+// fallback:
+val user = result.getOrElse { User.GUEST }
+
+// branch:
+result.fold(
+    onSuccess = { render(it) },
+    onFailure = { e -> showError(); log(e) },
+)
+```
+
+A practical pattern: `getOrThrow()` in debug, `getOrElse` + telemetry in release — bad wire
+data crashes the nightly build, not the user.
+
+## The exception taxonomy
+
+All failures are subtypes of the sealed `MappingException`; each carries the **field path**
+from the mapping root (`customer.address.zipCode`, `items[3].price`):
+
+| Type | Meaning |
+|------|---------|
+| `RequiredFieldMissing` | absent value, target had no escape ([ladder](../basic-usage/null-safety.md) floor) |
+| `TypeConversionFailed` | converter threw — carries the original cause |
+| `UnknownEnumValue` | wire value matches no [`MappableEnum`](../enum/mappable-enum.md) constant |
+| `EmptyCollection` | a non-empty container ([NonEmptyList](../type-conversion/arrow.md)) got an empty wire list |
+| `ValidationFailed` | a [`@Validate`](../validation/validate.md) rule rejected the value |
+| `UnsupportedConversion` | a refused [`@UnsupportedDirection`](../type-conversion/custom-converter.md#refusing-a-direction) was hit at runtime (hand-written code paths; generated code refuses at compile time) |
+
+Because the type is sealed, an exhaustive `when` over failure kinds compiles — and grows a
+warning when a future version adds a kind.
+
+Paths are generated as compile-time string literals: they **survive R8/ProGuard** unchanged.
+
+## What never reaches runtime
+
+These are *build errors*, by design:
+
+- **`MissingConverter`** — a field pair has no converter anywhere
+  (`Money -> String has no registered converter. Add one via @ConvertWith / @KMapperConfig…`)
+- **`UnsupportedConversion`** — the needed direction is declared-refused
+  (`Long -> Int conversion is unsupported! …` with the author's reason)
+- structural problems: unmappable field, wrapper signature violations, `OnFail.Skip` on a
+  scalar, an `OrNull`-only converter override, …
+
+The compile messages name the field, the pair, and the fix — they are part of the API
+surface, not an afterthought.
+
+## Relationship to the sink
+
+`MappingException` is the **hard-failure** channel. Errors *absorbed* by a declared escape
+never throw — they go to the [degradation sink](../observability/listener.md) instead. Same
+taxonomy (`AbsorbedConversionError` carries the would-have-been exception as its cause),
+different severity.
+
+> Next: **[Observability →](../observability/listener.md)**
+
+==============================================================================
+SECTION: Observability — MappingListener and the Degradation Sink  (observability/listener.md)
+==============================================================================
+
+# MappingListener and the Degradation Sink
+
+Two channels tell you everything mappings do in production:
+
+- **`Result` failures** — hard errors, at the call site. ([Error
+  handling](../error-handling/mapping-exception.md).)
+- **The degradation sink** — every *absorbed* leniency: the broken date that became `null`,
+  the dropped list element, the converged duplicate key. This page is that channel.
+
+## Registering a listener
+
+```kotlin
+import com.sahsenvar.kmapper.KMapper
+import com.sahsenvar.kmapper.MappingListener
+import com.sahsenvar.kmapper.MappingDegradation
+
+// once, at app startup (Application.onCreate / iOS app delegate):
+KMapper.addListener(object : MappingListener {
+    override fun onDegradation(event: MappingDegradation) {
+        telemetry.count("mapping.degradation", event::class.simpleName)
+    }
+
+    override fun onError(source: Any, error: MappingException) {
+        log.warn("mapping failed: ${error.message}")
+    }
+})
+```
+
+`MappingListener` also offers `onMapStart`/`onMapComplete` for tracing. All methods have
+default no-op bodies — override what you need. A ready-made `LoggingMappingListener(log)` is
+included.
+
+Listeners are pure observers by contract: an exception thrown inside a listener is suppressed
+and can never affect the mapping or other listeners. Generated code checks
+`KMapper.hasListeners` first, so the whole channel costs ~nothing when unused.
+
+## The degradation events
+
+`MappingDegradation` is sealed; every event carries the field path:
+
+| Event | Emitted when |
+|-------|--------------|
+| `AbsorbedConversionError` | a broken scalar took a default/null escape ([ladder](../basic-usage/null-safety.md) rung 2/3) — carries the cause |
+| `DroppedBrokenElement` | a broken collection element was dropped |
+| `DroppedNullElement` | a null element didn't fit a non-null element type and was dropped |
+| `DuplicateKey` | two map keys converged after conversion; last entry won |
+| `ConvergedDuplicateElement` | two set elements converged after conversion |
+
+The split to remember (Rule 2 of the [mental model](../getting-started/mental-model.md)):
+**declared absence is silent** — a nullable field receiving null is *not* an event;
+**absorbed brokenness always reports** — data was present and lost, telemetry should know.
+
+## The debug/release pattern
+
+```kotlin
+if (BuildConfig.DEBUG) {
+    KMapper.addListener(object : MappingListener {
+        override fun onDegradation(event: MappingDegradation) =
+            error("degradation in debug build: $event") // crash loudly while developing…
+    })
+} else {
+    KMapper.addListener(MetricsListener) // …observe quietly in production
+}
+```
+
+One warning: don't run mappings *inside* `onDegradation` — a degrading seam inside the tap
+would recurse the dispatch.
+
+> Next: **[Multi-Module Projects →](../advanced/multi-module.md)**
+
+==============================================================================
+SECTION: Advanced — Multi-Module Projects  (advanced/multi-module.md)
+==============================================================================
+
+# Multi-Module Projects
+
+The rule of thumb: **the compiler goes where mappings are declared; the runtime goes where
+generated code is called.**
+
+## Who needs what
+
+| Module | Needs |
+|--------|-------|
+| declares `@MapTo`/`@MapFrom` models | `kmapper-annotations` + `ksp(kmapper-compiler)` |
+| only *calls* `toXResult()` | `kmapper-core` (usually transitively) |
+| only uses seams/validators by hand | `kmapper-core` |
+
+A typical layered app:
+
+```
+:data       -> declares wire models + @MapTo + its own @KMapperConfig; runs KSP
+:domain     -> plain models; kmapper-core only (transitive)
+:app        -> calls generated mappers; no KSP
+```
+
+## Cross-module model pairs work
+
+`@MapTo(DomainUser::class)` in `:data` can point at a class from `:domain` — KSP resolves
+classpath symbols, including their constructor defaults (the
+[ladder](../basic-usage/null-safety.md) works across module boundaries).
+
+## One @KMapperConfig per declaring module
+
+[Registration](../type-conversion/kmapperconfig.md) is per compilation module. Modules don't
+inherit each other's configs; give each mapping-declaring module its own (sharing converter
+*objects* between them is fine — they're ordinary classes):
+
+```kotlin
+// :data/src/…/DataMapperConfig.kt
+@KMapperConfig(converters = [MoneyStringConverter::class])
+object DataMapperConfig
+```
+
+## KMP wiring reminder
+
+In a multiplatform module the processor is registered **per target**
+(`kspCommonMainMetadata`, `kspJvm`, `kspIosArm64`, …) — full snippet in
+[Installation](../getting-started/installation.md#kotlin-multiplatform).
+
+> Next: **[Architecture →](architecture.md)**
+
+==============================================================================
+SECTION: Advanced — Architecture: How It Works  (advanced/architecture.md)
+==============================================================================
+
+# Architecture: How It Works
+
+A look under the hood — useful for debugging builds, reviewing generated code, and trusting
+what runs in production.
+
+## The pipeline
+
+```
+your annotated models
+   └─ KSP2 (kmapper-compiler)
+        ├─ analyze: match fields, resolve converters/wrappers, check directives
+        ├─ refuse:  MissingConverter / UnsupportedConversion / structural errors -> build fails
+        └─ generate: toXResult() extension functions (plain Kotlin, KotlinPoet)
+              └─ compiled like hand-written code; calls kmapper-core seams at runtime
+```
+
+Everything type-related is decided **at compile time**: which converter handles each field,
+which ladder rung each escape provides, which validators fire. There is no runtime registry
+lookup on the hot path and no reflection anywhere.
+
+## What generated code looks like
+
+```kotlin
+public fun UserResponse.toUserResult(): Result<User> = runCatching {
+    if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toUserResult, User::class) }
+    val result = User(
+        id = id,
+        joined = joined.convertOrFail("joined", "kotlin.String", "kotlinx.datetime.LocalDate") {
+            LocalDateStringConverter.convertFrom(it)
+        },
+    )
+    if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toUserResult, result) }
+    result
+}
+```
+
+Worth noticing:
+
+- **Converters are called as objects** (`LocalDateStringConverter.convertFrom(...)`), never
+  inlined as ad-hoc casts — user and built-in converters run on identical rails.
+- **Seams** (`convertOrFail`, `convertOrNull`, `convertEachOrSkip`, …) are public
+  `kmapper-core` functions implementing the [ladder](../basic-usage/null-safety.md) — the
+  same functions available to [hand-written
+  mappers](../getting-started/examples.md).
+- **Paths are string literals** — R8/ProGuard-safe error messages.
+- The observability hooks vanish behind a single `hasListeners` check when unused.
+
+## Inspecting generated code
+
+```
+build/generated/ksp/<target>/kotlin/…
+```
+
+Generated files are ordinary Kotlin — readable, debuggable, breakpointable. When mapping
+behavior surprises you, read the generated function first; it usually answers the question.
+
+## Design invariants the generator enforces
+
+- A field either maps cleanly, or the build names the problem — no silent skips.
+- Lossy conversions don't exist unless *you* wrote the converter
+  ([refusal policy](../type-conversion/built-in.md#refused-directions-are-a-feature)).
+- Every absorbed error has a sink event; every hard error has a path.
+- `CancellationException` is always rethrown — mappings never swallow coroutine
+  cancellation.
+
+> Next: **[Annotation Reference →](../reference/annotations.md)**
+
+==============================================================================
+SECTION: Reference — Annotation Reference  (reference/annotations.md)
+==============================================================================
+
+# Annotation Reference
+
+All annotations live in `com.sahsenvar.kmapper.annotations` (`kmapper-annotations` artifact).
+
+## Mapping declaration
+
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@MapTo(target)` | class (repeatable) | generate `Source.toTargetResult()` — declared on the source |
+| `@MapFrom(source)` | class (repeatable) | same generation, declared on the target |
+
+→ [@MapTo and @MapFrom](../basic-usage/mapto-mapfrom.md)
+
+## Field directives
+
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@FieldMap(fieldName, targetClass)` | property (repeatable) | match a differently-named target field; optionally scoped to one target |
+| `@IgnoreMap` | property | exclude the field from auto-matching; the target slot defaults or becomes a caller parameter |
+| `@IgnoreDefaultValue` | property | the constructor default is construction convenience only — absence becomes `RequiredFieldMissing` |
+
+→ [Field Mapping](../basic-usage/field-mapping.md)
+
+Placement rule: field directives are read from the **source field of the generated
+direction** ([details](../type-conversion/convert-with.md#the-placement-rule-worth-memorizing)).
+
+## Conversion control
+
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@ConvertWith(use, onFail)` | property | per-field converter override and/or failure policy |
+| `@ConvertTo(target, use, onFail)` | property (repeatable) | `@ConvertWith` scoped to one mapping direction |
+| `@ConvertFrom(source, use, onFail)` | property (repeatable) | the reverse scoping |
+| `OnFail` (enum) | — | `Auto` (ladder), `Throw` (never absorb), `Skip` (compact collections) |
+
+→ [@ConvertWith and OnFail](../type-conversion/convert-with.md)
+
+## Registration
+
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@KMapperConfig(converters, wrappers)` | object | module-wide converter/wrapper registration; discovery by type pair |
+| `@CollectionWrapper(forType)` | object | declare a `wrap`/`unwrap` pair for a custom container type |
+
+→ [@KMapperConfig](../type-conversion/kmapperconfig.md),
+[Collection wrappers](../type-conversion/custom-converter.md#collection-wrappers)
+
+## Validation
+
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@Validate(vararg validators)` | property | field-anchored invariants; run before (source side) / after (target side) conversion |
+
+→ [@Validate](../validation/validate.md)
+
+## Converter authoring (in `kmapper-core`)
+
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@UnsupportedDirection(reason)` | function (`convertTo`/`convertFrom`) | declare a direction intentionally unsupported; the reason appears in the compile error |
+
+→ [Refusing a direction](../type-conversion/custom-converter.md#refusing-a-direction)
+
+## Removed in 2.0
+
+`@Ignore` → `@IgnoreMap` · `@MapDefaultValue` → constructor defaults ·
+`@UseMapTypeConverter` → `@ConvertWith` · `@ValidateFrom`/`@ValidateTo` → `@Validate`.
+Full mapping: [Migrating from 1.x](migration-1x.md).
+
+==============================================================================
+SECTION: Reference — Migrating from 1.x  (reference/migration-1x.md)
+==============================================================================
+
+# Migrating from 1.x to 2.0
+
+2.0 is the converter-subsystem redesign: failures became values, the fallback ladder became
+the default behavior, and the converter/validation/observability surfaces were rebuilt for
+[user–author parity](../getting-started/mental-model.md#the-parity-principle). The release is
+**intentionally breaking**; this page is the complete map from old to new.
+
+## 1. Coordinates
+
+| 1.x | 2.0 |
+|-----|-----|
+| `kmapper-core` | `kmapper-core` (now also usable standalone) |
+| — | **`kmapper-annotations`** (new artifact — annotations moved out of core) |
+| `kmapper-processor` | **`kmapper-compiler`** |
+| `ksp("…:kmapper-processor:1.0.0")` | `ksp("…:kmapper-compiler:2.0.0")` |
+
+Annotation **imports are unchanged** (`com.sahsenvar.kmapper.annotations.*`) — you only add
+the new dependency:
+
+```kotlin
+implementation("io.github.sahsenvar:kmapper-core:2.0.0")
+implementation("io.github.sahsenvar:kmapper-annotations:2.0.0")  // new
+ksp("io.github.sahsenvar:kmapper-compiler:2.0.0")                // renamed
+```
+
+## 2. The generated API: `toX()` → `toXResult()`
+
+| 1.x | 2.0 |
+|-----|-----|
+| `fun Source.toUser(): User` (throws) | `fun Source.toUserResult(): Result<User>` |
+
+Mechanical migration — old throwing behavior is one call away:
+
+```kotlin
+// 1.x
+val user = response.toUser()
+
+// 2.0, same semantics:
+val user = response.toUserResult().getOrThrow()
+```
+
+…but the [Result boundary](../error-handling/mapping-exception.md) is the feature: prefer
+`getOrElse`/`fold` at real call sites.
+
+## 3. Annotations
+
+| 1.x | 2.0 | Notes |
+|-----|-----|-------|
+| `@Ignore` | `@IgnoreMap` | same idea, clearer name |
+| `@MapDefaultValue(expression)` | **removed** — use a constructor default | the default now lives in one place; see [field mapping](../basic-usage/field-mapping.md) |
+| `@UseMapTypeConverter(X::class)` | `@ConvertWith(use = X::class)` | gains `onFail` policy too |
+| `@ValidateFrom` / `@ValidateTo` | `@Validate` | now [field-anchored](../validation/validate.md): one declaration, both directions |
+| — | `@IgnoreDefaultValue`, `@ConvertTo`/`@ConvertFrom`, `@CollectionWrapper` | new capabilities |
+
+## 4. Custom converters: the 4-method shape
+
+| 1.x | 2.0 |
+|-----|-----|
+| `convertToNonNull(value: S): T` | `convertTo(source: S): T` |
+| `convertFromNonNull(value: T): S` | `convertFrom(target: T): S` |
+| `convertTo(value: S?): T?` (final, null-passing) | `convertToOrNull(source: S): T?` (open — [sanctioned null](../type-conversion/custom-converter.md#the-two-optional-methods-sanctioned-null)) |
+| `convertFrom(value: T?): S?` (final) | `convertFromOrNull(target: T): S?` |
+
+Null handling moved out of converters entirely — the generated
+[ladder](../basic-usage/null-safety.md) owns it. Your migration: rename the two `NonNull`
+methods and delete any null-shuffling. New capability:
+[`@UnsupportedDirection(reason)`](../type-conversion/custom-converter.md#refusing-a-direction)
+for directions you refuse to implement.
+
+## 5. Built-in converter names: richer type first
+
+| 1.x | 2.0 |
+|-----|-----|
+| `StringIntConverter` | `IntStringConverter` |
+| `StringLongConverter` | `LongStringConverter` |
+| `StringDoubleConverter` | `DoubleStringConverter` |
+| `StringFloatConverter` | `FloatStringConverter` |
+| `StringBooleanConverter` | `BooleanStringConverter` |
+| `IntLongConverter` | `LongIntConverter` |
+| `StringInstantConverter` | `InstantStringConverter` |
+| `LongInstantConverter` | `InstantLongConverter` |
+
+You rarely referenced these by name (discovery is automatic); fix imports where you did.
+Add-on converter names are unchanged in this release.
+
+## 6. Converters that moved or changed behavior
+
+- **kotlinx-datetime `String` converters moved to core.** Delete
+  `StringLocalDateConverter`-style entries from your `@KMapperConfig` — `LocalDate`,
+  `LocalDateTime`, `LocalTime`, `Instant`, and `Duration` pairs are now
+  [built-ins](../type-conversion/built-in.md). `kmapper-converters-datetime` keeps only
+  `java.time` converters and bridges.
+- **bignumber lossy directions now refuse at compile time** (`BigDecimal → Double`,
+  `BigInteger → Long`/`Int`, `BigDecimal → BigInteger`). 1.x truncated these silently. If
+  you relied on one, [write the explicit converter](../type-conversion/bignumber.md).
+
+## 7. Behavior changes to review (not just renames)
+
+- **The fallback ladder is the default.** In 1.x a broken value generally failed the
+  mapping; in 2.0 a *nullable or defaulted* target field absorbs it (with a
+  [degradation report](../observability/listener.md)). Audit fields where you *want*
+  hardness and mark them `@ConvertWith(onFail = OnFail.Throw)`.
+- **Collections salvage by default.** One broken element no longer fails the list — it's
+  dropped/nulled and reported. `OnFail.Throw` restores all-or-nothing per field.
+- **New sink channel.** `MappingListener` gained `onDegradation(event)`; register a
+  listener so absorbed errors reach your telemetry.
+
+## 8. Migration checklist
+
+1. Update coordinates (§1) and build; fix `toX()` call sites mechanically (§2).
+2. Search-and-replace annotations (§3); move `@MapDefaultValue` expressions into
+   constructor defaults.
+3. Rename custom-converter methods (§4); drop registrations covered by new built-ins (§6).
+4. Add a degradation listener (§7) — even just a logger.
+5. Audit must-be-hard fields and add `OnFail.Throw` where partial data is unacceptable.
+6. Run the build: 2.0 turns the remaining gaps into **named compile errors** — they are the
+   to-do list.
+
+==============================================================================
+SECTION: Reference — Limitations & Roadmap  (reference/limitations.md)
+==============================================================================
+
+# Limitations & Roadmap
+
+Honest edges of the current release, with the reasoning — most are deliberate scope
+decisions, recorded in the project's design ledger.
+
+## Current limitations
+
+- **One converter per type pair per module.** [Discovery](../type-conversion/kmapperconfig.md)
+  must stay unambiguous; format variants are per-field
+  [`@ConvertWith`](../type-conversion/convert-with.md) decisions.
+- **Validators and converters are objects.** Generated code calls them by FQN — no instance
+  state, no DI. Parameterization happens through
+  [open-base subclassing](../type-conversion/custom-converter.md#parameterized-converters).
+- **`@FieldMap` matches by simple name.** Qualified path renames
+  (`Data.wireScore → Domain.score` syntax) aren't supported; a single name has sufficed.
+- **Map-shaped custom containers** (two type parameters, `MultiMap<K, V>`-style) are outside
+  the `@CollectionWrapper` convention — wrappers cover single-element-type containers.
+- **Validation is always hard.** A `@Validate` failure never rides the
+  [ladder](../basic-usage/null-safety.md); "absorbable validation" is parked until a real
+  use case demands it.
+- **`kotlin.uuid.Uuid` is not a core built-in** while the API is experimental —
+  [the add-on covers it](../type-conversion/uuid.md#why-isnt-uuid--string-a-core-built-in).
+
+## Parked (designed, not yet shipped)
+
+- **Arrow accumulated boundary** — `toXAccumulated(): IorNel<MappingError, X>`: collect *all*
+  failures instead of failing fast. Designed end-to-end; ships in a follow-up release.
+- **Per-mapping summary sink event** ("3/100 items dropped") and listener throttling
+  guidance.
+- **`OnAbsent` element policy** (treat null source elements as errors) — if demanded.
+- **Strict-on-collision option for Map keys** (currently: last wins + `DuplicateKey` report).
+- **`converters-format` add-on** (locale-aware number formatting) — the
+  [parameterized-converter recipe](../type-conversion/custom-converter.md#parameterized-converters)
+  covers it user-side meanwhile.
+
+Found a limitation that blocks you?
+[Open an issue](https://github.com/sahsenvar/KMapper/issues) — parked items get unparked by
+real use cases.
+
+> Next: **[FAQ →](faq.md)**
+
+==============================================================================
+SECTION: Reference — FAQ  (reference/faq.md)
+==============================================================================
+
+# FAQ
+
+## Why does the generated function return `Result` instead of throwing?
+
+Because wire data *will* be malformed eventually, and a mapper that throws turns someone
+else's bad deploy into your crash. With `Result`, failure is part of the signature: the call
+site decides (`getOrThrow` / `getOrElse` / `fold`), and the decision is visible in code
+review. [Details](../error-handling/mapping-exception.md).
+
+## Why didn't my broken value become an error?
+
+Probably the target field is nullable or has a default — a declared escape on the
+[fallback ladder](../basic-usage/null-safety.md). The absorption was reported to the
+[degradation sink](../observability/listener.md); register a listener and you'll see it.
+Want hardness for that field? `@ConvertWith(onFail = OnFail.Throw)`.
+
+## Why is there no `@MapDefaultValue`?
+
+Kotlin already has default values — in the constructor. KMapper uses them by *omitting the
+argument*, so the default lives in exactly one place and behaves identically for mapping and
+hand construction. If a default should *not* act as a wire fallback, that's
+[`@IgnoreDefaultValue`](../basic-usage/field-mapping.md).
+
+## Why does `Long → Int` fail my build? Other mappers just convert it.
+
+They convert it *until the value doesn't fit*, then silently give you a wrong number. KMapper
+[refuses lossy directions at compile time](../type-conversion/built-in.md#refused-directions-are-a-feature)
+with a reasoned message; if your domain guarantees the range, a three-line custom converter
+makes that guarantee explicit and owned.
+
+## Why doesn't KMapper map enums by name automatically?
+
+`name`/`ordinal` mapping breaks silently on rename/reorder — the exact failure class KMapper
+exists to eliminate. [`MappableEnum`](../enum/mappable-enum.md) costs one `wireValue` per
+constant and is rename-proof.
+
+## My `@ConvertWith` annotation seems ignored. Why?
+
+Field directives are read from the **source side of the generated direction** — with
+`@MapTo` on the wire model, annotate the wire field, not the domain field.
+[The placement rule](../type-conversion/convert-with.md#the-placement-rule-worth-memorizing).
+
+## Can I use KMapper without code generation?
+
+Yes — `kmapper-core` is a standalone artifact. Hand-written mappers use the same public
+seams, ladder semantics, converters, and error types as generated code (that's the
+[parity principle](../getting-started/mental-model.md#the-parity-principle)). See the
+`CoreOnlyMapping` [example](../getting-started/examples.md).
+
+## How do I see what was generated?
+
+`build/generated/ksp/<target>/kotlin/…` — plain Kotlin, breakpointable.
+[Architecture](../advanced/architecture.md).
+
+## Does it work with R8/ProGuard?
+
+Yes. No reflection, and error paths are compile-time string literals — your release-build
+stack traces still say `customer.address.zipCode`.
+
+## Where are complete runnable examples?
+
+The [sample gallery](../getting-started/examples.md): 25 files, every feature, basic →
+advanced, each with documented output.

@@ -37,6 +37,10 @@ public abstract interface annotation class com/sahsenvar/kmapper/annotations/KMa
 	public abstract fun wrappers ()[Ljava/lang/Class;
 }
 
+public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapDefaultValue : java/lang/annotation/Annotation {
+	public abstract fun expression ()Ljava/lang/String;
+}
+
 public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapFrom : java/lang/annotation/Annotation {
 	public abstract fun source ()Ljava/lang/Class;
 }

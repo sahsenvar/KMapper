@@ -40,6 +40,20 @@ multi-module setup, full annotation reference.
 **Prefer reading code?** The [sample gallery](sample/README.md) has 25 runnable examples
 covering every feature, ordered basic → advanced (`./gradlew sample:runSample`).
 
+## 🤖 For AI assistants
+
+Working on a project that uses KMapper? Start here:
+
+- **[llms.txt](llms.txt)** — curated index of the docs (llmstxt.org format);
+  **[llms-full.txt](llms-full.txt)** — the entire guide as one file for context ingestion.
+  (The GitBook site serves its own at `kmapper.gitbook.io/docs/llms.txt`.)
+- **[docs/AGENTS.md](docs/AGENTS.md)** — consumer cheat sheet: the 3-rule mental model,
+  annotation table, sharp edges, and compile-error → fix mappings.
+- Writing 1.x-era API (`@Ignore`, `@UseMapTypeConverter`, `@ValidateFrom/To`,
+  `@MapDefaultValue`)? Those names still resolve but fail compilation with **guided
+  ERROR-level deprecations** naming the 2.0 replacement — follow the message or the
+  [migration guide](docs/guide-en/reference/migration-1x.md).
+
 ## Quick start
 
 ```kotlin

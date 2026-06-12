@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — AI-friendliness package (ships in 2.0.1)
+
+- **Guided 1.x deprecation stubs** in `kmapper-annotations`: `@Ignore`, `@UseMapTypeConverter`,
+  `@ValidateFrom`, `@ValidateTo` are ERROR-level typealiases of their 2.0 replacements
+  (with `ReplaceWith`), and `@MapDefaultValue` is an ERROR-level stub pointing to constructor
+  defaults — 1.x-era code now fails compilation with the exact migration instruction instead
+  of an unresolved reference.
+- **`llms.txt` / `llms-full.txt`** at the repo root (llmstxt.org format): curated index and
+  single-file full content of the English guide, generated from `docs/guide-en` in SUMMARY
+  order by `scripts/generate-llms-txt.py`. (GitBook additionally auto-serves its own
+  `llms.txt` for the published Türkçe space.)
+- **`docs/AGENTS.md`** — consumer cheat sheet for AI coding agents: setup, the 3-rule mental
+  model, annotation quick table, sharp edges, compile-error → fix table.
+- README section routing AI assistants to the above.
+
 ## [2.0.0] - 2026-06-12
 
 Migration guide: [docs/guide-en/reference/migration-1x.md](docs/guide-en/reference/migration-1x.md)
