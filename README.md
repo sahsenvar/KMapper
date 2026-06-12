@@ -28,6 +28,6 @@ Group `io.github.sahsenvar`:
 | `kmapper-converters-uri` | JVM / Android / iOS (platform-split) | Scalar converters: `String` ↔ `java.net.URI` (JVM), `android.net.Uri` (Android), `platform.Foundation.NSURL` (iOS) |
 | `kmapper-validators` | KMP | `EmailValidator`, `UrlValidator` for use with field-anchored `@Validate` validation |
 
-**Latest release:** `1.0.0` — on [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core) (all 10 modules). See the [installation guide](docs/guide-en/getting-started/installation.md).
+**Latest release:** `1.0.0` (10 modules) — on [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core). The converter redesign on `main` adds `kmapper-annotations` (11 artifacts) and ships as the next major release. See the [installation guide](docs/guide-en/getting-started/installation.md).
 
 Design & implementation plan live in [`docs/superpowers/`](docs/superpowers/).

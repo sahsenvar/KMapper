@@ -176,10 +176,11 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
 ## F) Boundary API + sink
 
 18. Generated per direction: core **`toXResult(): Result<X>`** (fail-fast on the first hard
-    error) and arrow add-on **`toXAccumulated(): IorNel<MappingError, X>`**
+    error) — IMPLEMENTED. The arrow add-on **`toXAccumulated(): IorNel<MappingError, X>`**
     (`Right` = clean, `Both` = partial value + all degradations, `Left` = hard failure with all
-    collected errors). **Value semantics are identical across both** (hard → no value,
-    soft → value); they differ only in error completeness.
+    collected errors) is **PARKED (§J)** — designed and locked, not yet built; `converters-arrow`
+    currently ships only the NonEmpty wrappers. **Value semantics must stay identical across
+    both** (hard → no value, soft → value); they differ only in error completeness.
 19. **Degradation sink:** typed events (`AbsorbedConversionError`, `DroppedBrokenElement`,
     `DroppedNullElement`, `DuplicateKey`, `ConvergedDuplicateElement`); process-wide listener,
     default no-op; "crash in debug, observe in prod" is a one-line call-site pattern, not a
@@ -207,9 +208,9 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
     post-conversion convergence dedup is reported.
 27. Nested collections recurse (`matrix[2][7]`); paths accumulate.
 28. **Collection seams** (public, parity): `convertEachOrSkip / convertEachOrNull /
-    convertEachOrFail` (+ Map/Set variants, + arrow accumulating counterparts). Core-only users
-    hand-write container shells in plain Kotlin (`.toPersistentList()`) — `@CollectionWrapper`
-    is only the codegen bridge.
+    convertEachOrFail` (+ Map/Set variants; arrow accumulating counterparts PARKED with the
+    accumulated boundary, §J). Core-only users hand-write container shells in plain Kotlin
+    (`.toPersistentList()`) — `@CollectionWrapper` is only the codegen bridge.
 29. The 16-combination source×target matrix + selection guide + the nullable-collection idiom
     note live in the spec.
 29b. **`@CollectionWrapper` is bidirectional**: the wrapper object declares
@@ -250,6 +251,9 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
 
 ## J) Parked (explicitly deferred, not lost)
 
+- **Arrow accumulated boundary** — `toXAccumulated(): IorNel<MappingError, X>`, the
+  `MappingError` value model, accumulating collection seams, and the generation trigger
+  (follow-up plan; the core `Result` boundary is the shipped v1 surface).
 - `OnAbsent` element policy (treat null source elements as errors) — if demanded.
 - Strict-on-collision option for Map keys.
 - Per-mapping summary sink event ("items: 3/100 dropped") + listener throttling guidance.

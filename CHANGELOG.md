@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — converter subsystem redesign (BREAKING; next major release)
+
+- **Result boundary:** generated mappers are now `toXResult(): Result<X>` — failures arrive as
+  values, never surprise exceptions (`.getOrThrow()` is the caller's explicit choice).
+- **Fallback ladder** as the default behavior: `converted value > declared constructor default >
+  null/not-a-member > error`; brokenness absorbed by a declared escape is REPORTED to the new
+  degradation sink (`MappingListener.onDegradation`), declared-absence flows stay silent.
+- **Path-carrying errors:** all `MappingException`s carry a field path from the mapping root
+  (`customer.address.zipCode`, `items[3].price`) — R8-safe codegen literals.
+- **Module split:** new `kmapper-annotations` artifact (declaration annotations; depends on
+  `kmapper-core`); the processor publishes as `kmapper-compiler` (was `kmapper-processor`);
+  `kmapper-core` is usable standalone for hand-written mappers via the new public conversion
+  seams (`convertOrFail/OrNull/OrElse`, `convertEachOr*`, `convertEntriesOr*`).
+- **Converter model:** 4-method `MapTypeConverter` (`convertTo`/`convertFrom` totals +
+  sanctioned-null `convertToOrNull`/`convertFromOrNull`); function-level
+  `@UnsupportedDirection(reason)` with compile-time enforcement; richer-first built-in naming
+  (e.g. `IntStringConverter`); 28 primitive pair objects + 2 Instant — every pair either
+  converts or explains why not at compile time.
+- **Annotations:** `@ConvertWith(use, onFail)` (+ direction-scoped `@ConvertTo`/`@ConvertFrom`),
+  `OnFail { Auto, Throw, Skip }`, field-anchored `@Validate`, `@IgnoreMap` (was `@Ignore`),
+  new `@IgnoreDefaultValue`. REMOVED: `@UseMapTypeConverter`, `@MapDefaultValue` (constructor
+  defaults via omit/copy replace it), `@ValidateFrom`/`@ValidateTo`.
+- **Collections:** element-ladder semantics (broken/null elements skip or null-in-place with
+  reporting; `OnFail.Throw` hardens, `OnFail.Skip` compacts), Map key/value ladders with
+  duplicate-key reporting, Set convergence reporting, bidirectional `@CollectionWrapper`
+  (`wrap`/`unwrap`, compile-checked signatures).
+
 ## [1.0.0] - 2026-06-05
 
 ### Added

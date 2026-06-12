@@ -46,7 +46,9 @@ declared-absence flows are silent. The boundary is a value: generated `toXResult
 
 - **Descriptive names, never cryptic.** No single-letter or over-abbreviated variables, functions, or
   classes (not `r`/`c` — use `result`/`compilation`). Applies to test code too.
-- **Tests use Kotest, in `commonTest`** (Kotest's KMP support covers the targets).
+- **Tests use Kotest, in `commonTest`** — with one honest caveat: Kotest specs currently
+  EXECUTE on JVM only in this repo (no Kotest-native engine wiring; parked). Native-target
+  coverage comes from kotlin.test-style tests, so commonTest is a mixed pattern by design.
   - Converter unit tests → `FunSpec` + `withData` (data-driven input/expected tables).
   - Processor tests → `BehaviorSpec` (Given / When / Then).
 - **Mix property-based and example-based tests:**
