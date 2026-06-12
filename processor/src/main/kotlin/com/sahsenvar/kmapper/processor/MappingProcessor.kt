@@ -291,8 +291,13 @@ class MappingProcessor(
         val sourceClassFqn = sourceClass.qualifiedName?.asString()
 
         targetFields.forEach { targetField ->
-            val mappedNames = targetField.fieldMapTargets[sourceClassFqn]
-            if (mappedNames != null && mappedNames.size > 1) {
+            // Validate the names that resolution would actually consult for THIS source:
+            // a class-scoped bucket suppresses the wildcard one (same priority as
+            // hasFieldMappingReverse), so specific+wildcard is a legitimate combination —
+            // but two names inside the consulted bucket claim two remote fields at once.
+            val specificNames = targetField.fieldMapTargets[sourceClassFqn].orEmpty()
+            val mappedNames = specificNames.ifEmpty { targetField.fieldMapTargets["*"].orEmpty() }
+            if (mappedNames.size > 1) {
                 logger.error(
                     "@FieldMap on field '${targetField.name}' in ${targetClass.simpleName.asString()} " +
                         "has multiple mappings (${mappedNames.joinToString(
@@ -574,6 +579,23 @@ class MappingProcessor(
                 it.shortName.asString() == "MapFrom"
             }
 
+        // VALIDATION: multiple @MapFrom sources require explicit targetClass in @FieldMap —
+        // a wildcard rename cannot disambiguate which source it talks about (mirror of the
+        // multi-@MapTo rule above).
+        if (mapFromAnnotations.count() > 1) {
+            targetConstructors.forEach { (_, targetFields) ->
+                targetFields.forEach { field ->
+                    if ("*" in field.fieldMapTargets) {
+                        logger.error(
+                            "@FieldMap on field '${field.name}' in ${targetClass.simpleName.asString()} " +
+                                "must specify targetClass parameter when multiple @MapFrom annotations exist. " +
+                                "Example: @FieldMap(fieldName = \"id\", targetClass = UserRemote::class)",
+                        )
+                    }
+                }
+            }
+        }
+
         mapFromAnnotations.forEach { annotation ->
             val sourceType = annotation.arguments.first().value as? KSType ?: return@forEach
             val sourceClass = sourceType.declaration as? KSClassDeclaration ?: return@forEach
@@ -584,14 +606,15 @@ class MappingProcessor(
             targetConstructors.forEach { (constructor, targetFields) ->
                 // VALIDATION: MapFrom does not allow multiple @FieldMap for the same sourceClass
                 validateMapFromFieldMappings(targetClass, targetFields, sourceClass)
-                // External field detection (fields in target not in source)
-                // Exclude fields whose constructor default is usable by mapping
+                // External field detection (fields in target not in source). Uses the SAME
+                // predicate as the fieldsToEmit pairing below — externals and pairing must
+                // never disagree about whether a field has a source mapping.
+                // Exclude fields whose constructor default is usable by mapping.
                 val externalFields =
                     targetFields.filter { targetField ->
                         val hasSourceMapping =
                             sourceFields.any { sourceField ->
-                                sourceField.name == targetField.name ||
-                                    targetField.fieldMapTarget == sourceField.name
+                                hasFieldMappingReverse(sourceField, targetField, sourceClass)
                             }
 
                         // External if: no source mapping AND no usable constructor default

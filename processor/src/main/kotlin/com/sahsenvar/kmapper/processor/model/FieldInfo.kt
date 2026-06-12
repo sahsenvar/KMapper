@@ -52,9 +52,6 @@ data class FieldInfo(
     /** @IgnoreDefaultValue: the constructor default is invisible to mapping. */
     val ignoreDefaultValue: Boolean = false,
 ) {
-    /** Legacy: Returns first FieldMap target name (for single @MapTo scenarios) */
-    val fieldMapTarget: String? get() = fieldMapTargets.values.firstOrNull()?.firstOrNull()
-
     /** The only default flag mapping decisions may consult (omit/copy, external params). */
     val usesDefaultInMapping: Boolean get() = hasDefault && !ignoreDefaultValue
 

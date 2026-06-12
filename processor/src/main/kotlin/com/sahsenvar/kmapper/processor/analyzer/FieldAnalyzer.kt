@@ -186,12 +186,16 @@ class FieldAnalyzer(
                         .firstOrNull { it.name?.asString() == "targetClass" }
                         ?.value as? KSType
 
+                // `Nothing::class` is the "no targetClass" sentinel. KSP resolves the OMITTED
+                // default through the Java mirror as java.lang.Void, so both spellings mean
+                // "wildcard" — missing the Void form silently buckets the rename under a key
+                // no lookup ever asks for.
                 val targetClassFqn =
                     targetClassArg
                         ?.declaration
                         ?.qualifiedName
                         ?.asString()
-                        ?.takeIf { it != "kotlin.Nothing" }
+                        ?.takeIf { it != "kotlin.Nothing" && it != "java.lang.Void" }
 
                 if (targetClassFqn != null) {
                     // Explicit targetClass specified - add to list

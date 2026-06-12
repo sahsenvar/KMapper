@@ -168,7 +168,6 @@ public final class com/sahsenvar/kmapper/processor/model/FieldInfo {
 	public final fun getConvertFromDirective ()Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
 	public final fun getConvertToDirective ()Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
 	public final fun getConvertWith ()Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
-	public final fun getFieldMapTarget ()Ljava/lang/String;
 	public final fun getFieldMapTargets ()Ljava/util/Map;
 	public final fun getHasDefault ()Z
 	public final fun getIgnoreDefaultValue ()Z

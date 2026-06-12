@@ -25,12 +25,11 @@ class NonEmptySetMappingTest {
     }
 
     @Test
-    fun `empty permissions list fails with EmptyCollection`() {
+    fun `empty permissions list fails with EmptyCollection carrying the field path`() {
         val outcome = RoleR(permissions = emptyList()).toRoleDResult()
         outcome.isFailure shouldBe true
-        // NOTE: wrapper-thrown EmptyCollection currently arrives with an EMPTY path — the
-        // generated wrap call site has no path-prefixing seam (tracked as a follow-up).
         val exception = outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.EmptyCollection>()
+        exception.path shouldBe "permissions"
         exception.detail shouldBe "NonEmptySet source was empty"
     }
 }

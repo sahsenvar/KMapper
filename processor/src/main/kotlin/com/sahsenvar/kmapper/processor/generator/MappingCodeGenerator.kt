@@ -468,16 +468,23 @@ class MappingCodeGenerator(
 
     /**
      * @CollectionWrapper emission, both directions. The wrapper object handles ONLY the
-     * container shell; element conversion stays on the normal seam rails:
+     * container shell; element conversion stays on the normal seam rails. The wrapper
+     * invocation itself rides a `convertOrFail` guard so a wrapper-thrown [MappingException]
+     * (e.g. EmptyCollection from a non-empty container) reaches the boundary carrying the
+     * FIELD path — the guard wraps ONLY the wrap/unwrap call, never the element seam chain,
+     * so element errors keep their own already-rooted paths (no double prefixing):
      *
      * Forward (wrap — target is the registered type):
-     *   WrapperObject.wrap(source.convertEachOrSkip(…) { … })           (non-null source)
-     *   source?.convertEachOrSkip(…) { … }?.let { WrapperObject.wrap(it) }  (nullable source)
-     *   WrapperObject.wrap(source) / source?.let { WrapperObject.wrap(it) } (Direct elements)
+     *   source.convertEachOrSkip(…) { … }.convertOrFail(path, from, to) { WrapperObject.wrap(it) }
+     *   source?.convertEachOrSkip(…) { … }?.convertOrFail(…) { WrapperObject.wrap(it) }   (nullable source)
+     *   source[?].convertOrFail(…) { WrapperObject.wrap(it) }                              (Direct elements)
      *
      * Unwrap (source is the registered type, target a plain collection):
-     *   WrapperObject.unwrap(source).convertEachOrSkip(…) { … }
-     *   source?.let { WrapperObject.unwrap(it) }?.convertEachOrSkip(…) { … }
+     *   source.convertOrFail(path, from, to) { WrapperObject.unwrap(it) }.convertEachOrSkip(…) { … }
+     *   source?.convertOrFail(…) { WrapperObject.unwrap(it) }?.convertEachOrSkip(…) { … }
+     *
+     * A nullable source uses `?.convertOrFail` — the safe call keeps null flowing to the
+     * container landing (no absence guard here; that's [applyChainLanding]'s job).
      *
      * The wrap contract takes List<T>, so the forward element seams are always List-shaped;
      * the unwrap direction picks Set seams when the plain TARGET is a Set.
@@ -489,13 +496,18 @@ class MappingCodeGenerator(
         onFail: OnFailPolicy,
     ): CodeBlock {
         val wrapperClass = ClassName.bestGuess(strategy.wrapperObjectFqn)
+        val containerFrom = sourceField.type.fqn()
+        val containerTo = targetField.type.fqn()
         return if (strategy.useUnwrap) {
             val unwrapped =
-                if (sourceField.isNullable) {
-                    CodeBlock.of("%N?.let·{·%T.unwrap(it)·}", sourceField.name, wrapperClass)
-                } else {
-                    CodeBlock.of("%T.unwrap(%N)", wrapperClass, sourceField.name)
-                }
+                wrapperShellGuard(
+                    receiver = CodeBlock.of("%N", sourceField.name),
+                    receiverIsNullable = sourceField.isNullable,
+                    path = targetField.name,
+                    fromLiteral = containerFrom,
+                    toLiteral = containerTo,
+                    wrapperCall = CodeBlock.of("{·%T.unwrap(it)·}", wrapperClass),
+                )
             val sourceElementType = elementTypeOf(sourceField.type)
             val targetElementType = elementTypeOf(targetField.type)
             if (sourceElementType == null || targetElementType == null) return unwrapped
@@ -514,36 +526,69 @@ class MappingCodeGenerator(
                 convertLambda = convertLambda,
             )
         } else {
-            val directWrap =
-                if (sourceField.isNullable) {
-                    CodeBlock.of("%N?.let·{·%T.wrap(it)·}", sourceField.name, wrapperClass)
-                } else {
-                    CodeBlock.of("%T.wrap(%N)", wrapperClass, sourceField.name)
-                }
+            val wrapCall = CodeBlock.of("{·%T.wrap(it)·}", wrapperClass)
             val sourceElementType = elementTypeOf(sourceField.type)
             val targetElementType = elementTypeOf(targetField.type)
-            if (sourceElementType == null || targetElementType == null) return directWrap
-            // wrap(List<T>) by contract — the inner seam is always the List-shaped one.
-            val seamName = listElementSeamName(targetElementType.isMarkedNullable, isSetTarget = false, onFail = onFail)
+            val seamName =
+                if (sourceElementType != null && targetElementType != null) {
+                    // wrap(List<T>) by contract — the inner seam is always the List-shaped one.
+                    listElementSeamName(targetElementType.isMarkedNullable, isSetTarget = false, onFail = onFail)
+                } else {
+                    null
+                }
             val convertLambda =
-                elementConvertLambda(strategy.elementStrategy, seamTakesTotalConvert(seamName))
-                    ?: return directWrap
-            val seamChain =
-                elementSeamCall(
-                    receiver = CodeBlock.of("%N", sourceField.name),
-                    receiverIsNullable = sourceField.isNullable,
-                    seamName = seamName,
-                    path = targetField.name,
-                    fromLiteral = sourceElementType.fqn(),
-                    toLiteral = targetElementType.fqn(),
-                    convertLambda = convertLambda,
-                )
-            if (sourceField.isNullable) {
-                CodeBlock.of("%L?.let·{·%T.wrap(it)·}", seamChain, wrapperClass)
-            } else {
-                CodeBlock.of("%T.wrap(%L)", wrapperClass, seamChain)
-            }
+                seamName?.let { elementConvertLambda(strategy.elementStrategy, seamTakesTotalConvert(it)) }
+            val innerChain =
+                if (seamName != null && convertLambda != null && sourceElementType != null && targetElementType != null) {
+                    elementSeamCall(
+                        receiver = CodeBlock.of("%N", sourceField.name),
+                        receiverIsNullable = sourceField.isNullable,
+                        seamName = seamName,
+                        path = targetField.name,
+                        fromLiteral = sourceElementType.fqn(),
+                        toLiteral = targetElementType.fqn(),
+                        convertLambda = convertLambda,
+                    )
+                } else {
+                    CodeBlock.of("%N", sourceField.name)
+                }
+            wrapperShellGuard(
+                receiver = innerChain,
+                receiverIsNullable = sourceField.isNullable,
+                path = targetField.name,
+                fromLiteral = containerFrom,
+                toLiteral = containerTo,
+                wrapperCall = wrapCall,
+            )
         }
+    }
+
+    /**
+     * Path guard for the wrapper-object invocation: `receiver[?].convertOrFail(path, from, to)
+     * { Wrapper.wrap/unwrap(it) }`. The receiver is evaluated BEFORE the guard, so only the
+     * wrapper call itself is caught — a thrown [MappingException] gets the field path via
+     * `withPathPrefix` (same type, e.g. EmptyCollection keeps its detail), anything else
+     * becomes a typed TypeConversionFailed at the field. The safe-call variant keeps a null
+     * chain flowing untouched (absence stays [applyChainLanding]'s decision).
+     */
+    private fun wrapperShellGuard(
+        receiver: CodeBlock,
+        receiverIsNullable: Boolean,
+        path: String,
+        fromLiteral: String,
+        toLiteral: String,
+        wrapperCall: CodeBlock,
+    ): CodeBlock {
+        val safeCall = if (receiverIsNullable) "?" else ""
+        return CodeBlock.of(
+            "%L$safeCall.%M(%S,·%S,·%S)·%L",
+            receiver,
+            MemberName(SEAMS_PACKAGE, "convertOrFail"),
+            path,
+            fromLiteral,
+            toLiteral,
+            wrapperCall,
+        )
     }
 
     /**

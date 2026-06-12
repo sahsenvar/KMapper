@@ -52,8 +52,11 @@ class CollectionWrapperTest {
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
         // Element-level conversion rides the seam rails inside the wrap call
         assertTrue(gen.contains("convertEachOrSkip(\"tags\""), "Expected convertEachOrSkip in generated code:\n$gen")
-        // Must call the wrapper object's wrap method
-        assertTrue(gen.contains("W.wrap("), "Expected W.wrap( call in generated code:\n$gen")
+        // The wrap() invocation itself is path-guarded: a wrapper-thrown MappingException
+        // (e.g. EmptyCollection from a non-empty container) must reach the boundary carrying
+        // the field path instead of an empty one.
+        assertTrue(gen.contains("convertOrFail(\"tags\""), "Expected path-guarded wrap call in generated code:\n$gen")
+        assertTrue(gen.contains("W.wrap(it)"), "Expected W.wrap(it) inside the path guard in generated code:\n$gen")
     }
 
     /**
