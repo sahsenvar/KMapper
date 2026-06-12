@@ -1,165 +1,68 @@
 # Annotation Reference
 
-All KMapper annotations are in the `com.sahsenvar.kmapper.annotations` package. They all have `SOURCE` retention — they are not included in the published binary; they are consumed only during the KSP compilation step. `@CollectionWrapper` is an exception and uses `BINARY` retention (required for type+annotation resolution from dependency artifacts).
+All annotations live in `com.sahsenvar.kmapper.annotations` (`kmapper-annotations` artifact).
 
-## Summary Table
+## Mapping declaration
 
-| Annotation | Target | Parameters | Description |
-|---|---|---|---|
-| `@MapTo` | Class | `target: KClass<*>` | Generates a `toX()` extension from this class to the target class. `@Repeatable` — can be applied multiple times for multiple targets. |
-| `@MapFrom` | Class | `source: KClass<*>` | Placed on the target class; generates a reverse-direction mapping. |
-| `@FieldMap` | Property | `fieldName: String`, `targetClass: KClass<*> = Nothing::class` | Maps a field to a different name in the target. The `targetClass` parameter specifies which target it applies to when using `@Repeatable`. |
-| `@MapDefaultValue` | Property | `expression: String` | The Kotlin expression to use when the nullable source field is `null`. Added to the generated code as a literal — it must be valid Kotlin. |
-| `@Ignore` | Property | — | Excludes this field from mapping. The corresponding field in the target constructor must either be absent or have a default value. |
-| `@UseMapTypeConverter` | Property | `converter: KClass<out MapTypeConverter<*, *>>` | Overrides the converter from the global `@KMapperConfig` list for this specific field. Does not need to be added to `@KMapperConfig`. |
-| `@KMapperConfig` | Object/Class | `converters: Array<KClass<*>> = []`, `wrappers: Array<KClass<*>> = []` | Defines the global converter and wrapper lists for this module. The processor finds `@KMapperConfig` within the module via `getSymbolsWithAnnotation`. |
-| `@CollectionWrapper` | Class (object) | `forType: KClass<*>` | `BINARY` retention. Marks an `object` as a collection wrapper; the object must expose `fun <T> wrap(items: List<T>): WrappedCollection<T>`. The consumer module lists this wrapper explicitly in `@KMapperConfig.wrappers`. |
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@MapTo(target)` | class (repeatable) | generate `Source.toTargetResult()` — declared on the source |
+| `@MapFrom(source)` | class (repeatable) | same generation, declared on the target |
 
-## `@MapTo`
+→ [@MapTo and @MapFrom](../basic-usage/mapto-mapfrom.md)
 
-```kotlin
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.SOURCE)
-@Repeatable
-annotation class MapTo(val target: KClass<*>)
-```
+## Field directives
 
-Mapping from the same source to multiple targets:
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@FieldMap(fieldName, targetClass)` | property (repeatable) | match a differently-named target field; optionally scoped to one target |
+| `@IgnoreMap` | property | exclude the field from auto-matching; the target slot defaults or becomes a caller parameter |
+| `@IgnoreDefaultValue` | property | the constructor default is construction convenience only — absence becomes `RequiredFieldMissing` |
 
-```kotlin
-@MapTo(UserDomain::class)
-@MapTo(UserUiModel::class)
-data class UserRemote(val id: String, val name: String) : RemoteModel
-```
+→ [Field Mapping](../basic-usage/field-mapping.md)
 
-See [@MapTo and @MapFrom](../basic-usage/mapto-mapfrom.md).
+Placement rule: field directives are read from the **source field of the generated
+direction** ([details](../type-conversion/convert-with.md#the-placement-rule-worth-memorizing)).
 
-## `@MapFrom`
+## Conversion control
 
-Placed on the target class; useful when you cannot add `@MapTo` to the source class:
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@ConvertWith(use, onFail)` | property | per-field converter override and/or failure policy |
+| `@ConvertTo(target, use, onFail)` | property (repeatable) | `@ConvertWith` scoped to one mapping direction |
+| `@ConvertFrom(source, use, onFail)` | property (repeatable) | the reverse scoping |
+| `OnFail` (enum) | — | `Auto` (ladder), `Throw` (never absorb), `Skip` (compact collections) |
 
-```kotlin
-@MapFrom(UserRemote::class)
-data class UserDomain(val id: String, val name: String) : DomainModel
-```
+→ [@ConvertWith and OnFail](../type-conversion/convert-with.md)
 
-See [@MapTo and @MapFrom](../basic-usage/mapto-mapfrom.md).
+## Registration
 
-## `@FieldMap`
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@KMapperConfig(converters, wrappers)` | object | module-wide converter/wrapper registration; discovery by type pair |
+| `@CollectionWrapper(forType)` | object | declare a `wrap`/`unwrap` pair for a custom container type |
 
-```kotlin
-@Target(AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.SOURCE)
-@Repeatable
-annotation class FieldMap(val fieldName: String, val targetClass: KClass<*> = Nothing::class)
-```
+→ [@KMapperConfig](../type-conversion/kmapperconfig.md),
+[Collection wrappers](../type-conversion/custom-converter.md#collection-wrappers)
 
-When the field name differs:
+## Validation
 
-```kotlin
-@MapTo(UserDomain::class)
-data class UserRemote(
-    @FieldMap(fieldName = "id")   // userId → id
-    val userId: String,
-) : RemoteModel
-```
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@Validate(vararg validators)` | property | field-anchored invariants; run before (source side) / after (target side) conversion |
 
-When there are multiple targets, specify the target with `targetClass`:
+→ [@Validate](../validation/validate.md)
 
-```kotlin
-@FieldMap(fieldName = "id",       targetClass = UserDomain::class)
-@FieldMap(fieldName = "userId",   targetClass = UserUiModel::class)
-val userId: String,
-```
+## Converter authoring (in `kmapper-core`)
 
-See [Field Mapping](../basic-usage/field-mapping.md).
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `@UnsupportedDirection(reason)` | function (`convertTo`/`convertFrom`) | declare a direction intentionally unsupported; the reason appears in the compile error |
 
-## `@MapDefaultValue`
+→ [Refusing a direction](../type-conversion/custom-converter.md#refusing-a-direction)
 
-```kotlin
-@Target(AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.SOURCE)
-annotation class MapDefaultValue(val expression: String)
-```
+## Removed in 2.0
 
-```kotlin
-@MapTo(UserDomain::class)
-data class UserRemote(
-    @MapDefaultValue("Clock.System.now()")
-    val createdAt: Instant?,
-) : RemoteModel
-```
-
-The `expression` is placed literally in the generated code. See [Null-Safety](../basic-usage/null-safety.md).
-
-## `@Ignore`
-
-```kotlin
-@Target(AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.SOURCE)
-annotation class Ignore
-```
-
-```kotlin
-@MapTo(UserDomain::class)
-data class UserRemote(
-    val id: String,
-    @Ignore val internalFlag: Boolean,  // UserDomain'e aktarılmaz
-) : RemoteModel
-```
-
-See [Field Mapping](../basic-usage/field-mapping.md).
-
-## `@UseMapTypeConverter`
-
-```kotlin
-@Target(AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.SOURCE)
-annotation class UseMapTypeConverter(val converter: KClass<out MapTypeConverter<*, *>>)
-```
-
-```kotlin
-@MapTo(EventDomain::class)
-data class EventRemote(
-    val startsAt: String,                                       // global: ISO-8601 converter
-    @UseMapTypeConverter(EpochStringToInstantConverter::class)  // per-field override
-    val legacyTime: String,
-) : RemoteModel
-```
-
-See [@KMapperConfig and @UseMapTypeConverter](../type-conversion/kmapperconfig.md).
-
-## `@KMapperConfig`
-
-```kotlin
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.SOURCE)
-annotation class KMapperConfig(
-    val converters: Array<KClass<*>> = [],
-    val wrappers: Array<KClass<*>> = [],
-)
-```
-
-```kotlin
-@KMapperConfig(
-    converters = [IsoStringToInstantConverter::class],
-    wrappers   = [PersistentListWrapper::class, NonEmptyListWrapper::class],
-)
-object AppMapperConfig
-```
-
-See [@KMapperConfig and @UseMapTypeConverter](../type-conversion/kmapperconfig.md) and [Multi-Module Projects](../advanced/multi-module.md).
-
-## `@CollectionWrapper`
-
-```kotlin
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.BINARY)
-annotation class CollectionWrapper(val forType: KClass<*>)
-```
-
-`@CollectionWrapper` is placed on an `object` and specifies which collection type (`forType`) it wraps. The object must expose `fun <T> wrap(items: List<T>): WrappedCollection<T>`. Used in `converters-immutable` and `converters-arrow`; you can also use it to define your own wrappers. The consumer module must list the wrapper explicitly in `@KMapperConfig.wrappers`. See [Multi-Module Projects](../advanced/multi-module.md).
-
----
-
-Next: [Limitations and Roadmap](./limitations.md)
+`@Ignore` → `@IgnoreMap` · `@MapDefaultValue` → constructor defaults ·
+`@UseMapTypeConverter` → `@ConvertWith` · `@ValidateFrom`/`@ValidateTo` → `@Validate`.
+See the migration guide in the repository's `CHANGELOG.md`.

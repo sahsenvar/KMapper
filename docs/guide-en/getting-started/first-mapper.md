@@ -1,102 +1,89 @@
 # Your First Mapper
 
-In this page you will write your first mapper, converting a REST response (`RemoteModel`) into a domain model.
+Five minutes from an API response to a safely mapped domain object — including your first
+mapping error, on purpose.
 
-## 1. Define the Models
+## 1. Two models
 
-The target (domain) model is a plain Kotlin class:
-
-```kotlin
-data class UserDomain(
-    val id: String,
-    val email: String,
-)
-```
-
-Add `@MapTo` to the source (remote) model to say "I want to be able to map this to `UserDomain`":
+A wire model (what the API sends) and a domain model (what your app wants):
 
 ```kotlin
 import com.sahsenvar.kmapper.annotations.MapTo
+import kotlinx.datetime.LocalDate
 
-@MapTo(UserDomain::class)
-data class UserRemote(
-    val id: String,
+data class User(
+    val id: Long,
     val email: String,
+    val joined: LocalDate,
+)
+
+@MapTo(User::class)
+data class UserResponse(
+    val id: Long,
+    val email: String,
+    val joined: String, // ISO date on the wire
 )
 ```
 
-> KMapper does **not** require your models to implement a specific interface (`RemoteModel`, `DomainModel`, etc.). Those interfaces are a convention in your own architecture; use them if you like.
+`@MapTo` lives on the **wire model** — the side you don't control is the side that declares
+how it becomes the side you do control.
 
 ## 2. Build
 
-Build the project. KMapper generates `UserRemoteMappers.kt` in the same package as the source class:
+```bash
+./gradlew build
+```
+
+KSP generates an extension function:
 
 ```kotlin
-public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
-    id = id,
-    email = email,
+fun UserResponse.toUserResult(): Result<User>
+```
+
+Two fields copied straight across; `joined` routed through the built-in
+`LocalDateStringConverter` (`String ↔ LocalDate` is one of 35 built-in pairs — no
+registration needed).
+
+## 3. Use it
+
+```kotlin
+val user: User = UserResponse(7, "grace@navy.mil", "2026-06-12")
+    .toUserResult()
+    .getOrThrow()
+```
+
+The generated function returns `Result<User>`: *you* decide at the call site whether a failure
+throws (`getOrThrow`), falls back (`getOrElse`), or branches (`fold`).
+
+## 4. Break it — on purpose
+
+```kotlin
+val broken = UserResponse(7, "grace@navy.mil", "not-a-date").toUserResult()
+
+println(broken.exceptionOrNull()?.message)
+// Cannot convert joined: String -> LocalDate failed for value "not-a-date" …
+```
+
+No crash — the failure arrived as a value, naming the exact field. In nested models the path
+grows with it (`customer.address.zipCode`); see
+[Nested Models](../basic-usage/nested-models.md).
+
+## 5. What if the wire value is missing?
+
+Make the domain field tell KMapper what "missing" should mean:
+
+```kotlin
+data class User(
+    val id: Long,
+    val email: String,
+    val joined: LocalDate? = null, // nullable: absent/broken date becomes null
 )
 ```
 
-> **Note:** Examples show a simplified body. The actual generated code also includes `KMapper.hasListeners`-guarded observability hooks and uses a `val result = …; return result` form — see [MappingListener](../observability/listener.md).
+A nullable or defaulted target field is a *declared escape*: absence flows into it silently,
+and a **broken** value is absorbed into it too — but every absorption is reported to the
+observability sink, so production telemetry still sees it. That ranking
+(`value > default > null > error`) is the **fallback ladder**, the heart of KMapper.
 
-## 3. Use It
-
-```kotlin
-val remote = UserRemote(id = "42", email = "a@b.com")
-val domain: UserDomain = remote.toUserDomain()
-```
-
-That is all there is to it. Fields with matching names are copied automatically.
-
-## Nested Models Work Automatically
-
-If a field is itself a type annotated with `@MapTo`, KMapper chains the inner mapping call automatically:
-
-```kotlin
-data class AddressDomain(val city: String)
-data class CustomerDomain(val name: String, val address: AddressDomain)
-
-@MapTo(AddressDomain::class)
-data class AddressRemote(val city: String)
-
-@MapTo(CustomerDomain::class)
-data class CustomerRemote(val name: String, val address: AddressRemote)
-```
-
-The generated code chains the inner mapping:
-
-```kotlin
-public fun CustomerRemote.toCustomerDomain(): CustomerDomain = CustomerDomain(
-    name = name,
-    address = address.toAddressDomain(),
-)
-```
-
-## Null-Safety Is Active from the Start
-
-Say the remote field is nullable but the domain field is required:
-
-```kotlin
-data class UserDomain(val id: String)          // required
-
-@MapTo(UserDomain::class)
-data class UserRemote(val id: String?)          // nullable
-```
-
-KMapper never silently swallows `null` — it generates a loud exception:
-
-```kotlin
-public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
-    id = id ?: throw MappingException.RequiredFieldMissing("id"),
-)
-```
-
-If you want to supply a default value instead, use `@MapDefaultValue` (see [Null-Safety](../basic-usage/null-safety.md)).
-
-## What's Next?
-
-- If field names differ: **[Field Mapping (@FieldMap)](../basic-usage/field-mapping.md)**
-- If you need type conversion (e.g. `String` → `Int`): **[Type Conversion](../type-conversion/built-in.md)**
-- For enum mapping: **[MappableEnum](../enum/mappable-enum.md)**
-- For the reverse direction (`DomainModel → RemoteModel`): **[@MapTo and @MapFrom](../basic-usage/mapto-mapfrom.md)**
+> Next: **[The Mental Model →](mental-model.md)** — the three rules that explain everything
+> you just saw.

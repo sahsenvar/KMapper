@@ -6,27 +6,35 @@
 
 * [Installation](getting-started/installation.md)
 * [Your First Mapper](getting-started/first-mapper.md)
+* [The Mental Model](getting-started/mental-model.md)
+* [Example Gallery](getting-started/examples.md)
 
 ## Basic Usage
 
 * [@MapTo and @MapFrom](basic-usage/mapto-mapfrom.md)
-* [Field Mapping (@FieldMap, @Ignore)](basic-usage/field-mapping.md)
-* [Null-Safety and @MapDefaultValue](basic-usage/null-safety.md)
-* [Nested Models](basic-usage/nested-models.md)
+* [Field Mapping and the Ignore Family](basic-usage/field-mapping.md)
+* [Null-Safety and the Fallback Ladder](basic-usage/null-safety.md)
+* [Nested Models and Error Paths](basic-usage/nested-models.md)
 * [Collections](basic-usage/collections.md)
 
 ## Type Conversion
 
 * [Built-in Converters](type-conversion/built-in.md)
 * [Writing a Custom Converter](type-conversion/custom-converter.md)
-* [@KMapperConfig and @UseMapTypeConverter](type-conversion/kmapperconfig.md)
+* [@KMapperConfig — Registration and Discovery](type-conversion/kmapperconfig.md)
+* [@ConvertWith — Per-Field Overrides and OnFail](type-conversion/convert-with.md)
 * [Immutable Collections (converters-immutable)](type-conversion/immutable.md)
-* [NonEmptyList — Arrow (converters-arrow)](type-conversion/arrow.md)
-* [Date and Time Converters (converters-datetime)](type-conversion/datetime.md)
-* [Big Number Converters (converters-bignumber)](type-conversion/bignumber.md)
-* [UUID Converters (converters-uuid)](type-conversion/uuid.md)
-* [Okio Converters (converters-okio)](type-conversion/okio.md)
-* [URI Converters (converters-uri)](type-conversion/uri.md)
+* [Arrow (converters-arrow)](type-conversion/arrow.md)
+* [Date and Time (converters-datetime)](type-conversion/datetime.md)
+* [Big Numbers (converters-bignumber)](type-conversion/bignumber.md)
+* [UUID (converters-uuid)](type-conversion/uuid.md)
+* [Okio (converters-okio)](type-conversion/okio.md)
+* [URI (converters-uri)](type-conversion/uri.md)
+
+## Validation
+
+* [@Validate — Field-Anchored Validation](validation/validate.md)
+* [The Validator Library](validation/validators.md)
 
 ## Enum Mapping
 
@@ -34,17 +42,16 @@
 
 ## Error Handling
 
-* [MappingException and Compile-Time Safety](error-handling/mapping-exception.md)
+* [The Result Boundary and MappingException](error-handling/mapping-exception.md)
 
 ## Observability
 
-* [MappingListener](observability/listener.md)
+* [MappingListener and the Degradation Sink](observability/listener.md)
 
 ## Advanced
 
 * [Multi-Module Projects](advanced/multi-module.md)
 * [Architecture: How It Works](advanced/architecture.md)
-* [Validation — @ValidateFrom / @ValidateTo](advanced/validation.md)
 
 ## Reference
 

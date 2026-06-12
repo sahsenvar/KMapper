@@ -1,121 +1,95 @@
-# Field Mapping — @FieldMap and @Ignore
+# Field Mapping and the Ignore Family
 
-KMapper's default behavior is to match fields **by name** between source and target. When field names or types don't align, use `@FieldMap`. When a field should be excluded from mapping entirely, use `@Ignore`.
+Name matching covers most fields for free. These are the tools for the rest.
 
----
-
-## @FieldMap — Field Renaming
+## @FieldMap — different names
 
 ```kotlin
-@FieldMap(fieldName: String, targetClass: KClass<*> = Nothing::class)
+@MapTo(User::class)
+data class UserResponse(
+    @FieldMap("displayName")
+    val user_name: String, // wire snake_case -> domain displayName
+)
 ```
 
-`@FieldMap` is applied to a property. `fieldName` specifies the name of the corresponding field in the target class.
+With several `@MapTo` targets, scope a rename to one target:
 
 ```kotlin
-@MapTo(UserDomain::class)
-data class UserRemote(
-    @FieldMap(fieldName = "userId")   // "id" in remote, "userId" in domain
-    val id: String,
+@MapTo(User::class)
+@MapTo(AuditEntry::class)
+data class UserResponse(
+    @FieldMap("displayName", targetClass = User::class)
+    @FieldMap("actorName", targetClass = AuditEntry::class)
+    val user_name: String,
+)
+```
+
+## @IgnoreMap — break the match on purpose
+
+`@IgnoreMap` makes the mapper pretend the field doesn't exist for auto-matching. Its value
+never flows through the mapping; the target slot falls back to its constructor default — or,
+with no default, becomes a **required parameter** of the generated function:
+
+```kotlin
+data class Account(
     val email: String,
+    val passwordHash: String, // no default…
 )
 
-data class UserDomain(
-    val userId: String,
+@MapTo(Account::class)
+data class SignUpRequest(
     val email: String,
+    @IgnoreMap
+    val passwordHash: String, // same name, but you do NOT want this copied raw
 )
+
+// generated: fun SignUpRequest.toAccountResult(passwordHash: String): Result<Account>
+val account = request.toAccountResult(passwordHash = hash(request.passwordHash))
 ```
 
-Generated code:
+## @IgnoreDefaultValue — "the default is not a wire fallback"
+
+A constructor default normally doubles as rung 2 of the [ladder](null-safety.md): absence
+quietly becomes the default. Sometimes the default is just construction convenience and the
+wire **must** send the value. `@IgnoreDefaultValue` (on the target field) makes mapping treat
+the default as nonexistent — absence is a hard `RequiredFieldMissing` again:
 
 ```kotlin
-public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
-    userId = id,
-    email  = email,
+data class Account(
+    @IgnoreDefaultValue
+    val plan: String = "FREE", // Account() in code defaults to FREE; the wire must always send a plan
 )
 ```
 
----
+## Caller-supplied parameters
 
-## Specifying a Target Class for Multiple Targets
-
-When the same source class is mapped to more than one target (repeated `@MapTo`) and a field should be renamed only for **one specific target**, the `targetClass` parameter comes into play. A `@FieldMap` without `targetClass` applies to all targets (wildcard).
+A target field with **no matching source field and no default** doesn't compile-error — it
+becomes a required parameter of the generated function. That's the mechanism for context the
+wire can't know:
 
 ```kotlin
-@MapTo(UserDomain::class)
-@MapTo(UserCache::class)
-data class UserRemote(
-    // Only "userId" for UserDomain; UserCache gets "id" (matched by name)
-    @FieldMap(fieldName = "userId", targetClass = UserDomain::class)
-    val id: String,
-    val email: String,
+data class Payment(
+    val id: Long,
+    val fetchedAt: Instant, // not on the wire
 )
+
+@MapTo(Payment::class)
+data class PaymentResponse(val id: Long)
+
+// generated:
+fun PaymentResponse.toPaymentResult(fetchedAt: Instant): Result<Payment>
 ```
 
-Generated code:
+## Constructor defaults are the fallback mechanism
+
+There is no `@MapDefaultValue`-style annotation: **the Kotlin constructor default *is* the
+fallback**, and KMapper uses it by *omitting the argument* — the same default your hand-written
+code sees, defined once, in one place:
 
 ```kotlin
-public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
-    userId = id,      // @FieldMap(targetClass=UserDomain::class) applied
-    email  = email,
-)
-
-public fun UserRemote.toUserCache(): UserCache = UserCache(
-    id    = id,       // matched by name — @FieldMap not applied
-    email = email,
+data class Settings(
+    val theme: String = "system", // absent/broken theme on the wire -> "system"
 )
 ```
 
-Multiple `@FieldMap` annotations can be stacked on the same field for different targets:
-
-```kotlin
-@FieldMap(fieldName = "userId",  targetClass = UserDomain::class)
-@FieldMap(fieldName = "cacheId", targetClass = UserCache::class)
-val id: String,
-```
-
----
-
-## @Ignore — Exclude a Field
-
-A field marked with `@Ignore` is excluded from mapping for **all targets**. Use it when the target class's constructor does not have that field, or when the value is provided externally.
-
-```kotlin
-@MapTo(UserDomain::class)
-data class UserRemote(
-    val id: String,
-    val email: String,
-    @Ignore val rawJson: String,   // this field does not exist in the domain model
-)
-
-data class UserDomain(
-    val id: String,
-    val email: String,
-)
-```
-
-The generated code never touches `rawJson`:
-
-```kotlin
-public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
-    id    = id,
-    email = email,
-)
-```
-
-If the target constructor has a parameter that corresponds to the `@Ignore`d field and that parameter has no default value, you will get a **compile error** — give the target parameter a default value, or handle the field with `@MapDefaultValue` instead of `@Ignore`.
-
----
-
-## Precedence Order
-
-The mapping rule for a field is determined in this order:
-
-1. `@Ignore` → exclude entirely
-2. Target-specific `@FieldMap(targetClass = X::class)` → apply only for that target
-3. Wildcard `@FieldMap(targetClass = Nothing::class)` → apply to all targets
-4. Name-based matching → assign directly when source and target field names match
-
----
-
-Next: [Null-Safety and @MapDefaultValue](null-safety.md)
+> Next: **[Null-Safety and the Fallback Ladder →](null-safety.md)**

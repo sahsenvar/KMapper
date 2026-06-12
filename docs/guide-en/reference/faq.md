@@ -1,78 +1,63 @@
 # FAQ
 
-## Does KMapper use reflection at runtime?
+## Why does the generated function return `Result` instead of throwing?
 
-No. KMapper runs entirely at compile time. The KSP processor analyzes annotations and generates plain Kotlin extension functions. The generated code does not use reflection APIs such as `KClass`, `::class.members`, or `getDeclaredField`. For this reason KMapper works without any restrictions on all KMP targets, including iOS/Kotlin Native.
+Because wire data *will* be malformed eventually, and a mapper that throws turns someone
+else's bad deploy into your crash. With `Result`, failure is part of the signature: the call
+site decides (`getOrThrow` / `getOrElse` / `fold`), and the decision is visible in code
+review. [Details](../error-handling/mapping-exception.md).
 
-## Does it work on iOS and Kotlin/Native?
+## Why didn't my broken value become an error?
 
-Yes. The `core` artifact is KMP; the generated extension functions are standard Kotlin and compile for all targets (Android, iOS/Native, JVM). `processor` is JVM-only but is executed only by the build toolchain; it is not included in the distributed code.
+Probably the target field is nullable or has a default — a declared escape on the
+[fallback ladder](../basic-usage/null-safety.md). The absorption was reported to the
+[degradation sink](../observability/listener.md); register a listener and you'll see it.
+Want hardness for that field? `@ConvertWith(onFail = OnFail.Throw)`.
 
-## Why aren't `ordinal` or `name` used?
+## Why is there no `@MapDefaultValue`?
 
-`ordinal` depends on the order of constants. When the enum order changes or a new constant is inserted in the middle, `ordinal` silently maps to the wrong value — impossible to notice without a compile error or a test. `name` is equally fragile against renaming. `wireValue` is bound directly to the constant; you can reorder the enum or rename the constant and the mapping does not change.
+Kotlin already has default values — in the constructor. KMapper uses them by *omitting the
+argument*, so the default lives in exactly one place and behaves identically for mapping and
+hand construction. If a default should *not* act as a wire fallback, that's
+[`@IgnoreDefaultValue`](../basic-usage/field-mapping.md).
 
-## What should I do if the source and target field names are different?
+## Why does `Long → Int` fail my build? Other mappers just convert it.
 
-Use `@FieldMap(fieldName = "targetFieldName")`:
+They convert it *until the value doesn't fit*, then silently give you a wrong number. KMapper
+[refuses lossy directions at compile time](../type-conversion/built-in.md#refused-directions-are-a-feature)
+with a reasoned message; if your domain guarantees the range, a three-line custom converter
+makes that guarantee explicit and owned.
 
-```kotlin
-@MapTo(UserDomain::class)
-data class UserRemote(
-    @FieldMap(fieldName = "id")
-    val userId: String,
-) : RemoteModel
-```
+## Why doesn't KMapper map enums by name automatically?
 
-If there are multiple targets, add the `targetClass` parameter:
+`name`/`ordinal` mapping breaks silently on rename/reorder — the exact failure class KMapper
+exists to eliminate. [`MappableEnum`](../enum/mappable-enum.md) costs one `wireValue` per
+constant and is rename-proof.
 
-```kotlin
-@FieldMap(fieldName = "id",     targetClass = UserDomain::class)
-@FieldMap(fieldName = "userId", targetClass = UserUiModel::class)
-val userId: String,
-```
+## My `@ConvertWith` annotation seems ignored. Why?
 
-See [Field Mapping](../basic-usage/field-mapping.md).
+Field directives are read from the **source side of the generated direction** — with
+`@MapTo` on the wire model, annotate the wire field, not the domain field.
+[The placement rule](../type-conversion/convert-with.md#the-placement-rule-worth-memorizing).
 
-## How do I add a custom converter?
+## Can I use KMapper without code generation?
 
-Extend `MapTypeConverter<S, T>` and add it to `@KMapperConfig`:
+Yes — `kmapper-core` is a standalone artifact. Hand-written mappers use the same public
+seams, ladder semantics, converters, and error types as generated code (that's the
+[parity principle](../getting-started/mental-model.md#the-parity-principle)). See the
+`CoreOnlyMapping` [example](../getting-started/examples.md).
 
-```kotlin
-object IsoStringToInstantConverter : MapTypeConverter<String, Instant>(String::class, Instant::class) {
-    override fun convertToNonNull(value: String): Instant =
-        Instant.parse(value)
-    override fun convertFromNonNull(value: Instant): String =
-        value.toString()
-}
+## How do I see what was generated?
 
-@KMapperConfig(converters = [IsoStringToInstantConverter::class])
-object AppMapperConfig
-```
+`build/generated/ksp/<target>/kotlin/…` — plain Kotlin, breakpointable.
+[Architecture](../advanced/architecture.md).
 
-If a specific field needs a different conversion, use `@UseMapTypeConverter` for a per-field override. See [@KMapperConfig and @UseMapTypeConverter](../type-conversion/kmapperconfig.md).
+## Does it work with R8/ProGuard?
 
-## Does every module in a multi-module project need its own `@KMapperConfig`?
+Yes. No reflection, and error paths are compile-time string literals — your release-build
+stack traces still say `customer.address.zipCode`.
 
-Yes. KSP compiles each module independently; one module's `@KMapperConfig` is not visible to another module's processor. Every module that generates mappers must define its own `@KMapperConfig` object.
+## Where are complete runnable examples?
 
-See [Multi-Module Projects](../advanced/multi-module.md).
-
-## Are marker interfaces (RemoteModel, DomainModel, etc.) required?
-
-No. You can apply the `@MapTo` or `@MapFrom` annotation to any class; you do not need to implement a specific marker interface. Marker interfaces are a useful convention for categorizing classes by layer in large projects; they are not enforced by KMapper.
-
-## What happens to the target constructor if I skip a field with `@Ignore`?
-
-The corresponding field in the target class constructor must either be absent or have a default value. If there is no default value and the field is present in the target, you will get a compile error — the generated code skips that field, so the target constructor call fails with a missing argument.
-
-```kotlin
-data class UserDomain(
-    val id: String,
-    val role: String = "USER",  // has a default value → id can be mapped with @Ignore
-)
-```
-
-## What is `convertOrFail`?
-
-`convertOrFail` is a helper function defined in the `core` artifact. It wraps a converter call in `try/catch` and converts any exception the converter throws into `MappingException.TypeConversionFailed`. You do not need to call it directly; it is used by the generated code. See [Error Handling](../error-handling/mapping-exception.md).
+The [sample gallery](../getting-started/examples.md): 25 files, every feature, basic →
+advanced, each with documented output.

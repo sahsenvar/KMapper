@@ -9,7 +9,10 @@ fun missingConverterMessage(
     from: String,
     to: String,
 ): String = "$from -> $to has no registered converter. Add one via @ConvertWith / @KMapperConfig " +
-    "(docs link — coming soon), or rethink your source/target types."
+    "(see $DOCS_BASE/kmapperconfig.md), or rethink your source/target types."
+
+/** Stable docs root for compile-error guidance links (GitHub render of the in-repo guide). */
+private const val DOCS_BASE: String = "https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en/type-conversion"
 
 /**
  * Shared "what you can do" guidance tail (the three options) appended to every
@@ -19,8 +22,8 @@ fun missingConverterMessage(
  */
 internal const val UNSUPPORTED_CONVERSION_GUIDANCE: String =
     " What you can do:\n" +
-        "  1. Check the converter add-ons (docs link — coming soon)\n" +
-        "  2. Create your own converter (docs link — coming soon)\n" +
+        "  1. Check the converter add-ons ($DOCS_BASE/built-in.md)\n" +
+        "  2. Create your own converter ($DOCS_BASE/custom-converter.md)\n" +
         "  3. Rethink your source or target type using supported types."
 
 /**

@@ -1,122 +1,69 @@
-# Observability — MappingListener
+# MappingListener and the Degradation Sink
 
-KMapper embeds a lightweight observability hook into every generated mapper. When no listener is registered, this hook has **~zero cost** and leaves no overhead in production builds.
+Two channels tell you everything mappings do in production:
 
-## The `MappingListener` Interface
+- **`Result` failures** — hard errors, at the call site. ([Error
+  handling](../error-handling/mapping-exception.md).)
+- **The degradation sink** — every *absorbed* leniency: the broken date that became `null`,
+  the dropped list element, the converged duplicate key. This page is that channel.
 
-```kotlin
-// com.sahsenvar.kmapper
-interface MappingListener {
-    fun onMapStart(source: Any, target: KClass<*>) {}
-    fun onMapComplete(source: Any, result: Any) {}
-    fun onError(source: Any, error: MappingException) {}
-}
-```
-
-All methods have a default no-op implementation; override only the ones you need. The interface is forward-compatible: future versions may add new methods like `onFieldDefaulted` or `onConversion` without breaking your existing implementations.
-
-## KMapper — Registering Listeners
-
-The `KMapper` singleton manages the listener list:
+## Registering a listener
 
 ```kotlin
-object KMapper {
-    val hasListeners: Boolean
-    fun addListener(listener: MappingListener)
-    fun removeListener(listener: MappingListener)
-    fun dispatch(block: MappingListener.() -> Unit)
-}
-```
+import com.sahsenvar.kmapper.KMapper
+import com.sahsenvar.kmapper.MappingListener
+import com.sahsenvar.kmapper.MappingDegradation
 
-Listeners are held with copy-on-write semantics: `addListener`/`removeListener` calls create a new list instead of mutating the existing one. This prevents data races in shared-memory environments like JVM/Android without requiring an external dependency such as `atomicfu`.
-
-## Generated Code — Guarded Dispatch
-
-Every generated mapper contains a guard block protected by `KMapper.hasListeners`:
-
-```kotlin
-fun UserRemote.toUserDomain(): UserDomain {
-    if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toUserDomain, UserDomain::class) }
-    val result = UserDomain(
-        id = id ?: throw MappingException.RequiredFieldMissing("id"),
-    )
-    if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toUserDomain, result) }
-    return result
-}
-```
-
-When `hasListeners` is false (no listener registered), `dispatch` is never called. There is no additional overhead as long as you do not register a listener in production.
-
-Events are emitted at **per-mapper** coarse granularity — the generated code stays lean.
-
-## LoggingMappingListener
-
-KMapper ships a basic logging implementation:
-
-```kotlin
-class LoggingMappingListener(private val log: (String) -> Unit) : MappingListener {
-    override fun onMapStart(source: Any, target: KClass<*>) =
-        log("KMapper start: ${source::class.simpleName} -> ${target.simpleName}")
-
-    override fun onMapComplete(source: Any, result: Any) =
-        log("KMapper done: ${source::class.simpleName} -> ${result::class.simpleName}")
-
-    override fun onError(source: Any, error: MappingException) =
-        log("KMapper error: ${error.message}")
-}
-```
-
-Pass any log function to the `log` parameter — `println`, Timber, Napier, or similar:
-
-```kotlin
-// Android (Application.onCreate / DI init)
-KMapper.addListener(LoggingMappingListener { message -> Log.d("KMapper", message) })
-
-// Kotlin/Native or shared code
-KMapper.addListener(LoggingMappingListener(::println))
-```
-
-## Registering at App Init
-
-Listeners should be registered once at application startup. The API is not designed for frequent `addListener`/`removeListener` calls.
-
-**Android:**
-
-```kotlin
-class MyApplication : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        if (BuildConfig.DEBUG) {
-            KMapper.addListener(LoggingMappingListener { message ->
-                Log.d("KMapper", message)
-            })
-        }
+// once, at app startup (Application.onCreate / iOS app delegate):
+KMapper.addListener(object : MappingListener {
+    override fun onDegradation(event: MappingDegradation) {
+        telemetry.count("mapping.degradation", event::class.simpleName)
     }
-}
-```
 
-**Koin / DI init:**
-
-```kotlin
-// KoinInitializer or a similar initialization point
-KMapper.addListener(LoggingMappingListener { message -> logger.debug(message) })
-```
-
-**Custom Listener:**
-
-```kotlin
-class MetricsMappingListener(private val tracker: MetricsTracker) : MappingListener {
     override fun onError(source: Any, error: MappingException) {
-        tracker.recordMappingError(
-            sourceType = source::class.simpleName ?: "Unknown",
-            errorType  = error::class.simpleName ?: "Unknown",
-        )
+        log.warn("mapping failed: ${error.message}")
     }
-}
-
-KMapper.addListener(MetricsMappingListener(myTracker))
+})
 ```
 
----
+`MappingListener` also offers `onMapStart`/`onMapComplete` for tracing. All methods have
+default no-op bodies — override what you need. A ready-made `LoggingMappingListener(log)` is
+included.
 
-Next: [Multi-Module Projects](../advanced/multi-module.md)
+Listeners are pure observers by contract: an exception thrown inside a listener is suppressed
+and can never affect the mapping or other listeners. Generated code checks
+`KMapper.hasListeners` first, so the whole channel costs ~nothing when unused.
+
+## The degradation events
+
+`MappingDegradation` is sealed; every event carries the field path:
+
+| Event | Emitted when |
+|-------|--------------|
+| `AbsorbedConversionError` | a broken scalar took a default/null escape ([ladder](../basic-usage/null-safety.md) rung 2/3) — carries the cause |
+| `DroppedBrokenElement` | a broken collection element was dropped |
+| `DroppedNullElement` | a null element didn't fit a non-null element type and was dropped |
+| `DuplicateKey` | two map keys converged after conversion; last entry won |
+| `ConvergedDuplicateElement` | two set elements converged after conversion |
+
+The split to remember (Rule 2 of the [mental model](../getting-started/mental-model.md)):
+**declared absence is silent** — a nullable field receiving null is *not* an event;
+**absorbed brokenness always reports** — data was present and lost, telemetry should know.
+
+## The debug/release pattern
+
+```kotlin
+if (BuildConfig.DEBUG) {
+    KMapper.addListener(object : MappingListener {
+        override fun onDegradation(event: MappingDegradation) =
+            error("degradation in debug build: $event") // crash loudly while developing…
+    })
+} else {
+    KMapper.addListener(MetricsListener) // …observe quietly in production
+}
+```
+
+One warning: don't run mappings *inside* `onDegradation` — a degrading seam inside the tap
+would recurse the dispatch.
+
+> Next: **[Multi-Module Projects →](../advanced/multi-module.md)**

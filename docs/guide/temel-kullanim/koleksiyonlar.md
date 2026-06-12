@@ -1,170 +1,71 @@
 # Koleksiyonlar
 
-KMapper, `List` ve `Set` koleksiyonlarındaki her elemanı otomatik olarak eşler. Koleksiyon tipine özel bir anotasyon gerekmez — element tipi eşlenmiş bir model olduğunda processor bunu kendisi fark eder.
+`List`, `Set` ve `Map` alanları eleman eleman eşlenir ve **her eleman kendi fallback
+ladder'ına biner**. Tasarım hedefi: yüz elemandan biri bozuksa bedeli o eleman olsun, payload
+değil — ve asla sessizce olmasın.
 
----
-
-## List Eşleştirme
+## List'ler
 
 ```kotlin
-@MapTo(TagDomain::class)
-data class TagRemote(val id: String, val name: String)
+data class Sensors(val readings: List<Int>)
 
-data class TagDomain(val id: String, val name: String)
+@MapTo(Sensors::class)
+data class SensorsResponse(val readings: List<String>) // eleman başına "42" -> 42
+```
 
-@MapTo(ArticleDomain::class)
-data class ArticleRemote(
-    val title: String,
-    val tags: List<TagRemote>,
-)
+Bozuk ya da null bir elemanın davranışı, **hedef eleman tipine** göre:
 
-data class ArticleDomain(
-    val title: String,
-    val tags: List<TagDomain>,
+| Hedef eleman | Bozuk/null eleman ne olur | Raporu |
+|--------------|----------------------------|--------|
+| `List<T?>` | yerinde `null` (boyut korunur) | `AbsorbedConversionError` / konum korunur |
+| `List<T>` | atılır (liste sıkışır) | `DroppedBrokenElement` / `DroppedNullElement` |
+
+Skalerlerle aynı felsefe: kaçışı tip beyan eder, her kullanımını sink duyar.
+
+## Alan bazlı eleman politikası: OnFail
+
+[`@ConvertWith(onFail = …)`](../tip-donusumu/convert-with.md) tek bir koleksiyon alanını
+ayarlar. Annotation, **üretilen yönün kaynak alanına** konur:
+
+```kotlin
+@MapTo(Measurements::class)
+data class MeasurementsResponse(
+    @ConvertWith(onFail = OnFail.Throw)
+    val invoiceLines: List<String>, // hep-ya-hiç: tek bozuk satır mapping'i düşürür
+
+    @ConvertWith(onFail = OnFail.Skip)
+    val tagIds: List<String?>, // sıkıştır: hedef null tutabilse bile bozuk/null elemanları at
 )
 ```
 
-Üretilen kod `.map { it.toTagDomain() }` kullanır:
+- `OnFail.Throw` — alanı sertleştirir: ilk bozuk eleman, `items[i]` tarzı yol taşıyan hatayla
+  mapping'in tamamını düşürür.
+- `OnFail.Skip` — sıkıştırır: bozuk/null elemanlar atılır (ve raporlanır).
+- `OnFail.Auto` (varsayılan) — yukarıdaki tablo.
 
-```kotlin
-public fun ArticleRemote.toArticleDomain(): ArticleDomain = ArticleDomain(
-    title = title,
-    tags  = tags.map { it.toTagDomain() },
-)
-```
+## Set'ler
 
----
+Aynı ladder. Bir ek incelik: eleman dönüşümü, kaynakta farklı iki elemanı hedefte eşit hale
+getirebilir (`"01"` ve `"1"` ikisi de → `1`). Set tekini tutar ve `ConvergedDuplicateElement`
+raporlar — set semantiği bile olsa sessiz veri kaybı yok.
 
-## Set Eşleştirme
+## Map'ler
 
-`Set` için aynı kural geçerlidir; processor `.map { }.toSet()` üretir:
+Anahtarlar ve değerler ayrı ayrı ladder'a biner. Map'e özgü iki kural:
 
-```kotlin
-@MapTo(PermissionDomain::class)
-data class PermissionRemote(val code: String)
+- **bozuk anahtar** girdinin tamamını düşürür (adressiz değer anlamsızdır) —
+  `DroppedBrokenElement` olarak raporlanır;
+- dönüşüm sonrası aynı hedef anahtara düşen iki kaynak anahtardan **sonuncusu** kalır ve
+  `DuplicateKey` raporlanır.
 
-data class PermissionDomain(val code: String)
+Tipleri birebir uyuşan `Map<String, String> → Map<String, String>` olduğu gibi geçer.
 
-@MapTo(RoleDomain::class)
-data class RoleRemote(
-    val name: String,
-    val permissions: Set<PermissionRemote>,
-)
+## Stdlib'in ötesi: wrapper'lar
 
-data class RoleDomain(
-    val name: String,
-    val permissions: Set<PermissionDomain>,
-)
-```
+`PersistentList`, `NonEmptyList` ve benzerleri tek bir `@CollectionWrapper` kaydı
+uzaklıkta — aynı eleman semantiği, farklı kap. Bkz.
+[Immutable Koleksiyonlar](../tip-donusumu/immutable.md) ve
+[Arrow](../tip-donusumu/arrow.md); kendi kap tipiniz için
+[kendi wrapper'ınızı yazın](../tip-donusumu/ozel-converter.md).
 
-Üretilen:
-
-```kotlin
-public fun RoleRemote.toRoleDomain(): RoleDomain = RoleDomain(
-    name        = name,
-    permissions = permissions.map { it.toPermissionDomain() }.toSet(),
-)
-```
-
----
-
-## Nullable Koleksiyonlar
-
-Kaynak koleksiyon nullable ise güvenli çağrı eklenir:
-
-```kotlin
-@MapTo(ArticleDomain::class)
-data class ArticleRemote(
-    val title: String,
-    val tags: List<TagRemote>?,    // opsiyonel liste
-)
-
-data class ArticleDomain(
-    val title: String,
-    val tags: List<TagDomain>?,
-)
-```
-
-Üretilen:
-
-```kotlin
-public fun ArticleRemote.toArticleDomain(): ArticleDomain = ArticleDomain(
-    title = title,
-    tags  = tags?.map { it.toTagDomain() },
-)
-```
-
-Hedef `tags` alanı zorunlu (`List<TagDomain>`, nullable değil) olsaydı null-safety kuralları devreye girerdi — bkz. [Null-Safety](null-safety.md).
-
----
-
-## İç İçe Koleksiyonlar
-
-Koleksiyon elemanlarının kendisi de koleksiyon içerebilir; processor her seviyeyi zincirler:
-
-```kotlin
-@MapTo(CategoryDomain::class)
-data class CategoryRemote(
-    val name: String,
-    val subCategories: List<CategoryRemote>,
-)
-
-data class CategoryDomain(
-    val name: String,
-    val subCategories: List<CategoryDomain>,
-)
-```
-
-Üretilen:
-
-```kotlin
-public fun CategoryRemote.toCategoryDomain(): CategoryDomain = CategoryDomain(
-    name          = name,
-    subCategories = subCategories.map { it.toCategoryDomain() },
-)
-```
-
----
-
-## Immutable Koleksiyonlar
-
-`PersistentList`, `ImmutableList`, `ImmutableSet` gibi `kotlinx.collections.immutable` tiplerini hedef olarak kullanmak istiyorsanız `converters-immutable` modülünü ekleyin. Bu modül `@CollectionWrapper` anotasyonunu taşıyan sarmalayıcı fonksiyonlar sağlar ve processor bunları otomatik keşfeder.
-
-Ayrıntılar için bkz. [Immutable Koleksiyonlar (converters-immutable)](../tip-donusumu/immutable.md).
-
----
-
-## Map\<K, V\> Eşleştirme
-
-`Map<K, V1>` → `Map<K, V2>` ekstra bağımlılık gerektirmeden desteklenir. Processor her
-**değeri** diğer alanlardaki kurallarla aynı şekilde eşler — değer tipleri aynıysa doğrudan
-atama, `V1` eşlenebilir bir modeliyle `toV2()` çağrısı yapılır. Anahtarlar her iki tarafta da
-aynı tip olmalıdır.
-
-```kotlin
-@MapTo(ConfigDomain::class)
-data class ConfigRemote(
-    val id: String,
-    val settings: Map<String, SettingRemote>,
-)
-
-data class ConfigDomain(
-    val id: String,
-    val settings: Map<String, SettingDomain>,
-)
-```
-
-Üretilen:
-
-```kotlin
-public fun ConfigRemote.toConfigDomain(): ConfigDomain = ConfigDomain(
-    id       = id,
-    settings = settings.mapValues { (_, v) -> v.toSettingDomain() },
-)
-```
-
-Değer tipleri aynı olduğunda (`Map<String, String>` → `Map<String, String>`), değerler mapper
-çağrısı olmadan doğrudan atanır.
-
-> **Not:** `PersistentMap`, `ImmutableMap` ve stdlib dışı diğer map tipleri henüz desteklenmez;
-> bu destek ilerleyen bir sürüme ertelenmiştir.
+> Sıradaki: **[Built-in Converter'lar →](../tip-donusumu/builtin.md)**

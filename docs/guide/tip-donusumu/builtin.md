@@ -1,97 +1,71 @@
 # Built-in Converter'lar
 
-KMapper, en yaygın tip dönüşümlerini kutudan çıkar çıkmaz destekler. Bu converter'lar `com.sahsenvar.kmapper.converter.builtin` paketindedir ve `@KMapperConfig`'e eklemenize gerek kalmadan processor tarafından otomatik tanınır.
+Eşleşen bir alan çiftinin tipleri farklıysa KMapper **derleme zamanında** bir converter
+çözümler. 35 tip çifti core ile gelir ve **kayıt gerektirmeden** otomatik çözümlenir — ve en
+az onun kadar önemlisi: veri bozacak yönler derleme zamanında *reddedilir*.
 
----
+## Katalog
 
-## Built-in Converter Tablosu
+Bütün built-in'ler `com.sahsenvar.kmapper.converter.builtin` paketinde public object'lerdir;
+isimde **zengin tip önce** gelir (daha fazlasını tutabilen tip: `LongIntConverter`,
+`InstantStringConverter`).
 
-| Converter | `S → T` (ileri) | `T → S` (ters) |
-|-----------|-----------------|----------------|
-| `StringIntConverter` | `String → Int` (`toInt()`) | `Int → String` (`toString()`) |
-| `StringLongConverter` | `String → Long` (`toLong()`) | `Long → String` |
-| `StringDoubleConverter` | `String → Double` (`toDouble()`) | `Double → String` |
-| `StringFloatConverter` | `String → Float` (`toFloat()`) | `Float → String` |
-| `StringBooleanConverter` | `String → Boolean` (`toBoolean()`) | `Boolean → String` |
-| `IntLongConverter` | `Int → Long` | `Long → Int` ¹ |
-| `StringInstantConverter` | `String → Instant` (ISO-8601) | `Instant → String` |
-| `LongInstantConverter` | `Long → Instant` (epoch ms) | `Instant → Long` |
+**Sayısal genişletme (12 çift)** — kayıpsız yön dönüştürür; daraltan yön reddedilir
+(aşağıya bakın):
 
-¹ Ters yön (`Long → Int`) değer `Int` aralığı dışındaysa `TypeConversionFailed` fırlatır.
+| Zengin | Dar |
+|--------|-----|
+| `Short`, `Int`, `Long`, `Float`, `Double` | `Byte` |
+| `Int`, `Long`, `Float`, `Double` | `Short` |
+| `Long`, `Double` | `Int` |
+| `Double` | `Float` |
 
-`Instant` tipi `kotlinx.datetime.Instant`'tır (`kotlinx-datetime` bağımlılığı gerekir).
+**String çiftleri (7)** — `Byte`, `Short`, `Int`, `Long`, `Float`, `Double`, `Boolean` ↔
+`String`. Formatlama totaldir; parse, bozuk girdide fırlatır (ve
+[ladder'a](../temel-kullanim/null-safety.md) biner). `Boolean` parse katıdır: yalnızca
+`"true"`/`"false"` — `"TRUE"`, `"1"`, `"yes"` belirsiz wire formatları olarak reddedilir.
 
----
+**Çapraz çiftler (9)** — `Float ↔ Int`, `Float ↔ Long`, `Double ↔ Long` (kayıpsız yön
+dönüştürür) ve `Boolean` ↔ tüm sayısal tipler. `Boolean`/sayısal çiftler özeldir: **iki yön de
+reddedilir** — `Byte → Boolean`'ın kanonik bir anlamı yok (`2` true mu?), `Boolean → Byte`'ın
+kanonik bir kodlaması yok (`0/1`? `-1`?). Registry'de durmalarının nedeni, jenerik "converter
+yok" hatası yerine *gerekçeli* reddi almanız ve **kendi** wire kuralınızı kodlayan tek
+satırlık converter'ı yazmanız.
 
-## Bilateral (İki Yönlü) Converter Kavramı
+**kotlinx-datetime (5)** — `Instant ↔ String` (ISO-8601), `Instant ↔ Long` (epoch ms),
+`LocalDate ↔ String`, `LocalDateTime ↔ String`, `LocalTime ↔ String`.
 
-Her converter nesnesi **hem ileri hem ters yönü** tek sınıfta barındırır:
+**kotlin.time (2)** — `Duration ↔ String` (ISO-8601, ör. `PT1H30M`), `Duration ↔ Long` (tam
+milisaniye; milisaniye altı hassasiyet kırpılır — `Instant ↔ Long` ile aynı, belgelenmiş
+takas).
 
-```kotlin
-object StringIntConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
-    override fun convertToNonNull(value: String): Int = value.toInt()
-    override fun convertFromNonNull(value: Int): String = value.toString()
-}
-```
+## Reddedilen yönler bir özelliktir
 
-Processor, hangi yönde dönüşüm gerektiğini analiz eder ve doğru metodu çağırır. `String → Int` eşleşmesi için `convertToNonNull`, `Int → String` için `convertFromNonNull` kullanılır.
-
----
-
-## convertOrFail Sarmalayıcısı
-
-Built-in converter'lar dahil tüm converter çağrıları üretilen kodda `convertOrFail` ile sarılır. Bu, ham platform istisnasının (örn. `NumberFormatException`) dışarı sızmasını engeller:
-
-```kotlin
-// Üretilen kod şu şekilde görünür:
-count = convertOrFail("String", "Int") { StringIntConverter.convertToNonNull(count) }
-```
-
-> **Not:** `convertOrFail`'e geçilen tip adları üretilen kodda tam niteliktedir (fully-qualified) — örn. `"kotlin.String"`, `"kotlin.Int"`, `"kotlinx.datetime.Instant"`. Örneklerde kısa form kullanılmıştır.
-
-Dönüşüm başarısız olursa `MappingException.TypeConversionFailed` fırlatılır; `cause` alanında orijinal istisna yer alır.
-
----
-
-## Kullanım Örneği
-
-```kotlin
-@MapTo(ProductDomain::class)
-data class ProductRemote(
-    val id: String,
-    val price: String,     // API'den string geldi, domain'de Double
-    val stock: String,     // API'den string geldi, domain'de Int
-)
-
-data class ProductDomain(
-    val id: String,
-    val price: Double,
-    val stock: Int,
-)
-```
-
-`String → Double` ve `String → Int` built-in oldukları için ek kayıt gerekmez. Üretilen:
-
-```kotlin
-public fun ProductRemote.toProductDomain(): ProductDomain = ProductDomain(
-    id    = id,
-    price = convertOrFail("String", "Double") { StringDoubleConverter.convertToNonNull(price) },
-    stock = convertOrFail("String", "Int")    { StringIntConverter.convertToNonNull(stock) },
-)
-```
-
----
-
-## Kayıt Dışı Tip Çifti → Derleme Hatası
-
-Built-in tabloda olmayan ve `@KMapperConfig`'e de eklenmeyen bir tip çifti kullanılırsa processor **derleme hatası** üretir:
+`LongIntConverter`, `Int → Long`'u seve seve dönüştürür. `Long → Int` isterseniz **build
+düşer**:
 
 ```
-no converter for MyCustomType -> MyTargetType; add it to @KMapperConfig(converters=[...]) or annotate the field with @UseMapTypeConverter
+Long -> Int conversion is unsupported! This relates to our policy on lossy conversions
+(e.g. Long -> Int, Double -> Float). What you can do:
+  1. Check the converter add-ons
+  2. Create your own converter
+  3. Rethink your source or target type using supported types.
 ```
 
-Kendi converter'ınızı yazmak için bkz. [Kendi Converter'ını Yazmak](ozel-converter.md).
+Bu, `@UnsupportedDirection`'dır — sessiz kırpma yerine beyan edilmiş, gerekçeli bir ret.
+Domain'iniz aralığı *gerçekten* garanti ediyorsa üç satırlık custom converter'ı yazar, kararı
+açıkça üstlenirsiniz. Aynı mekanizma
+[kendi converter'larınızda](ozel-converter.md) da emrinizde.
 
----
+## Çözümleme sırası
 
-Sonraki adım: [Kendi Converter'ını Yazmak](ozel-converter.md)
+`A → B` isteyen bir alan için:
+
+1. alan üzerindeki [`@ConvertWith`](convert-with.md) — açık override kazanır
+2. [`@KMapperConfig`](kmapperconfig.md) converter'larınız — aynı çift için custom,
+   built-in'i **gölgeler**
+3. core built-in'leri (bu sayfa)
+4. hiçbiri yoksa → çifti ve nereye kayıt ekleyeceğinizi söyleyen `MissingConverter` derleme
+   hatası
+
+> Sıradaki: **[Kendi Converter'ınızı Yazmak →](ozel-converter.md)**

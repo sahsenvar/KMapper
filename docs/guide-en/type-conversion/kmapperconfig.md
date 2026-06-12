@@ -1,131 +1,70 @@
-# @KMapperConfig and @UseMapTypeConverter
+# @KMapperConfig — Registration and Discovery
 
-`@KMapperConfig` is how you register converters that are not in the built-in table with the processor. For per-field overrides, use `@UseMapTypeConverter`.
-
----
-
-## @KMapperConfig — Global Converter List
+`@KMapperConfig` is your module's one-stop registration point: list converter objects and
+collection wrappers once, and every mapping in the module can use them — **no per-field
+annotation needed**.
 
 ```kotlin
-@KMapperConfig(converters: Array<KClass<*>> = [])
-```
+import com.sahsenvar.kmapper.annotations.KMapperConfig
 
-`@KMapperConfig` is applied to an `object`. Every class in the `converters` array must be a subtype of `MapTypeConverter<S,T>`.
-
-```kotlin
-@KMapperConfig(converters = [
-    UuidStringConverter::class,
-    StatusConverter::class,
-    StringInstantConverter::class,   // built-in, but harmless to include in the list
-])
+@KMapperConfig(
+    converters = [MoneyStringConverter::class],
+    wrappers = [PersistentListWrapper::class, NonEmptyListWrapper::class],
+)
 object AppMapperConfig
 ```
 
-The processor finds this object at compile time, resolves the `(S,T)` pair from each converter's `MapTypeConverter<S,T>` supertype, and automatically wires the generated calls for those pairs. **No manual runtime registration is needed** — the processor generates the runtime registration from the same list.
+The carrier (`AppMapperConfig`) is just an anchor for the annotation — any object works, one
+per module is the pattern.
 
----
+## Discovery is by type pair
 
-## Precedence Order
-
-The converter for a given field is chosen in this order:
-
-1. **`@UseMapTypeConverter`** (per-field override) — highest priority
-2. **`@KMapperConfig` list** (global registration)
-3. **Built-in converter table** (always available in the background)
-
-The search stops as soon as a higher-priority rule is found.
-
----
-
-## @UseMapTypeConverter — Per-Field Override
-
-When you need a different converter than the one in the global list for the same `(S,T)` pair, apply `@UseMapTypeConverter` to a single field:
+You never say *which field* uses `MoneyStringConverter`. The processor sees a field pair
+`Money → String` (either direction), finds a registered converter whose `(S, T)` types match,
+and wires it in. Declaration order doesn't matter.
 
 ```kotlin
-// Global @KMapperConfig: StringInstantConverter (ISO-8601)
-@KMapperConfig(converters = [StringInstantConverter::class])
-object AppMapperConfig
-
-@MapTo(EventDomain::class)
-data class EventRemote(
-    val startsAt: String,          // global: converted with ISO-8601
-
-    @UseMapTypeConverter(LongStringToInstantConverter::class)  // per-field override
-    val legacyTime: String,        // different format for this field
+@MapTo(Invoice::class)
+data class InvoiceResponse(
+    val total: String, // String -> Money: resolved automatically via the config
 )
 
-data class EventDomain(
-    val startsAt: Instant,
-    val legacyTime: Instant,
-)
+data class Invoice(val total: Money)
 ```
 
-Generated code:
+## Resolution and shadowing
+
+For each field pair, first match wins:
+
+1. **[`@ConvertWith`](convert-with.md)** on the field — the explicit override
+2. **`@KMapperConfig` converters** — *your* `Instant ↔ String` converter shadows the
+   built-in one for the whole module (e.g. to switch the wire format to epoch strings)
+3. **[core built-ins](built-in.md)**
+4. **compile error** — `MissingConverter`, naming the pair
+
+Two registered converters claiming the **same pair** is a compile error, not a coin toss: the
+registry must stay unambiguous. Format *variants* of one pair (UTF-8 vs Base64
+`String ↔ ByteString`) belong in per-field `@ConvertWith` instead.
+
+## Wrappers
+
+`wrappers = [...]` registers [`@CollectionWrapper`](custom-converter.md#collection-wrappers)
+objects that teach collection mapping new container types:
 
 ```kotlin
-public fun EventRemote.toEventDomain(): EventDomain = EventDomain(
-    startsAt   = convertOrFail("String", "Instant") { StringInstantConverter.convertToNonNull(startsAt) },
-    legacyTime = convertOrFail("String", "Instant") { LongStringToInstantConverter.convertToNonNull(legacyTime) },
+data class UserD(
+    val tags: PersistentList<Tag>,  // List<TagR> -> PersistentList<Tag>: wrapper + element mapping
+    val roles: NonEmptyList<String>, // empty wire list -> MappingException.EmptyCollection
 )
 ```
 
-A converter specified with `@UseMapTypeConverter` does not need to be in the `@KMapperConfig` list; it is valid only for the annotated field and overrides the global list for that field.
+Add-ons ship ready wrappers — [immutable](immutable.md), [arrow](arrow.md) — and your own
+container types register through the identical mechanism.
 
----
+## Scope
 
-## Missing Converter → Compile Error
+One `@KMapperConfig` covers the **compilation module** it lives in. In a multi-module build,
+each module that declares mappings has its own config (a tiny object usually) — see
+[Multi-Module Projects](../advanced/multi-module.md).
 
-If the required `(S,T)` pair for a field is found in neither the built-in table, the global list, nor a per-field override, the processor reports a **compile error**:
-
-```
-no converter for UUID -> String; add it to @KMapperConfig(converters=[...]) or annotate the field with @UseMapTypeConverter
-```
-
----
-
-## Ambiguous Global — Compile Error
-
-If the `@KMapperConfig` list contains two different converters for the **same `(S,T)` pair**, the processor also reports a compile error:
-
-```kotlin
-@KMapperConfig(converters = [
-    StringInstantConverter::class,   // String → Instant
-    EpochStringInstantConverter::class,  // String → Instant  ← same pair!
-])
-object AppMapperConfig
-```
-
-The processor reports something like:
-
-```
-❌ DUPLICATE CONVERTER IN @KMapperConfig DETECTED
-
-Type pair: kotlin.String → kotlinx.datetime.Instant
-
-First converter:  ...StringInstantConverter
-Second converter: ...EpochStringInstantConverter
-
-@KMapperConfig lists two converters for the same (S,T) pair — this is ambiguous.
-→ Keep exactly one converter for this pair in @KMapperConfig(converters=[...]).
-  If you need a different converter for a specific field, use @UseMapTypeConverter
-  on that field instead of adding a second entry to @KMapperConfig.
-```
-
-**Resolution:** Keep the generally-used converter in `@KMapperConfig`, and apply the exceptional one only to the specific field that needs it via `@UseMapTypeConverter`.
-
----
-
-## KMapper.addConverter — Runtime Escape Hatch
-
-When compile-time safety is not a requirement, you can register a converter at runtime with `KMapper.addConverter(converter)`:
-
-```kotlin
-// Application.onCreate or iOS app delegate:
-KMapper.addConverter(MyConverter)
-```
-
-This path is **not compile-time safe** — the processor cannot see this registration and cannot check for missing converters. Use it only in dynamic or test environments; prefer `@KMapperConfig` in production code.
-
----
-
-Next: [Immutable Collections (converters-immutable)](immutable.md)
+> Next: **[@ConvertWith and OnFail →](convert-with.md)**

@@ -1,117 +1,30 @@
-# URI Converter'ları — converters-uri
+# URI — converters-uri
 
-`converters-uri` modülü, URI tipleri için **platforma özgü scalar converter'lar** sağlar. KMP
-ortak bir URI tipi bulunmadığından, her platform kendi converter'ını alır:
-
-| Platform | Tip | Converter |
-|----------|-----|-----------|
-| JVM | `java.net.URI` | `JavaStringUriConverter` |
-| Android | `android.net.Uri` | `AndroidStringUriConverter` |
-| iOS | `platform.Foundation.NSURL` | `NsUrlStringConverter` |
-
-Bu modülün `commonMain`'inde converter bulunmaz. Diğer scalar add-on'lar gibi, converter'lar
-`@KMapperConfig(converters = [...])` listesine eklenmelidir — otomatik keşfedilmezler.
-
----
+`String ↔` platformun URI tipi, platform başına bir converter — domain modelleri ham string
+yerine gerçek URI tipleri taşıyan KMP uygulamaları için.
 
 ## Kurulum
 
 ```kotlin
-// build.gradle.kts (tüketen modül)
-kotlin {
-    sourceSets {
-        commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
-        }
-        // converters-uri platforma özgü kaynak kümelerde kullanılır:
-        jvmMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-converters-uri:1.0.0")
-        }
-        androidMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-converters-uri:1.0.0")
-        }
-        // iOS için: iosMain veya her iOS hedef kaynak kümesine ekleyin
-    }
+commonMain.dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-uri:2.0.0")
 }
 ```
 
----
+## Converter'lar (`com.sahsenvar.kmapper.uri`)
 
-## Platforma Göre Converter'lar
+| Object | Çift | Source set |
+|--------|------|------------|
+| `JavaStringUriConverter` | `String ↔ java.net.URI` | jvmMain |
+| `AndroidStringUriConverter` | `String ↔ android.net.Uri` | androidMain |
+| `NsUrlStringConverter` | `String ↔ platform.Foundation.NSURL` | iosMain |
 
-### JVM — `java.net.URI`
+URI tipinin kendisi platforma göre değiştiğinden bunlar tek bir `commonMain`
+`@KMapperConfig`'i yerine **platform** source set'lerinde kaydedilir (`expect`/`actual` bir
+config object'i ya da platform bazlı mapping tanımları).
 
-| Nesne | K | H | İleri | Geri |
-|-------|---|---|-------|------|
-| `JavaStringUriConverter` | `String` | `java.net.URI` | `URI.create(value)` | `value.toString()` |
+Bozuk URI'ler platformun kendi exception'ını fırlatır ve
+[ladder'a](../temel-kullanim/null-safety.md) biner; `commonMain`'de platform tipi olmadan
+URL biçimli string doğrulamak için [`UrlValidator`](../dogrulama/validatorler.md).
 
-### Android — `android.net.Uri`
-
-| Nesne | K | H | İleri | Geri |
-|-------|---|---|-------|------|
-| `AndroidStringUriConverter` | `String` | `android.net.Uri` | `Uri.parse(value)` | `value.toString()` |
-
-### iOS — `platform.Foundation.NSURL`
-
-| Nesne | K | H | İleri | Geri |
-|-------|---|---|-------|------|
-| `NsUrlStringConverter` | `String` | `platform.Foundation.NSURL` | `NSURL.URLWithString(value)` | `value.absoluteString ?: value.path ?: ""` |
-
-`NSURL.URLWithString()`, hatalı biçimlendirilmiş girdi için `null` döner. Converter, null durumunda
-`MappingException.TypeConversionFailed("String", "NSURL", cause)` fırlatır — sessizce boş bir
-NSURL üretmez.
-
-> **NSURL round-trip uyarısı:** `NSURL`, URL'leri normalize eder (ör. sondaki eğik çizgi
-> standartlaştırması). Round-trip testleri, `"https://example.com/"` (sondaki eğik çizgi mevcut)
-> gibi halihazırda normalize edilmiş URL'ler kullanmalıdır. `"https://example.com"` (eğik çizgi
-> olmadan) iOS'ta farklı bir dizgiyle dönebilir.
-
----
-
-## Kullanım (JVM/Android örneği)
-
-```kotlin
-import com.sahsenvar.kmapper.annotations.KMapperConfig
-import com.sahsenvar.kmapper.uri.JavaStringUriConverter
-
-@KMapperConfig(converters = [JavaStringUriConverter::class])
-object AppMappers
-```
-
-```kotlin
-import java.net.URI
-
-@MapTo(ResourceDomain::class)
-data class ResourceRemote(
-    val id: String,
-    val endpoint: String,    // "https://api.example.com/resource/1"
-)
-
-data class ResourceDomain(
-    val id: String,
-    val endpoint: URI,
-)
-```
-
-Üretilen eşleştirme:
-
-```kotlin
-public fun ResourceRemote.toResourceDomain(): ResourceDomain = ResourceDomain(
-    id       = id,
-    endpoint = JavaStringUriConverter.convertToNonNull(endpoint),
-)
-```
-
----
-
-## Hangi Converter'ı Seçmeli?
-
-| Hedef tip | Converter |
-|-----------|-----------|
-| `java.net.URI` (JVM) | `JavaStringUriConverter` |
-| `android.net.Uri` (Android) | `AndroidStringUriConverter` |
-| `platform.Foundation.NSURL` (iOS) | `NsUrlStringConverter` |
-
----
-
-Sonraki adım: [Doğrulama — @ValidateFrom / @ValidateTo →](../ileri/dogrulama.md) | Diğer kaynaklar: [@KMapperConfig](kmapperconfig.md)
+> Sıradaki: **[@Validate →](../dogrulama/validate.md)**

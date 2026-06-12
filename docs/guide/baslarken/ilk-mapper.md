@@ -1,102 +1,88 @@
-# 5 Dakikada İlk Mapper
+# İlk Mapper'ınız
 
-Bu sayfada bir REST yanıtını (`RemoteModel`) domain modeline dönüştüren ilk mapper'ı yazıyoruz.
+API yanıtından güvenle eşlenmiş bir domain nesnesine beş dakika — bilerek tetiklenmiş ilk
+mapping hatanız dahil.
 
-## 1. Modelleri tanımla
+## 1. İki model
 
-Hedef (domain) modelin sade Kotlin sınıfıdır:
-
-```kotlin
-data class UserDomain(
-    val id: String,
-    val email: String,
-)
-```
-
-Kaynak (remote) modele `@MapTo` ekleyerek "bunu `UserDomain`'e eşleyebilmek istiyorum" dersiniz:
+Bir wire modeli (API'nin gönderdiği) ve bir domain modeli (uygulamanızın istediği):
 
 ```kotlin
 import com.sahsenvar.kmapper.annotations.MapTo
+import kotlinx.datetime.LocalDate
 
-@MapTo(UserDomain::class)
-data class UserRemote(
-    val id: String,
+data class User(
+    val id: Long,
     val email: String,
+    val joined: LocalDate,
+)
+
+@MapTo(User::class)
+data class UserResponse(
+    val id: Long,
+    val email: String,
+    val joined: String, // wire'da ISO tarih
 )
 ```
 
-> KMapper, modellerinizin belirli bir arayüzü (`RemoteModel`, `DomainModel` vb.) uygulamasını **zorunlu tutmaz**. Bu arayüzler yalnızca kendi mimarinizde bir konvansiyondur; isterseniz kullanabilirsiniz.
+`@MapTo` **wire modelinin** üzerinde durur — kontrol etmediğiniz taraf, kontrol ettiğiniz
+tarafa nasıl dönüşeceğini bildiren taraftır.
 
-## 2. Derle
+## 2. Derleyin
 
-Projeyi derleyin. KMapper, kaynakla aynı pakette `UserRemoteMappers.kt` üretir:
+```bash
+./gradlew build
+```
+
+KSP bir extension fonksiyonu üretir:
 
 ```kotlin
-public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
-    id = id,
-    email = email,
+fun UserResponse.toUserResult(): Result<User>
+```
+
+İki alan doğrudan kopyalanır; `joined` ise built-in `LocalDateStringConverter`'dan geçer
+(`String ↔ LocalDate`, 35 built-in çiftten biri — kayıt gerekmez).
+
+## 3. Kullanın
+
+```kotlin
+val user: User = UserResponse(7, "grace@navy.mil", "2026-06-12")
+    .toUserResult()
+    .getOrThrow()
+```
+
+Üretilen fonksiyon `Result<User>` döner: hata durumunda fırlatmak (`getOrThrow`), geriye
+düşmek (`getOrElse`) ya da dallanmak (`fold`) — karar çağıran tarafta, yani *sizde*.
+
+## 4. Bilerek bozun
+
+```kotlin
+val broken = UserResponse(7, "grace@navy.mil", "not-a-date").toUserResult()
+
+println(broken.exceptionOrNull()?.message)
+// Cannot convert joined: String -> LocalDate failed for value "not-a-date" …
+```
+
+Crash yok — hata, tam olarak hangi alanın bozulduğunu söyleyen bir değer olarak geldi. İç içe
+modellerde yol da onunla birlikte büyür (`customer.address.zipCode`); bkz.
+[İç İçe Modeller](../temel-kullanim/nested.md).
+
+## 5. Peki wire'daki değer hiç gelmezse?
+
+"Eksik"in ne anlama geleceğini domain alanının tipi söylesin:
+
+```kotlin
+data class User(
+    val id: Long,
+    val email: String,
+    val joined: LocalDate? = null, // nullable: eksik/bozuk tarih null olur
 )
 ```
 
-> **Not:** Örneklerde sadeleştirilmiş gövde gösterilir. Üretilen gerçek kod ayrıca `KMapper.hasListeners` korumalı gözlemleme guard'ları içerir ve gövdesi `val result = …; return result` biçimindedir — bkz. [MappingListener](../gozlemleme/listener.md).
+Nullable ya da default'lu bir hedef alan *beyan edilmiş bir kaçış noktasıdır*: eksiklik ona
+sessizce akar; **bozuk** bir değer de oraya emilir — ama her emilme gözlemlenebilirlik
+kanalına raporlanır, yani production telemetriniz onu yine görür. Bu sıralama
+(`değer > default > null > hata`) **fallback ladder**'dır — KMapper'ın kalbi.
 
-## 3. Kullan
-
-```kotlin
-val remote = UserRemote(id = "42", email = "a@b.com")
-val domain: UserDomain = remote.toUserDomain()
-```
-
-Hepsi bu kadar. İsim eşleşen alanlar otomatik kopyalanır.
-
-## İç içe modeller otomatik çalışır
-
-Bir alan kendisi de `@MapTo`'lu bir tipse, KMapper iç eşlemeyi otomatik çağırır:
-
-```kotlin
-data class AddressDomain(val city: String)
-data class CustomerDomain(val name: String, val address: AddressDomain)
-
-@MapTo(AddressDomain::class)
-data class AddressRemote(val city: String)
-
-@MapTo(CustomerDomain::class)
-data class CustomerRemote(val name: String, val address: AddressRemote)
-```
-
-Üretilen kod iç eşlemeyi zincirler:
-
-```kotlin
-public fun CustomerRemote.toCustomerDomain(): CustomerDomain = CustomerDomain(
-    name = name,
-    address = address.toAddressDomain(),
-)
-```
-
-## Null-safety daha baştan devrede
-
-Diyelim remote alan nullable ama domain alanı zorunlu:
-
-```kotlin
-data class UserDomain(val id: String)          // zorunlu
-
-@MapTo(UserDomain::class)
-data class UserRemote(val id: String?)          // nullable
-```
-
-KMapper, `null` durumunu **sessizce yutmaz** — gürültülü bir istisna üretir:
-
-```kotlin
-public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
-    id = id ?: throw MappingException.RequiredFieldMissing("id"),
-)
-```
-
-Varsayılan vermek isterseniz `@MapDefaultValue` kullanabilirsiniz (bkz. [Null-Safety](../temel-kullanim/null-safety.md)).
-
-## Sırada ne var?
-
-- Alan adları farklıysa: **[Alan Eşleştirme (@FieldMap)](../temel-kullanim/alan-eslestirme.md)**
-- Tip dönüşümü gerekiyorsa (örn. `String` → `Int`): **[Tip Dönüşümü](../tip-donusumu/builtin.md)**
-- Enum eşlemesi: **[MappableEnum](../enum/mappable-enum.md)**
-- Ters yön (`DomainModel → RemoteModel`): **[@MapTo ve @MapFrom](../temel-kullanim/mapto-mapfrom.md)**
+> Sıradaki: **[Zihinsel Model →](zihinsel-model.md)** — az önce gördüğünüz her şeyi açıklayan
+> üç kural.

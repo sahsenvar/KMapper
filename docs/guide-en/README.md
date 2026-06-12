@@ -1,48 +1,73 @@
-# Introduction
+# KMapper
 
-**KMapper** is a **compile-time**, KSP-based object mapping library for Kotlin Multiplatform. Instead of hand-writing model transformation functions between layers (`RemoteModel → DomainModel`, `DomainModel → UiModel`, etc.), KMapper generates `toX()` extension functions from annotations automatically.
+**Compile-time object mapping for Kotlin Multiplatform.** You annotate your wire models; KMapper
+generates the mapping functions at build time with KSP — no reflection, no runtime registry, no
+hand-written boilerplate to keep in sync.
 
 ```kotlin
-@MapTo(UserDomain::class)
-data class UserRemote(val id: String, val email: String) : RemoteModel
+data class User(val id: Long, val joined: LocalDate)
 
-// KMapper generates:
-fun UserRemote.toUserDomain(): UserDomain = UserDomain(id = id, email = email)
+@MapTo(User::class)
+data class UserResponse(val id: Long, val joined: String)
+
+// Generated for you at compile time:
+val user: Result<User> = UserResponse(7, "2026-06-12").toUserResult()
 ```
 
-> **Note:** Examples show a simplified body. The actual generated code also includes `KMapper.hasListeners`-guarded observability hooks and uses a `val result = …; return result` form — see [MappingListener](observability/listener.md).
+Three things make that snippet different from every mapper you have hand-written:
+
+1. **Failures are values.** The generated function returns `Result<User>` — malformed wire data
+   surfaces as a typed `MappingException`, never as a surprise crash deep in a parsing stack.
+2. **Errors carry a path.** A bad date three objects deep reports
+   `Cannot convert order.customer.joined: …` — you know *which field of which record* broke.
+3. **The conversion is visible and replaceable.** `String → LocalDate` resolved to a built-in
+   converter object. Your own converters plug into *the same* resolution, with the same
+   priority rules and the same compile-time checks.
 
 ## Why KMapper?
 
-- **No reflection.** All mapping code is generated at compile time. This eliminates runtime overhead and makes KMapper **Kotlin/Native (iOS) friendly** — it works seamlessly on platforms where reflection is restricted.
-- **Type- and null-safe.** Type mismatches, missing converters, and unmappable fields become **compile errors**; no runtime surprises.
-- **Zero boilerplate.** You never write mapper functions by hand; no maintenance burden.
-- **KMP-native.** Define mappings in `commonMain`; Android and iOS share the same generated code.
+- **No reflection, KMP-native.** Generated Kotlin runs on Android, JVM, and iOS alike. Declare
+  mappings once in `commonMain`.
+- **Compile-time safety.** A missing converter, an unmappable field, or a conversion that would
+  silently lose data is a **build error with a guiding message** — not a production incident.
+- **Honest error handling by design.** The *fallback ladder* keeps one malformed field from
+  destroying a whole payload, while every absorbed error is reported to an observability sink.
+  Nothing fails silently; nothing crashes by default.
+- **User–author parity.** Every capability the library uses internally — converter objects,
+  validators, collection wrappers, even "this direction is intentionally unsupported" — is
+  available to your code through the exact same API.
 
-## Design Principles
+## The design principle behind everything
 
-1. **Silent incorrect behavior is the enemy.** If a transformation is ambiguous or incomplete, the library never silently produces a wrong value — it either stops at compile time or throws a typed exception (`MappingException`). (Fragile defaults like `ordinal`/`name` for enums are **intentionally absent**.)
-2. **Compile-time safety comes first.** Missing converter, unmappable field, guaranteed-infinite cycle → all are compile errors.
-3. **Modular converters.** The core stays small; dependencies such as `kotlinx.collections.immutable` and Arrow live only in the optional add-on artifacts.
-4. **Explicit intent.** A global converter list and per-field overrides make the rules readable and traceable — no magic.
+> **A silently wrong value is worse than an error.**
 
-## Modules
+KMapper never invents data (no `ordinal`-based enum mapping, no truncating `Long → Int`) and
+never hides a failure (every leniency is declared in the type or an annotation, and every
+absorbed error is observable). When something can't be done safely, you hear about it at
+compile time.
 
-| Artifact | Platform | Responsibility |
-|----------|----------|----------------|
-| `io.github.sahsenvar:kmapper-core` | KMP | Annotations, `MapTypeConverter`, `TypeConverterRegistry`, built-in converters, `MappableEnum`, `MappingException`, `KMapper`/`MappingListener` |
-| `io.github.sahsenvar:kmapper-processor` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()`) |
-| `io.github.sahsenvar:kmapper-converters-immutable` | KMP | `List` → `PersistentList`/`ImmutableList`/`ImmutableSet`/`PersistentSet` wrappers |
-| `io.github.sahsenvar:kmapper-converters-arrow` | KMP | Arrow `NonEmptyList`, `NonEmptySet`, `Option<T>` mapping |
-| `io.github.sahsenvar:kmapper-converters-datetime` | KMP (kotlinx) / JVM+Android | `String`/`Long` ↔ `LocalDate`, `LocalDateTime`, `Instant`, etc. |
-| `io.github.sahsenvar:kmapper-converters-bignumber` | KMP (ionspin) / JVM+Android | `String`/`Double`/`Long`/`Int` ↔ `BigDecimal`, `BigInteger` |
-| `io.github.sahsenvar:kmapper-converters-uuid` | KMP / JVM+Android | `String` ↔ `kotlin.uuid.Uuid`; `String`/`Uuid` ↔ `java.util.UUID` |
-| `io.github.sahsenvar:kmapper-converters-okio` | KMP | `String`/`ByteArray` ↔ `okio.ByteString`; `String` ↔ `okio.Path` |
-| `io.github.sahsenvar:kmapper-converters-uri` | JVM / Android / iOS | `String` ↔ `java.net.URI` / `android.net.Uri` / `NSURL` |
-| `io.github.sahsenvar:kmapper-validators` | KMP | `EmailValidator`, `UrlValidator` for `@ValidateFrom`/`@ValidateTo` |
+## Artifacts
 
-## Version Status
+Group `io.github.sahsenvar`:
 
-KMapper **1.0.0** is published on [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core) — all 10 modules. See [Installation](getting-started/installation.md).
+| Artifact | Platform | Purpose |
+|----------|----------|---------|
+| `kmapper-core` | KMP | Standalone runtime: exceptions, converter base + built-ins, validators, seams, observability. Usable without code generation. |
+| `kmapper-annotations` | KMP | Declaration annotations (`@MapTo`, `@FieldMap`, `@ConvertWith`, …) |
+| `kmapper-compiler` | JVM (KSP) | The code generator |
+| `kmapper-converters-immutable` | KMP | kotlinx-collections-immutable wrappers |
+| `kmapper-converters-arrow` | KMP | Arrow `NonEmptyList`/`NonEmptySet` wrappers, `Option` |
+| `kmapper-converters-datetime` | JVM/Android | `java.time` converters and kotlinx ↔ java bridges |
+| `kmapper-converters-bignumber` | KMP / JVM+Android | ionspin and `java.math` big numbers |
+| `kmapper-converters-uuid` | KMP / JVM+Android | `kotlin.uuid.Uuid` and `java.util.UUID` |
+| `kmapper-converters-okio` | KMP | `ByteString` (UTF-8/Base64/Hex), `Path` |
+| `kmapper-converters-uri` | JVM / Android / iOS | platform URI types |
+| `kmapper-validators` | KMP | Email, phone, IP, UUID, Luhn… for `@Validate` |
 
-> Next: **[Installation →](getting-started/installation.md)**
+## Where to start
+
+- New here? **[Installation](getting-started/installation.md)** →
+  **[Your First Mapper](getting-started/first-mapper.md)** — running in five minutes.
+- Want the philosophy in three rules? **[The Mental Model](getting-started/mental-model.md)**.
+- Prefer reading code? The **[runnable example gallery](getting-started/examples.md)** covers
+  every feature, ordered basic → advanced.

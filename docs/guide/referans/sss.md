@@ -1,78 +1,64 @@
-# Sık Sorulan Sorular
+# SSS
 
-## KMapper çalışma zamanında reflection kullanıyor mu?
+## Üretilen fonksiyon neden fırlatmak yerine `Result` dönüyor?
 
-Hayır. KMapper tamamen derleme zamanında çalışır. KSP processor anotasyonları analiz eder ve düz Kotlin extension fonksiyonları üretir. Üretilen kodda `KClass`, `::class.members`, `getDeclaredField` gibi reflection API'leri kullanılmaz. Bu nedenle iOS/Kotlin Native dahil tüm KMP hedeflerinde herhangi bir kısıtlama olmadan çalışır.
+Çünkü wire verisi eninde sonunda bozuk *gelecek* ve fırlatan bir mapper, başkasının kötü
+deploy'unu sizin crash'inize çevirir. `Result` ile hata imzanın parçasıdır: çağrı noktası
+karar verir (`getOrThrow` / `getOrElse` / `fold`) ve karar code review'da görünür.
+[Ayrıntılar](../hata-yonetimi/mapping-exception.md).
 
-## iOS ve Kotlin/Native'de çalışıyor mu?
+## Bozuk değerim neden hataya dönüşmedi?
 
-Evet. `core` artifact KMP'dir; üretilen extension fonksiyonlar standart Kotlin'dir ve tüm hedeflerde (Android, iOS/Native, JVM) derlenir. `processor` JVM-only'dir ama yalnızca build araçları tarafından çalıştırılır; dağıtılan koda dahil değildir.
+Muhtemelen hedef alan nullable ya da default'lu —
+[fallback ladder](../temel-kullanim/null-safety.md)'da beyan edilmiş bir kaçış. Emilme,
+[degradation sink](../gozlemleme/listener.md)'e raporlandı; bir listener kaydedin, görürsünüz.
+O alan için sertlik mi istiyorsunuz? `@ConvertWith(onFail = OnFail.Throw)`.
 
-## Neden ordinal veya name kullanılmıyor?
+## Neden `@MapDefaultValue` yok?
 
-`ordinal`, sabitlerin sırasına bağlıdır. Enum sırası değiştiğinde ya da araya yeni bir sabit eklendiğinde `ordinal` sessizce yanlış değere eşlenir — derleme hatası ya da test olmadan fark etmek imkânsızdır. `name` ise yeniden adlandırmaya karşı aynı şekilde kırılgandır. `wireValue` sabite doğrudan bağlıdır; enum'u yeniden sıralayabilir, sabit adını değiştirebilirsiniz — mapping değişmez.
+Kotlin'in zaten default değerleri var — constructor'da. KMapper onları *argümanı atlayarak*
+kullanır: default tam olarak tek yerde yaşar ve mapping ile elle kurma için birebir aynı
+davranır. Bir default wire fallback'i gibi davranmamalıysa, o iş
+[`@IgnoreDefaultValue`](../temel-kullanim/alan-eslestirme.md)'nun.
 
-## Kaynak ve hedef alanın adı farklıysa ne yapmalıyım?
+## `Long → Int` neden build'imi düşürüyor? Diğer mapper'lar dönüştürüyor.
 
-`@FieldMap(fieldName = "hedefAlanAdi")` kullanın:
+Dönüştürüyorlar — *değer sığmayana kadar*; sonra sessizce yanlış bir sayı veriyorlar. KMapper
+kayıplı yönleri gerekçeli mesajla
+[derleme zamanında reddeder](../tip-donusumu/builtin.md); domain'iniz aralığı garanti
+ediyorsa üç satırlık custom converter bu güvenceyi açık ve sahipli yapar.
 
-```kotlin
-@MapTo(UserDomain::class)
-data class UserRemote(
-    @FieldMap(fieldName = "id")
-    val userId: String,
-) : RemoteModel
-```
+## KMapper enum'ları neden otomatik olarak adla eşlemiyor?
 
-Birden fazla hedef varsa `targetClass` parametresini ekleyin:
+`name`/`ordinal` eşlemesi yeniden adlandırma/sıralamada sessizce kırılır — KMapper'ın yok
+etmek için var olduğu hata sınıfının ta kendisi.
+[`MappableEnum`](../enum/mappable-enum.md) sabit başına bir `wireValue`'ya mal olur ve
+yeniden adlandırmaya dayanıklıdır.
 
-```kotlin
-@FieldMap(fieldName = "id",     targetClass = UserDomain::class)
-@FieldMap(fieldName = "userId", targetClass = UserUiModel::class)
-val userId: String,
-```
+## `@ConvertWith` annotation'ım yok sayılıyor gibi. Neden?
 
-Bkz. [Alan Eşleştirme](../temel-kullanim/alan-eslestirme.md).
+Alan direktifleri **üretilen yönün kaynak tarafından** okunur — `@MapTo` wire modelindeyse
+wire alanını işaretleyin, domain alanını değil.
+[Yerleşim kuralı](../tip-donusumu/convert-with.md).
 
-## Özel bir converter nasıl eklenir?
+## KMapper'ı kod üretimi olmadan kullanabilir miyim?
 
-`MapTypeConverter<S, T>` sınıfından türetin ve `@KMapperConfig`'e ekleyin:
+Evet — `kmapper-core` bağımsız bir artifact. Elle yazılmış mapper'lar, üretilen kodla aynı
+public seam'leri, ladder semantiğini, converter'ları ve hata tiplerini kullanır
+([parity ilkesi](../baslarken/zihinsel-model.md)). `CoreOnlyMapping`
+[örneğine](../baslarken/ornekler.md) bakın.
 
-```kotlin
-object IsoStringToInstantConverter : MapTypeConverter<String, Instant>(String::class, Instant::class) {
-    override fun convertToNonNull(value: String): Instant =
-        Instant.parse(value)
-    override fun convertFromNonNull(value: Instant): String =
-        value.toString()
-}
+## Ne üretildiğini nasıl görürüm?
 
-@KMapperConfig(converters = [IsoStringToInstantConverter::class])
-object AppMapperConfig
-```
+`build/generated/ksp/<hedef>/kotlin/…` — düz Kotlin, breakpoint konabilir.
+[Mimari](../ileri/mimari.md).
 
-Yalnızca belirli bir alan için farklı bir dönüşüm gerekiyorsa `@UseMapTypeConverter` ile alan bazlı override yapın. Bkz. [@KMapperConfig ve @UseMapTypeConverter](../tip-donusumu/kmapperconfig.md).
+## R8/ProGuard ile çalışıyor mu?
 
-## Çok modüllü projede her modül için ayrı @KMapperConfig mi gerekiyor?
+Evet. Reflection yok ve hata yolları derleme zamanı string literal'i — release build stack
+trace'leriniz hâlâ `customer.address.zipCode` der.
 
-Evet. KSP her modülü bağımsız olarak derler; bir modülün `@KMapperConfig`'i başka bir modülün processor'ı tarafından görülmez. Mapper üreten her modül kendi `@KMapperConfig` nesnesini tanımlamalıdır.
+## Eksiksiz çalıştırılabilir örnekler nerede?
 
-Bkz. [Çok Modüllü Projeler](../ileri/cok-modullu.md).
-
-## Marker interface (RemoteModel, DomainModel vb.) zorunlu mu?
-
-Hayır. `@MapTo` ya da `@MapFrom` anotasyonunu herhangi bir sınıfa uygulayabilirsiniz; belirli bir marker interface implement etmek zorunda değilsiniz. Marker interface'ler, büyük projelerde sınıfları katmanlarına göre sınıflandırmak için yararlı bir konvansiyondur; KMapper tarafından zorunlu tutulmaz.
-
-## @Ignore ile bir alanı atlarsam hedef constructor'da ne olur?
-
-Hedef sınıfın constructor'ında karşılık gelen alan ya bulunmamalı ya da default değeri olmalıdır. Default değer yoksa ve alan hedefte varsa derleme hatası alırsınız — üretilen kod o alanı atlayacağından hedef constructor çağrısı eksik argümanla başarısız olur.
-
-```kotlin
-data class UserDomain(
-    val id: String,
-    val role: String = "USER",  // default değer var → @Ignore ile id eşlenebilir
-)
-```
-
-## convertOrFail nedir?
-
-`convertOrFail` `core` artifact'ında tanımlı bir yardımcı fonksiyondur. Converter çağrısını `try/catch` ile sarar ve converter exception fırlatırsa `MappingException.TypeConversionFailed`'e dönüştürür. Doğrudan kullanmanıza gerek yoktur; üretilen kod tarafından kullanılır. Bkz. [Hata Yönetimi](../hata-yonetimi/mapping-exception.md).
+[Örnek galerisi](../baslarken/ornekler.md): 25 dosya, her özellik, basitten gelişmişe, her
+biri belgelenmiş çıktısıyla.

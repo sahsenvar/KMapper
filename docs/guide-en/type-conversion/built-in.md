@@ -1,97 +1,70 @@
 # Built-in Converters
 
-KMapper supports the most common type conversions out of the box. These converters live in the `com.sahsenvar.kmapper.converter.builtin` package and are recognized by the processor automatically — no `@KMapperConfig` registration is needed.
+When a matched field pair has different types, KMapper resolves a converter **at compile
+time**. 35 type pairs ship in core and are auto-resolved with **no registration** — and, just
+as importantly, the directions that would corrupt data are *refused* at compile time.
 
----
+## The catalog
 
-## Built-in Converter Table
+All built-ins live in `com.sahsenvar.kmapper.converter.builtin` as public objects, named
+**richer type first** (the type that can hold more comes first: `LongIntConverter`,
+`InstantStringConverter`).
 
-| Converter | `S → T` (forward) | `T → S` (reverse) |
-|-----------|-------------------|-------------------|
-| `StringIntConverter` | `String → Int` (`toInt()`) | `Int → String` (`toString()`) |
-| `StringLongConverter` | `String → Long` (`toLong()`) | `Long → String` |
-| `StringDoubleConverter` | `String → Double` (`toDouble()`) | `Double → String` |
-| `StringFloatConverter` | `String → Float` (`toFloat()`) | `Float → String` |
-| `StringBooleanConverter` | `String → Boolean` (`toBoolean()`) | `Boolean → String` |
-| `IntLongConverter` | `Int → Long` | `Long → Int` ¹ |
-| `StringInstantConverter` | `String → Instant` (ISO-8601) | `Instant → String` |
-| `LongInstantConverter` | `Long → Instant` (epoch ms) | `Instant → Long` |
+**Numeric widening (12 pairs)** — the lossless direction converts; the narrowing direction is
+refused (see below):
 
-¹ The reverse direction (`Long → Int`) throws `TypeConversionFailed` if the value is outside the `Int` range.
+| Richer | Poorer |
+|--------|--------|
+| `Short`, `Int`, `Long`, `Float`, `Double` | `Byte` |
+| `Int`, `Long`, `Float`, `Double` | `Short` |
+| `Long`, `Double` | `Int` |
+| `Double` | `Float` |
 
-`Instant` refers to `kotlinx.datetime.Instant` (requires the `kotlinx-datetime` dependency).
+**String pairs (7)** — `Byte`, `Short`, `Int`, `Long`, `Float`, `Double`, `Boolean` ↔
+`String`. Formatting is total; parsing throws on malformed input (and rides the
+[ladder](../basic-usage/null-safety.md)). `Boolean` parsing is strict: `"true"`/`"false"`
+only — `"TRUE"`, `"1"`, `"yes"` are refused as ambiguous wire formats.
 
----
+**Cross pairs (9)** — `Float ↔ Int`, `Float ↔ Long`, `Double ↔ Long` (lossless direction
+converts), and `Boolean` ↔ every numeric type. The `Boolean`/numeric pairs are special: **both
+directions are refused** — `Byte → Boolean` has no canonical semantics (is `2` true?) and
+`Boolean → Byte` has no canonical encoding (`0/1`? `-1`?). They exist in the registry so that
+instead of a generic "no converter" error you get the *reasoned* refusal and write a one-line
+converter encoding **your** wire's convention.
 
-## The Bilateral Converter Concept
+**kotlinx-datetime (5)** — `Instant ↔ String` (ISO-8601), `Instant ↔ Long` (epoch millis),
+`LocalDate ↔ String`, `LocalDateTime ↔ String`, `LocalTime ↔ String`.
 
-Each converter object handles **both directions** in a single class:
+**kotlin.time (2)** — `Duration ↔ String` (ISO-8601, e.g. `PT1H30M`), `Duration ↔ Long`
+(whole milliseconds; sub-millisecond precision truncates — documented trade-off matching
+`Instant ↔ Long`).
 
-```kotlin
-object StringIntConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
-    override fun convertToNonNull(value: String): Int = value.toInt()
-    override fun convertFromNonNull(value: Int): String = value.toString()
-}
-```
+## Refused directions are a feature
 
-The processor analyzes which direction is needed and calls the correct method. For a `String → Int` mapping it uses `convertToNonNull`; for `Int → String` it uses `convertFromNonNull`.
-
----
-
-## The convertOrFail Wrapper
-
-All converter calls — including built-in ones — are wrapped with `convertOrFail` in the generated code. This prevents raw platform exceptions (e.g. `NumberFormatException`) from leaking out:
-
-```kotlin
-// What the generated code looks like:
-count = convertOrFail("String", "Int") { StringIntConverter.convertToNonNull(count) }
-```
-
-> **Note:** The type names passed to `convertOrFail` in the generated code are fully qualified — e.g. `"kotlin.String"`, `"kotlin.Int"`, `"kotlinx.datetime.Instant"`. Short forms are used in the examples here.
-
-If conversion fails, `MappingException.TypeConversionFailed` is thrown; the original exception is available in the `cause` field.
-
----
-
-## Usage Example
-
-```kotlin
-@MapTo(ProductDomain::class)
-data class ProductRemote(
-    val id: String,
-    val price: String,     // comes from the API as String, needs Double in domain
-    val stock: String,     // comes from the API as String, needs Int in domain
-)
-
-data class ProductDomain(
-    val id: String,
-    val price: Double,
-    val stock: Int,
-)
-```
-
-`String → Double` and `String → Int` are both built-in, so no extra registration is needed. Generated:
-
-```kotlin
-public fun ProductRemote.toProductDomain(): ProductDomain = ProductDomain(
-    id    = id,
-    price = convertOrFail("String", "Double") { StringDoubleConverter.convertToNonNull(price) },
-    stock = convertOrFail("String", "Int")    { StringIntConverter.convertToNonNull(stock) },
-)
-```
-
----
-
-## Unregistered Type Pair → Compile Error
-
-If a type pair is not in the built-in table and has not been added to `@KMapperConfig`, the processor reports a **compile error**:
+`LongIntConverter` converts `Int → Long` happily. Ask for `Long → Int` and the **build
+fails**:
 
 ```
-no converter for MyCustomType -> MyTargetType; add it to @KMapperConfig(converters=[...]) or annotate the field with @UseMapTypeConverter
+Long -> Int conversion is unsupported! This relates to our policy on lossy conversions
+(e.g. Long -> Int, Double -> Float). What you can do:
+  1. Check the converter add-ons
+  2. Create your own converter
+  3. Rethink your source or target type using supported types.
 ```
 
-To write your own converter, see [Writing a Custom Converter](custom-converter.md).
+That's `@UnsupportedDirection` — a declared, reasoned refusal instead of a silent
+truncation. If your domain *does* guarantee the range, you write the three-line custom
+converter and own that decision explicitly. The same mechanism is yours to use in
+[your own converters](custom-converter.md#refusing-a-direction).
 
----
+## Resolution order
 
-Next: [Writing a Custom Converter](custom-converter.md)
+For a field needing `A → B`:
+
+1. field-level [`@ConvertWith`](convert-with.md) — explicit override wins
+2. your [`@KMapperConfig` converters](kmapperconfig.md) — a custom pair **shadows** a
+   built-in for the same pair
+3. core built-ins (this page)
+4. nothing? → compile error `MissingConverter`, naming the pair and where to register one
+
+> Next: **[Writing a Custom Converter →](custom-converter.md)**

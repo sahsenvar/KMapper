@@ -1,115 +1,62 @@
 # @MapTo ve @MapFrom
 
-KMapper, iki yönlü eşleştirmeyi iki ayrı anotasyonla destekler: **`@MapTo`** kaynak sınıftan hedefe, **`@MapFrom`** ise hedef sınıftan kaynağa doğru bir `toX()` fonksiyonu üretir.
+İki annotation da aynı şeyi söyler — "şu iki sınıf arasında mapping üret" — tek farkları
+**tanımı hangi sınıfın taşıdığıdır**.
 
----
-
-## @MapTo — İleri Yön
-
-`@MapTo(Target::class)` anotasyonu **kaynak** sınıfa eklenir. Processor, kaynak sınıfın extension fonksiyonu olarak `toTarget()` üretir.
+## @MapTo — kaynak üzerinde
 
 ```kotlin
-// Kaynak: data katmanı
-@MapTo(UserDomain::class)
-data class UserRemote(
-    val id: String,
-    val email: String,
-)
+@MapTo(User::class)
+data class UserResponse(val id: Long, val name: String)
 
-// Hedef: domain katmanı
-data class UserDomain(
-    val id: String,
-    val email: String,
-)
+// üretir: fun UserResponse.toUserResult(): Result<User>
 ```
 
-Derleme sonrası üretilen dosya `UserRemoteMappers.kt` (kaynak sınıfla aynı paket):
+## @MapFrom — hedef üzerinde
+
+Bazen kaynak sınıf sizin değildir (başka bir modül, üretilmiş kod). Tanımı hedefe koyun;
+üretilen fonksiyon birebir aynıdır:
 
 ```kotlin
-// build/generated/…/UserRemoteMappers.kt
-public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
-    id    = id,
-    email = email,
-)
+@MapFrom(UserResponse::class)
+data class User(val id: Long, val name: String)
+
+// aynısını üretir: fun UserResponse.toUserResult(): Result<User>
 ```
 
-Kullanımı:
+## Hangi tarafı işaretlemeli?
+
+Tercihiniz **wire modelinde `@MapTo`** olsun. Wire modelleri değişken taraftır — API
+değiştiğinde model ve mapping kuralları aynı dosyada birlikte değişir. Kaynak sınıf sizin
+kontrolünüzde değilse `@MapFrom`'a uzanın.
+
+## İkisi de tekrarlanabilir
+
+Bir kaynak birden çok hedefe, bir hedef birden çok kaynaktan eşlenebilir:
 
 ```kotlin
-val domain: UserDomain = userRemote.toUserDomain()
+@MapTo(User::class)
+@MapTo(UserListItem::class)
+data class UserResponse(val id: Long, val name: String, val avatarUrl: String?)
+
+// fun UserResponse.toUserResult(): Result<User>
+// fun UserResponse.toUserListItemResult(): Result<UserListItem>
 ```
 
----
+Gerektiğinde alan direktifleri tek bir hedefe daraltılabilir — bkz.
+[`@FieldMap(targetClass = …)`](alan-eslestirme.md).
 
-## Birden Çok Hedef (Repeatable)
+## Neler eşlenir?
 
-`@MapTo` tekrarlanabilir (`@Repeatable`) olduğu için aynı kaynak sınıfı birden fazla hedefe eşleyebilirsiniz:
+Alanlar, kaynağın property'leri ile hedefin primary constructor parametreleri arasında
+**isimle** eşlenir. Eşleşen her çift için sırasıyla:
 
-```kotlin
-@MapTo(UserDomain::class)
-@MapTo(UserCache::class)
-data class UserRemote(
-    val id: String,
-    val email: String,
-)
-```
+1. aynı tip → kopyalanır
+2. farklı tip → derleme zamanında bir [converter](../tip-donusumu/builtin.md) çözümlenir
+3. iç içe `@MapTo`/`@MapFrom` çifti → üretilen alt mapper'dan geçer
+4. hiçbiri uymazsa → alanı ve eksik parçayı söyleyen **derleme hatası**
 
-Processor her hedef için ayrı bir extension üretir:
+Karşılığı ve default'u olmayan *hedef* alanları, üretilen fonksiyonun zorunlu parametresi
+olur (bkz. [çağıranın sağladığı parametreler](alan-eslestirme.md)).
 
-```kotlin
-public fun UserRemote.toUserDomain(): UserDomain = UserDomain(id = id, email = email)
-public fun UserRemote.toUserCache(): UserCache  = UserCache(id = id, email = email)
-```
-
-Alan adları veya tipleri hedefler arasında farklılaşıyorsa `@FieldMap(targetClass = ...)` ile hangi eşleştirmenin hangi hedefe ait olduğunu belirtebilirsiniz (bkz. [Alan Eşleştirme](alan-eslestirme.md)).
-
----
-
-## @MapFrom — Ters Yön
-
-`@MapFrom(Source::class)` anotasyonu **hedef** sınıfa eklenir; yani eşleştirme yönü kaynaktan hedefe aynı olsa da anotasyonu **hedef sınıfa** koyarsınız. Üretilen `toX()` fonksiyonu yine **kaynak** sınıfın extension'ı olarak çıkar — tek fark anotasyonun kimin üzerinde durduğudur.
-
-```kotlin
-data class UserRemote(
-    val id: String,
-    val email: String,
-)
-
-// Anotasyon hedef sınıfta; ama toUserDomain() kaynaktan çağrılır
-@MapFrom(UserRemote::class)
-data class UserDomain(
-    val id: String,
-    val email: String,
-)
-```
-
-Üretilen kod `@MapTo` ile özdeştir:
-
-```kotlin
-public fun UserRemote.toUserDomain(): UserDomain = UserDomain(
-    id    = id,
-    email = email,
-)
-```
-
-`@MapFrom` da `@Repeatable`'dır; birden fazla kaynaktan aynı hedefe eşleyebilirsiniz:
-
-```kotlin
-@MapFrom(UserRemote::class)
-@MapFrom(UserCache::class)
-data class UserDomain(val id: String, val email: String)
-```
-
----
-
-## Hangi Anotasyonu Seçmeli?
-
-| Durum | Tercih |
-|-------|--------|
-| Kaynak sınıf sizin kontrolünüzde (ör. DTO) | `@MapTo` kaynağa |
-| Hedef sınıf sizin kontrolünüzde (ör. domain model) | `@MapFrom` hedefe |
-| İkisi de sizin — fark etmez | İkisi de aynı kodu üretir |
-
----
-
-Sonraki adım: [Alan Eşleştirme (@FieldMap, @Ignore)](alan-eslestirme.md)
+> Sıradaki: **[Alan Eşleme ve Ignore Ailesi →](alan-eslestirme.md)**

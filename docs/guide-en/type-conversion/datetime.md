@@ -1,127 +1,59 @@
-# Date and Time Converters — converters-datetime
+# Date and Time — converters-datetime
 
-The `converters-datetime` module provides **scalar converters** for mapping between `kotlinx-datetime` / `java.time` types and `String` or `Long`. Scalar converters are not auto-discovered like `@CollectionWrapper`; you must list the ones you need in `@KMapperConfig(converters = [...])`.
-
----
+> **kotlinx-datetime needs no add-on.** `Instant`, `LocalDate`, `LocalDateTime`, `LocalTime`
+> (↔ `String`/`Long`) and `kotlin.time.Duration` are [core built-ins](built-in.md) —
+> auto-resolved, zero registration. This add-on exists for **`java.time`** models and for
+> bridging the two worlds on JVM/Android.
 
 ## Setup
 
 ```kotlin
-// build.gradle.kts (consuming module)
-kotlin {
-    sourceSets {
-        commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:1.0.0")
-            implementation("io.github.sahsenvar:kmapper-converters-datetime:1.0.0")
-        }
-    }
+dependencies {
+    implementation("io.github.sahsenvar:kmapper-converters-datetime:2.0.0")
 }
 ```
 
----
-
-## Platform Support
-
-| Converter group | Source set | Runs on |
-|-----------------|------------|---------|
-| `kotlinx-datetime` converters | `commonMain` | All platforms (JVM, Android, iOS, JS, WASM) |
-| `java.time` converters | `jvmAndroidMain` | JVM and Android only |
-| Bridge converters (kotlinx ↔ java.time) | `jvmAndroidMain` | JVM and Android only |
-
-> **Note:** `Instant` conversions (`StringInstantConverter`, `LongInstantConverter`) are built into `core` — you do not need `converters-datetime` for them.
-
----
-
-## kotlinx-datetime Converters (commonMain)
-
-Available on all platforms.
-
-| Converter | Source | Target |
-|-----------|--------|--------|
-| `StringLocalDateConverter` | `String` (ISO-8601) | `kotlinx.datetime.LocalDate` |
-| `StringLocalDateTimeConverter` | `String` (ISO-8601) | `kotlinx.datetime.LocalDateTime` |
-| `StringLocalTimeConverter` | `String` (ISO-8601) | `kotlinx.datetime.LocalTime` |
-
----
-
-## java.time Converters (jvmAndroidMain)
-
-Available on JVM and Android only. Names are prefixed with `Java` to distinguish them from the kotlinx counterparts.
-
-| Converter | Source | Target |
-|-----------|--------|--------|
-| `StringJavaInstantConverter` | `String` (ISO-8601) | `java.time.Instant` |
-| `LongJavaInstantConverter` | `Long` (epoch-milli) | `java.time.Instant` |
-| `StringJavaLocalDateConverter` | `String` (ISO-8601) | `java.time.LocalDate` |
-| `StringJavaLocalDateTimeConverter` | `String` (ISO-8601) | `java.time.LocalDateTime` |
-| `StringJavaLocalTimeConverter` | `String` (ISO-8601) | `java.time.LocalTime` |
-| `StringJavaZonedDateTimeConverter` | `String` (ISO-8601) | `java.time.ZonedDateTime` |
-| `StringJavaOffsetDateTimeConverter` | `String` (ISO-8601) | `java.time.OffsetDateTime` |
-
----
-
-## Bridge Converters: kotlinx ↔ java.time (jvmAndroidMain)
-
-Use these when one layer of your model uses `kotlinx.datetime.*` and another uses `java.time.*`.
-
-| Converter | Source | Target |
-|-----------|--------|--------|
-| `KotlinJavaInstantConverter` | `kotlinx.datetime.Instant` | `java.time.Instant` |
-| `KotlinJavaLocalDateConverter` | `kotlinx.datetime.LocalDate` | `java.time.LocalDate` |
-
----
-
-## Usage
-
-List the converters you need in `@KMapperConfig(converters = [...])`:
+Register what you use in [`@KMapperConfig`](kmapperconfig.md) (add-on converters are not
+auto-discovered):
 
 ```kotlin
-import com.sahsenvar.kmapper.annotations.KMapperConfig
-import com.sahsenvar.kmapper.datetime.StringLocalDateConverter
-import com.sahsenvar.kmapper.datetime.StringLocalDateTimeConverter
-
-@KMapperConfig(converters = [StringLocalDateConverter::class, StringLocalDateTimeConverter::class])
-object MyMappers
+@KMapperConfig(converters = [StringJavaInstantConverter::class, KotlinJavaDurationConverter::class])
+object AppMapperConfig
 ```
 
-Then use the types directly in your models:
+## `java.time` scalar converters (JVM/Android)
 
-```kotlin
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
+Package `com.sahsenvar.kmapper.datetime`; all parse/format ISO-8601 via the type's own
+`parse`/`toString`:
 
-@MapTo(EventDomain::class)
-data class EventRemote(
-    val name: String,
-    val date: String,        // "2026-06-04"
-    val createdAt: String,   // "2026-06-04T10:15:30"
-)
+| Object | Pair |
+|--------|------|
+| `StringJavaInstantConverter` | `String ↔ java.time.Instant` |
+| `LongJavaInstantConverter` | `Long` (epoch ms) `↔ java.time.Instant` |
+| `StringJavaLocalDateConverter` | `String ↔ java.time.LocalDate` |
+| `StringJavaLocalDateTimeConverter` | `String ↔ java.time.LocalDateTime` |
+| `StringJavaLocalTimeConverter` | `String ↔ java.time.LocalTime` |
+| `StringJavaZonedDateTimeConverter` | `String ↔ java.time.ZonedDateTime` |
+| `StringJavaOffsetDateTimeConverter` | `String ↔ java.time.OffsetDateTime` |
+| `StringJavaDurationConverter` | `String` (`"PT1H30M"`) `↔ java.time.Duration` |
 
-data class EventDomain(
-    val name: String,
-    val date: LocalDate,
-    val createdAt: LocalDateTime,
-)
-```
+## Bridges: kotlinx ↔ java
 
-Generated mapping:
+For codebases straddling both libraries (a kotlinx-datetime KMP domain, a java.time
+persistence layer):
 
-```kotlin
-public fun EventRemote.toEventDomain(): EventDomain = EventDomain(
-    name      = name,
-    date      = StringLocalDateConverter.convertToNonNull(date),
-    createdAt = StringLocalDateTimeConverter.convertToNonNull(createdAt),
-)
-```
+| Object | Pair | Notes |
+|--------|------|-------|
+| `KotlinJavaInstantConverter` | `kotlinx Instant ↔ java Instant` | exact |
+| `KotlinJavaLocalDateConverter` | `kotlinx LocalDate ↔ java LocalDate` | exact |
+| `KotlinJavaDurationConverter` | `kotlin.time.Duration ↔ java.time.Duration` | exact for finite values within ±146 years at ns precision |
 
----
+## Choosing a wire format per field
 
-## Which Converter Should You Use?
+`String ↔ Instant` (ISO) and `Long ↔ Instant` (epoch millis) are different pairs, so both can
+coexist via discovery. Two *formats of the same pair* (say ISO string and epoch-as-string)
+are a per-field decision — see
+[parameterized converters](custom-converter.md#parameterized-converters) and
+[@ConvertWith](convert-with.md).
 
-- **KMP project (iOS included):** use `kotlinx-datetime` converters.
-- **JVM/Android only:** you can use either `kotlinx-datetime` or `java.time` converters.
-- **`Instant`:** no extra dependency needed — use `StringInstantConverter`/`LongInstantConverter` from `core`.
-
----
-
-Next: [Big Number Converters →](bignumber.md) | See also: [@KMapperConfig](kmapperconfig.md)
+> Next: **[Big Numbers →](bignumber.md)**

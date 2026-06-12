@@ -1,86 +1,66 @@
-# Architecture — Modules and the KSP Pipeline
+# Architecture: How It Works
 
-This page explains KMapper's internal design at a conceptual level. You do not need to know these details to use the library, but understanding how it works makes troubleshooting and contributing easier.
+A look under the hood — useful for debugging builds, reviewing generated code, and trusting
+what runs in production.
 
-## Module Split
-
-KMapper consists of four separate artifacts:
-
-```
-com.sahsenvar.kmapper
-├── core              (KMP)
-│   ├── Annotations: @MapTo, @MapFrom, @FieldMap, @MapDefaultValue,
-│   │                @UseMapTypeConverter, @Ignore, @KMapperConfig, @CollectionWrapper
-│   ├── MappableEnum<W>, MappingException (sealed)
-│   ├── MapTypeConverter (abstract), TypeConverterRegistry (expect/actual)
-│   ├── Built-in primitive converters (str↔int/long/double/float/bool, int↔long, …)
-│   └── KMapper, MappingListener, LoggingMappingListener
-│
-├── processor         (JVM-only, KSP)
-│   └── MappingProcessor + FieldAnalyzer → TypeMatcher → MappingCodeGenerator pipeline
-│
-├── converters-immutable (KMP, optional)
-│   └── List/Set → PersistentList/ImmutableList/ImmutableSet wrappers
-│       (kotlinx.collections.immutable dependency lives here only)
-│
-└── converters-arrow  (KMP, optional, empty slot in this release)
-    └── Reserved for Nel converters (next round)
-```
-
-**Design decisions:**
-
-- Annotations and the runtime are kept together in a single `core` artifact (the MapStruct approach). Separating them later is mechanical; for now, YAGNI.
-- `kotlinx.collections.immutable` has been moved out of `core` — it lives only in `converters-immutable`. Projects that use only `core` do not pull in this dependency.
-- `processor` is JVM-only: KSP runs only on the JVM. The generated code is KMP.
-
-## KSP Pipeline — Compile Time
-
-KMapper never uses runtime reflection. All mapping code is generated during compilation:
+## The pipeline
 
 ```
-Source class annotated with @MapTo
-        ↓
-  FieldAnalyzer
-  • Inspects constructor val fields
-  • Determines the strategy for each field:
-    direct / type-conversion / nested / collection / wrapped-collection / enum
-        ↓
-  TypeMatcher
-  • Resolves the @KMapperConfig converter list
-  • Checks built-in primitive conversions
-  • Missing converter → compile error
-        ↓
-  Validator
-  • Cycle detection (unconditional cycle → compile error)
-  • Enum MappableEnum check
-  • W type compatibility check
-        ↓
-  MappingCodeGenerator (KotlinPoet)
-  • Generates the {Source}Mappers.kt extension file
-  • Writes null-checks (RequiredFieldMissing)
-  • Wraps converter calls with TypeConversionFailed
-  • Adds listener guard blocks
-        ↓
-  build/generated/ksp/…/{Source}Mappers.kt
+your annotated models
+   └─ KSP2 (kmapper-compiler)
+        ├─ analyze: match fields, resolve converters/wrappers, check directives
+        ├─ refuse:  MissingConverter / UnsupportedConversion / structural errors -> build fails
+        └─ generate: toXResult() extension functions (plain Kotlin, KotlinPoet)
+              └─ compiled like hand-written code; calls kmapper-core seams at runtime
 ```
 
-The processor generates one `.kt` file per `@MapTo`/`@MapFrom`-annotated class it analyzes. The files compile as ordinary Kotlin source; there is no reflection.
+Everything type-related is decided **at compile time**: which converter handles each field,
+which ladder rung each escape provides, which validators fire. There is no runtime registry
+lookup on the hot path and no reflection anywhere.
 
-## Why No Reflection?
+## What generated code looks like
 
-The core benefit of the KSP approach is full compile-time safety:
+```kotlin
+public fun UserResponse.toUserResult(): Result<User> = runCatching {
+    if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toUserResult, User::class) }
+    val result = User(
+        id = id,
+        joined = joined.convertOrFail("joined", "kotlin.String", "kotlinx.datetime.LocalDate") {
+            LocalDateStringConverter.convertFrom(it)
+        },
+    )
+    if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toUserResult, result) }
+    result
+}
+```
 
-- Missing converter → compile error, not a runtime surprise.
-- Type mismatch → compile error.
-- Circular dependency → compile error.
-- Works on all KMP targets including iOS/Native (no reflection restrictions).
+Worth noticing:
 
-## Platform Compatibility
+- **Converters are called as objects** (`LocalDateStringConverter.convertFrom(...)`), never
+  inlined as ad-hoc casts — user and built-in converters run on identical rails.
+- **Seams** (`convertOrFail`, `convertOrNull`, `convertEachOrSkip`, …) are public
+  `kmapper-core` functions implementing the [ladder](../basic-usage/null-safety.md) — the
+  same functions available to [hand-written
+  mappers](../getting-started/examples.md).
+- **Paths are string literals** — R8/ProGuard-safe error messages.
+- The observability hooks vanish behind a single `hasListeners` check when unused.
 
-Because `core` is KMP, the generated extension functions compile for Android, iOS (Kotlin/Native), and JVM targets. `processor` is JVM-only but is executed only by the build toolchain; it is not included in the distributed code.
+## Inspecting generated code
 
-`TypeConverterRegistry` uses the `expect/actual` mechanism to get a platform-specific implementation per target; the outward-facing API is identical across platforms.
+```
+build/generated/ksp/<target>/kotlin/…
+```
 
----
+Generated files are ordinary Kotlin — readable, debuggable, breakpointable. When mapping
+behavior surprises you, read the generated function first; it usually answers the question.
 
-Next: [Annotation Reference](../reference/annotations.md)
+## Design invariants the generator enforces
+
+- A field either maps cleanly, or the build names the problem — no silent skips.
+- Lossy conversions don't exist unless *you* wrote the converter
+  ([refusal policy](../type-conversion/built-in.md#refused-directions-are-a-feature)).
+- Every absorbed error has a sink event; every hard error has a path.
+- `CancellationException` is always rethrown — mappings never swallow coroutine
+  cancellation.
+
+> Next: **[Annotation Reference →](../reference/annotations.md)**
