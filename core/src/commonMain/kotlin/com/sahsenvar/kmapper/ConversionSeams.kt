@@ -164,22 +164,3 @@ inline fun <S : Any, T : Any> S?.convertOrElseStrict(
         throw toMappingException(path, from, to, cause)
     }
 }
-
-/**
- * Legacy path-less wrapper kept TEMPORARILY so currently-generated mapper code keeps
- * compiling until ladder codegen replaces the emission (plan Task 14).
- */
-@Deprecated("Legacy wrapper; removed when ladder codegen lands (plan Task 14).")
-inline fun <T> convertOrFail(
-    from: String,
-    to: String,
-    block: () -> T,
-): T = try {
-    block()
-} catch (cancellation: CancellationException) {
-    throw cancellation
-} catch (mappingFailure: MappingException) {
-    throw mappingFailure
-} catch (cause: Throwable) {
-    throw MappingException.TypeConversionFailed(path = "", from = from, to = to, cause = cause)
-}
