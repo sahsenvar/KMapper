@@ -70,6 +70,7 @@ class ConverterShapeProbeProcessor(
             "fixtures.TotalPlusOrNullConverter",
             "fixtures.BilateralConverter",
             "fixtures.HelperOverloadConverter",
+            "fixtures.DerivedReOverrideConverter",
             "fixtures.DataModel",
             "fixtures.DoesNotExist",
             // Classpath BINARY probe: a built-in from :core (inheritClassPath), asserting that
@@ -172,6 +173,22 @@ class ConverterIntrospectorTest :
              */
             object HelperOverloadConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
                 fun convertTo(source: String, radix: Int): Int = source.toInt(radix)
+            }
+
+            /** Base refuses convertTo with an annotated stub; see DerivedReOverrideConverter. */
+            abstract class GuardedBaseConverter : MapTypeConverter<String, Int>(String::class, Int::class) {
+                override fun convertFrom(target: Int): String = target.toString()
+
+                @UnsupportedDirection("Base refuses String to Int.")
+                override fun convertTo(source: String): Int = unsupported()
+            }
+
+            /**
+             * Most-derived re-override: provides the direction its base annotated as
+             * unsupported — the derived declaration (and its missing annotation) must win.
+             */
+            object DerivedReOverrideConverter : GuardedBaseConverter() {
+                override fun convertTo(source: String): Int = source.toInt()
             }
                 """.trimIndent(),
             )
@@ -281,6 +298,16 @@ class ConverterIntrospectorTest :
                         "orNullOnlyTo=false;orNullOnlyFrom=false;" +
                         "reasonTo=Long -> Int narrows and can truncate; convert explicitly if intended.;" +
                         "reasonFrom=null;" +
+                        "orNullAnnotated=false"
+                }
+
+                then("a most-derived re-override provides the direction its base annotated as unsupported") {
+                    compilationResult.messages shouldContain
+                        "SHAPE:fixtures.DerivedReOverrideConverter=" +
+                        "source=kotlin.String;target=kotlin.Int;" +
+                        "providesTo=true;providesFrom=true;" +
+                        "orNullOnlyTo=false;orNullOnlyFrom=false;" +
+                        "reasonTo=null;reasonFrom=null;" +
                         "orNullAnnotated=false"
                 }
 
