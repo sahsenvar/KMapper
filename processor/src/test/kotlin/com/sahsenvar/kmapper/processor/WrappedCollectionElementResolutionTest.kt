@@ -20,9 +20,9 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
  * @UnsupportedDirection reason, and a pair with no converter at all surfaces the
  * MissingConverter guidance — exactly like the other two container shapes.
  *
- * Assertions are diagnostic-level (KSP error messages) on purpose: element-level Convert
- * CODEGEN is the follow-up codegen chunk (see the INTERIM note in MappingCodeGenerator),
- * so resolution is observable through compile-time diagnostics, not generated calls.
+ * Assertions are diagnostic-level (KSP error messages) on purpose: resolution errors fire
+ * before any code is generated, so they are observable through compile-time diagnostics
+ * independently of the element-seam emission (covered by CollectionLadderCodegenTest).
  */
 class WrappedCollectionElementResolutionTest :
     BehaviorSpec({

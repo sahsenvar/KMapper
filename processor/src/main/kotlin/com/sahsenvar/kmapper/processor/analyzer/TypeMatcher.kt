@@ -22,14 +22,15 @@ import com.sahsenvar.kmapper.unsupportedConversionMessage
  * compile error.
  *
  * @param customConverters Map of (sourceFqn to targetFqn) → converterFqn, populated from @KMapperConfig.
- * @param collectionWrappers Map of target-collection-FQN → wrapper-function-FQN, from @CollectionWrapper descriptors.
+ * @param collectionWrappers Map of wrapped-collection-FQN → validated wrapper descriptor
+ *   (object FQN + provided wrap/unwrap directions), from @CollectionWrapper discovery.
  * @param introspector Reads converter shapes (type pair + provided directions); null disables
  *   shape-aware resolution (every converter reference then errors as missing — tests only).
  */
 class TypeMatcher(
     private val logger: KSPLogger,
     private val customConverters: Map<Pair<String, String>, String> = emptyMap(),
-    private val collectionWrappers: Map<String, String> = emptyMap(),
+    private val collectionWrappers: Map<String, CollectionWrapperDescriptor> = emptyMap(),
     private val introspector: ConverterIntrospector? = null,
 ) {
     /**
@@ -54,6 +55,21 @@ class TypeMatcher(
         }
 
         val strategy = resolveStrategy(sourceField, targetField, isReverse)
+
+        // Post-resolution precondition: a collection-LIKE target can still resolve to a
+        // whole-value conversion (field-level converter / nested mapper for the entire
+        // container) — OnFail.Skip has no element scope there either. Rejecting here keeps
+        // the scalar seam table Skip-free by construction (the generator asserts it).
+        if (effectiveOnFail == OnFailPolicy.Skip &&
+            (strategy is MappingStrategy.Convert || strategy is MappingStrategy.Nested)
+        ) {
+            logger.error(
+                "${sourceField.name}: OnFail.Skip targets collection elements, but this field " +
+                    "resolves to a whole-value conversion; use OnFail.Throw or a " +
+                    "nullable/defaulted target instead.",
+            )
+            return MappingStrategy.Unmappable
+        }
 
         // Strategy-aware dead-'?' warning, AFTER resolution and only at this entry point
         // (element-level recursion goes through resolveStrategy, so it fires once per field):
@@ -111,16 +127,26 @@ class TypeMatcher(
         //    compares the outer type FQN (ignoring generic arguments). Two List<X>/List<Y> types
         //    with different element types would be incorrectly treated as Direct if same-type ran first.
         //
-        //    Also handles @CollectionWrapper: when the target FQN (e.g. PersistentList) is in
-        //    collectionWrappers, the source must be a standard collection (List/Set) and we emit
-        //    WrappedCollection so the generator appends the wrapper call after .map { }.
+        //    Also handles @CollectionWrapper, BOTH directions: a registered target FQN
+        //    (e.g. PersistentList) fed from a plain collection takes the wrap path; a
+        //    registered SOURCE FQN landing on a plain collection takes the unwrap path.
+        //    A mapping needing a direction the wrapper does not declare is a guided
+        //    compile error (the wrapper counterpart of UnsupportedConversion).
         val targetCollFqn =
             targetField.type.declaration.qualifiedName
                 ?.asString()
-        val wrapperFqn = if (targetCollFqn != null) collectionWrappers[targetCollFqn] else null
+        val wrapDescriptor = if (targetCollFqn != null) collectionWrappers[targetCollFqn] else null
 
-        if (wrapperFqn != null && isCollectionType(sourceField.type)) {
+        if (wrapDescriptor != null && isCollectionType(sourceField.type)) {
             // Target is a wrapped collection (e.g. PersistentList); source is a plain List/Set.
+            if (!wrapDescriptor.providesWrap) {
+                logger.error(
+                    "${sourceField.name}: ${wrapDescriptor.wrapperSimpleName} declares no wrap for " +
+                        "${wrapDescriptor.forTypeSimpleName}; add " +
+                        "fun <T> wrap(source: List<T>): ${wrapDescriptor.forTypeSimpleName}<T>",
+                )
+                return MappingStrategy.Unmappable
+            }
             // Elements run the same full resolution as the other container shapes — no silent
             // Direct fallback for element pairs that actually need a converter.
             val sourceElementType = extractCollectionElementType(sourceField.type)
@@ -131,7 +157,34 @@ class TypeMatcher(
                 } else {
                     MappingStrategy.Direct
                 }
-            return MappingStrategy.WrappedCollection(elementStrategy, wrapperFqn)
+            return MappingStrategy.WrappedCollection(elementStrategy, wrapDescriptor.wrapperObjectFqn)
+        }
+
+        // 2a. Unwrap direction: the SOURCE is a registered wrapped type and the target is a
+        //     plain stdlib collection — Wrapper.unwrap(source) feeds the element seams.
+        val sourceCollFqn =
+            sourceField.type.declaration.qualifiedName
+                ?.asString()
+        val unwrapDescriptor = if (sourceCollFqn != null) collectionWrappers[sourceCollFqn] else null
+
+        if (unwrapDescriptor != null && isStdlibCollectionType(targetField.type)) {
+            if (!unwrapDescriptor.providesUnwrap) {
+                logger.error(
+                    "${sourceField.name}: ${unwrapDescriptor.wrapperSimpleName} declares no unwrap for " +
+                        "${unwrapDescriptor.forTypeSimpleName}; add " +
+                        "fun <T> unwrap(source: ${unwrapDescriptor.forTypeSimpleName}<T>): List<T>",
+                )
+                return MappingStrategy.Unmappable
+            }
+            val sourceElementType = extractCollectionElementType(sourceField.type)
+            val targetElementType = extractCollectionElementType(targetField.type)
+            val elementStrategy =
+                if (sourceElementType != null && targetElementType != null) {
+                    resolveElementStrategy(sourceField, targetField, sourceElementType, targetElementType, isReverse)
+                } else {
+                    MappingStrategy.Direct
+                }
+            return MappingStrategy.WrappedCollection(elementStrategy, unwrapDescriptor.wrapperObjectFqn, useUnwrap = true)
         }
 
         // 2b. Map<K,V> detection — must come before data-class nested check and before
@@ -447,8 +500,21 @@ class TypeMatcher(
     }
 
     /**
+     * Returns true for the plain stdlib collection containers (List/MutableList/Set/MutableSet)
+     * only — excludes wrapped types like kotlinx.collections.immutable. Used as the unwrap
+     * direction's TARGET shape check: unwrap() lands on a plain collection by contract.
+     */
+    fun isStdlibCollectionType(type: KSType): Boolean {
+        val fqn = type.declaration.qualifiedName?.asString() ?: return false
+        return fqn.startsWith("kotlin.collections.List") ||
+            fqn.startsWith("kotlin.collections.MutableList") ||
+            fqn.startsWith("kotlin.collections.Set") ||
+            fqn.startsWith("kotlin.collections.MutableSet")
+    }
+
+    /**
      * Returns true when the given type is a stdlib Set (kotlin.collections.Set or MutableSet).
-     * Used to determine whether the generator must append `.toSet()` after `.map { }`.
+     * Used to select the Set-producing element seams (convertEach…ToSet).
      */
     fun isSetCollectionType(type: KSType): Boolean {
         val fqn = type.declaration.qualifiedName?.asString() ?: return false

@@ -9,8 +9,9 @@ private const val COLLECTION_WRAPPER_ANNOTATION = "com.sahsenvar.kmapper.annotat
 private const val KMAPPER_CONFIG_ANNOTATION = "com.sahsenvar.kmapper.annotations.KMapperConfig"
 
 /**
- * Reads all @KMapperConfig.wrappers listings (in-module, works on KMP/iOS) and resolves
- * each wrapper object's @CollectionWrapper.forType to build Map<forTypeFqn, wrapperObjectFqn>.
+ * Reads all @KMapperConfig.wrappers listings (in-module, works on KMP/iOS), resolves each
+ * wrapper object's @CollectionWrapper.forType, and validates the duck-typed wrap/unwrap
+ * contract via [CollectionWrapperValidator] to build Map<forTypeFqn, descriptor>.
  *
  * Design:
  *   - No cross-module symbol enumeration (getDeclarationsFromPackage / getSymbolsWithAnnotation
@@ -18,6 +19,8 @@ private const val KMAPPER_CONFIG_ANNOTATION = "com.sahsenvar.kmapper.annotations
  *   - For each KClass listed in @KMapperConfig.wrappers, resolve its @CollectionWrapper.forType
  *     by reading the annotation on the resolved dependency class. This is standard
  *     dependency annotation resolution, which works cross-module in KSP2.
+ *   - Signature validation: wrap/unwrap shapes are checked against forType; a bad shape or a
+ *     wrapper with neither direction → logger.error (causes COMPILATION_ERROR).
  *   - Duplicate forType (same collection type listed via two wrapper objects) → logger.error
  *     (causes COMPILATION_ERROR).
  *
@@ -27,9 +30,11 @@ private const val KMAPPER_CONFIG_ANNOTATION = "com.sahsenvar.kmapper.annotations
 fun discoverWrappersFromConfig(
     resolver: Resolver,
     logger: KSPLogger,
-): Map<String, String> {
-    // forTypeFqn → wrapperObjectFqn; accumulate all first, then check duplicates
-    val entries = mutableListOf<Pair<String, String>>()
+): Map<String, CollectionWrapperDescriptor> {
+    val validator = CollectionWrapperValidator(logger)
+
+    // Accumulate all validated descriptors first, then check duplicates
+    val entries = mutableListOf<CollectionWrapperDescriptor>()
 
     resolver
         .getSymbolsWithAnnotation(KMAPPER_CONFIG_ANNOTATION)
@@ -88,24 +93,23 @@ fun discoverWrappersFromConfig(
                     continue
                 }
 
-                entries.add(forTypeFqn to wrapperObjectFqn)
+                val descriptor = validator.validate(wrapperDecl, forTypeFqn) ?: continue
+                entries.add(descriptor)
             }
         }
 
     // Detect duplicate forType registrations — same collection type mapped by two wrappers
-    val seenForTypes = mutableMapOf<String, String>() // forTypeFqn → first wrapperObjectFqn
-    val result = mutableMapOf<String, String>()
-    for ((forTypeFqn, wrapperObjectFqn) in entries) {
-        val existing = seenForTypes[forTypeFqn]
+    val result = mutableMapOf<String, CollectionWrapperDescriptor>()
+    for (descriptor in entries) {
+        val existing = result[descriptor.forTypeFqn]
         if (existing != null) {
             logger.error(
-                "Duplicate @CollectionWrapper for forType=$forTypeFqn: " +
-                    "both $existing and $wrapperObjectFqn are registered. " +
+                "Duplicate @CollectionWrapper for forType=${descriptor.forTypeFqn}: " +
+                    "both ${existing.wrapperObjectFqn} and ${descriptor.wrapperObjectFqn} are registered. " +
                     "Remove one from @KMapperConfig.wrappers.",
             )
         } else {
-            seenForTypes[forTypeFqn] = wrapperObjectFqn
-            result[forTypeFqn] = wrapperObjectFqn
+            result[descriptor.forTypeFqn] = descriptor
         }
     }
 

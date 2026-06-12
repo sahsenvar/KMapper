@@ -15,7 +15,7 @@ class CollectionWrapperTest {
     /**
      * A @CollectionWrapper object in the same compilation, listed in @KMapperConfig.wrappers.
      * A @MapTo model with a PersistentList<TagDomain> target field should generate
-     * W.wrap(tags.map { it.toTagDomain() }) — the wrapper object's wrap() call.
+     * W.wrap(tags.convertEachOrSkip(...) { ... }) — element seams INSIDE the wrap() call.
      */
     @Test
     fun `List maps to PersistentList via CollectionWrapper object`() {
@@ -50,8 +50,8 @@ class CollectionWrapperTest {
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
-        // Must have a .map call for element-level conversion
-        assertTrue(gen.contains(".map") || gen.contains("map·{"), "Expected .map in generated code:\n$gen")
+        // Element-level conversion rides the seam rails inside the wrap call
+        assertTrue(gen.contains("convertEachOrSkip(\"tags\""), "Expected convertEachOrSkip in generated code:\n$gen")
         // Must call the wrapper object's wrap method
         assertTrue(gen.contains("W.wrap("), "Expected W.wrap( call in generated code:\n$gen")
     }

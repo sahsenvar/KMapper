@@ -63,15 +63,19 @@ sealed class MappingStrategy {
     data object EnumToWire : MappingStrategy()
 
     /**
-     * Collection mapping that terminates with a @CollectionWrapper object's wrap() call.
-     * Emits: WrapperObject.wrap(source.map { elementMapping }) (non-null source)
-     *      or source?.map { ... }?.let { WrapperObject.wrap(it) } (nullable source)
+     * Collection mapping whose container shell is handled by a @CollectionWrapper object,
+     * in either direction. Element conversion stays on the normal seam rails:
+     *   forward (wrap):  `WrapperObject.wrap(<element seam chain>)`
+     *   reverse (unwrap): `WrapperObject.unwrap(source).<element seam chain>`
      * @param elementStrategy how to map each element
      * @param wrapperObjectFqn fully-qualified name of the wrapper object (e.g. com.example.PersistentListWrapper)
+     * @param useUnwrap true when the SOURCE field is the registered wrapped type and the
+     *   target is a plain collection — the generator calls unwrap() and feeds the seams.
      */
     data class WrappedCollection(
         val elementStrategy: MappingStrategy,
         val wrapperObjectFqn: String,
+        val useUnwrap: Boolean = false,
     ) : MappingStrategy()
 
     /**

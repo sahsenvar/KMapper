@@ -2,10 +2,8 @@
 
 package com.sahsenvar.kmapper.processor
 
-import com.sahsenvar.kmapper.KMapper
 import com.sahsenvar.kmapper.MappingDegradation
 import com.sahsenvar.kmapper.MappingException
-import com.sahsenvar.kmapper.MappingListener
 import com.tschuchort.compiletesting.SourceFile
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -15,25 +13,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-
-/** Local recording listener (mirrors ScalarLadderCodegenTest's — file-private there). */
-private class NestedRecordingListener : MappingListener {
-    val events = mutableListOf<MappingDegradation>()
-
-    override fun onDegradation(event: MappingDegradation) {
-        events.add(event)
-    }
-}
-
-private inline fun <T> recordingDegradations(block: (NestedRecordingListener) -> T): T {
-    val listener = NestedRecordingListener()
-    KMapper.addListener(listener)
-    return try {
-        block(listener)
-    } finally {
-        KMapper.removeListener(listener)
-    }
-}
 
 /**
  * Golden + runtime tests for nested mapping through the ladder seams (plan Task 15):
@@ -164,7 +143,7 @@ class NestedLadderCodegenTest :
 
             `when`("the inner mapping fails hard but the outer field is nullable") {
                 then("the outer field absorbs to null and reports with the prefixed cause path") {
-                    recordingDegradations { listener ->
+                    withRecordingListener { listener ->
                         val outcome =
                             result.invokeResultMapper(
                                 "ContactDataModelMappersKt",

@@ -21,9 +21,10 @@ import com.squareup.kotlinpoet.MemberName
  *   `convertOrElse` (Auto) or `convertOrElseStrict` with `base.<field>` as the fallback.
  *
  * Path literals are the TARGET field name (single segment — nesting prefixes accumulate at
- * runtime via `MappingException.withPathPrefix`); type literals are codegen string literals
- * (fully-qualified for converter pairs, simple class names for nested mappers) so release
- * builds stay readable under R8 without a mapping file.
+ * runtime via `MappingException.withPathPrefix`; element seams append their own `[i]` /
+ * `["key"]` segments); type literals are codegen string literals (fully-qualified for
+ * converter pairs and collection elements, simple class names for scalar nested mappers)
+ * so release builds stay readable under R8 without a mapping file.
  */
 class MappingCodeGenerator(
     private val logger: KSPLogger,
@@ -67,7 +68,7 @@ class MappingCodeGenerator(
 
                 is MappingStrategy.Collection ->
                     applyChainLanding(
-                        generateCollectionMapping(sourceField, strategy),
+                        generateCollectionMapping(sourceField, targetField, strategy, onFail),
                         chainIsNullable = sourceField.isNullable,
                         targetField = targetField,
                         landingShape = landingShape,
@@ -75,7 +76,7 @@ class MappingCodeGenerator(
 
                 is MappingStrategy.WrappedCollection ->
                     applyChainLanding(
-                        generateWrappedCollectionMapping(sourceField, strategy),
+                        generateWrappedCollectionMapping(sourceField, targetField, strategy, onFail),
                         chainIsNullable = sourceField.isNullable,
                         targetField = targetField,
                         landingShape = landingShape,
@@ -83,7 +84,7 @@ class MappingCodeGenerator(
 
                 is MappingStrategy.MapValues ->
                     applyChainLanding(
-                        generateMapValuesMapping(sourceField, strategy),
+                        generateMapValuesMapping(sourceField, targetField, strategy, onFail),
                         chainIsNullable = sourceField.isNullable,
                         targetField = targetField,
                         landingShape = landingShape,
@@ -103,20 +104,11 @@ class MappingCodeGenerator(
                     )
 
                 is MappingStrategy.EnumFromWire ->
-                    applyChainLanding(
-                        generateEnumFromWireMapping(sourceField, targetField, strategy),
-                        chainIsNullable = sourceField.isNullable,
-                        targetField = targetField,
-                        landingShape = landingShape,
-                    )
+                    generateEnumFromWireMapping(sourceField, targetField, strategy, landingShape, onFail)
 
                 is MappingStrategy.EnumToWire ->
                     applyChainLanding(
-                        if (sourceField.isNullable) {
-                            CodeBlock.of("%N?.wireValue", sourceField.name)
-                        } else {
-                            CodeBlock.of("%N.wireValue", sourceField.name)
-                        },
+                        generateEnumToWireMapping(sourceField),
                         chainIsNullable = sourceField.isNullable,
                         targetField = targetField,
                         landingShape = landingShape,
@@ -131,11 +123,16 @@ class MappingCodeGenerator(
         return wrapWithValidation(sourceField, targetField, baseMapping)
     }
 
-    /** Seam member for the (landing shape × policy) cell. `OnFail.Skip` on a scalar is a compile error upstream. */
+    /**
+     * Seam member for the (landing shape × policy) cell. `OnFail.Skip` reaches the element
+     * seams via the collection table only; on a scalar landing site it is rejected upstream
+     * (TypeMatcher precondition), so seeing it here is a processor bug — fail loudly.
+     */
     private fun seamFor(
         landingShape: LandingShape,
         onFail: OnFailPolicy,
     ): MemberName {
+        check(onFail != OnFailPolicy.Skip) { "OnFail.Skip must be rejected upstream of scalar seam selection" }
         val seamName =
             when (landingShape) {
                 LandingShape.HARD -> "convertOrFail"
@@ -262,14 +259,12 @@ class MappingCodeGenerator(
     }
 
     /**
-     * INTERIM container-level landing for chain-shaped strategies (collections, maps,
-     * wrapped collections, enum bridges, Option unwrap): a nullable chain into a HARD
-     * landing site gets the `orRequired` absence guard; the COPY stage falls back to
-     * `base.<field>`; nullable targets pass the chain through unchanged.
-     *
-     * The full element-ladder codegen (the convertEach… / convertEntries… seams) replaces
-     * the `.map { }` chains in the collections chunk — only the container-level null
-     * handling has moved to the seams here.
+     * Container-level landing for chain-shaped strategies (collections, maps, wrapped
+     * collections, enum→wire reads, Option unwrap): a nullable chain into a HARD landing
+     * site gets the `orRequired` absence guard; the COPY stage falls back to `base.<field>`;
+     * nullable targets pass the chain through unchanged. This is the CONTAINER half of the
+     * scope separation — element failure handling lives inside the element seams and never
+     * escalates here.
      */
     private fun applyChainLanding(
         chain: CodeBlock,
@@ -314,7 +309,7 @@ class MappingCodeGenerator(
         val toValidators = targetField.validators
         if (fromValidators.isEmpty() && toValidators.isEmpty()) return expr
 
-        val validationFailed = ClassName("com.sahsenvar.kmapper", "MappingException", "ValidationFailed")
+        val validationFailed = ClassName(SEAMS_PACKAGE, "MappingException", "ValidationFailed")
         val srcName = sourceField.name
         val tgtName = targetField.name
 
@@ -379,194 +374,324 @@ class MappingCodeGenerator(
     }
 
     /**
-     * Wire → enum bridge via MappableEnum.entries. The path literal is the TARGET field's
-     * name (a path names where the value LANDS — consistent with every seam emission; the
-     * source field name can differ under @FieldMap renames).
+     * Wire → enum bridge riding the SAME ladder seams as any conversion (spec: UnknownEnumValue
+     * "rides the same ladder"): the entries lookup is the convert lambda, so an unknown wire
+     * value absorbs to null/default at nullable/defaulted landing sites (reported) and stays
+     * hard only where the ladder is hard. The lambda throws with an EMPTY path — the seam
+     * prefixes the TARGET field's name (a path names where the value LANDS; the source field
+     * name can differ under @FieldMap renames).
      */
     private fun generateEnumFromWireMapping(
         sourceField: FieldInfo,
         targetField: FieldInfo,
         strategy: MappingStrategy.EnumFromWire,
+        landingShape: LandingShape,
+        onFail: OnFailPolicy,
     ): CodeBlock {
         val enumClassName = ClassName.bestGuess(strategy.enumFqn)
         val enumSimpleName = strategy.enumFqn.substringAfterLast(".")
-        val mappingExceptionClass = ClassName("com.sahsenvar.kmapper", "MappingException")
-
-        return if (sourceField.isNullable) {
+        val mappingExceptionClass = ClassName(SEAMS_PACKAGE, "MappingException")
+        return emitSeamCall(
+            sourceField = sourceField,
+            targetField = targetField,
+            landingShape = landingShape,
+            onFail = onFail,
+            fromLiteral = sourceField.type.fqn(),
+            toLiteral = enumSimpleName,
+            convertLambda =
             CodeBlock.of(
-                "%N?.let·{·w·->·%T.entries.firstOrNull·{·it.wireValue·==·w·}" +
-                    "·?:·throw·%T.UnknownEnumValue(%S,·%S,·w.toString())·}",
-                sourceField.name,
+                "{·wire·->·%T.entries.firstOrNull·{·it.wireValue·==·wire·}" +
+                    "·?:·throw·%T.UnknownEnumValue(%S,·%S,·wire.toString())·}",
                 enumClassName,
                 mappingExceptionClass,
-                targetField.name,
+                "",
                 enumSimpleName,
-            )
-        } else {
-            CodeBlock.of(
-                "%T.entries.firstOrNull·{·it.wireValue·==·%N·}" +
-                    "·?:·throw·%T.UnknownEnumValue(%S,·%S,·%N.toString())",
-                enumClassName,
-                sourceField.name,
-                mappingExceptionClass,
-                targetField.name,
-                enumSimpleName,
-                sourceField.name,
-            )
-        }
+            ),
+        )
     }
 
     /**
-     * INTERIM collection emission (`.map { }` chains): element conversion shape unchanged
-     * until the element-ladder chunk lands; nested element mappers already ride the Result
-     * boundary (`it.toXResult().getOrThrow()`). Container-level null handling is applied by
-     * [applyChainLanding] after this returns.
+     * Enum → wire value via MappableEnum.wireValue — a property read that can never break,
+     * so no seam is needed; the container-level landing (orRequired / `?: base.x`) is applied
+     * by [applyChainLanding] after this returns.
+     */
+    private fun generateEnumToWireMapping(sourceField: FieldInfo): CodeBlock = if (sourceField.isNullable) {
+        CodeBlock.of("%N?.wireValue", sourceField.name)
+    } else {
+        CodeBlock.of("%N.wireValue", sourceField.name)
+    }
+
+    /**
+     * Element-ladder collection emission: Convert/Nested elements ride the convertEach…
+     * seams selected by the (target element shape × onFail) table — see [listElementSeamName];
+     * Direct same-type elements keep the container passthrough (no seam). Container-level
+     * null handling is applied by [applyChainLanding] after this returns (scope separation:
+     * element failure never escalates to the container).
+     *
+     * Emission shapes:
+     *   tags.convertEachOrSkip("tags", "kotlin.String", "kotlin.Long") { LongStringConverter.convertFromOrNull(it) }
+     *   tags?.convertEachOrFail("tags", "TagDataModel", "TagDomainModel") { it.toTagDomainModelResult().getOrThrow() }
      */
     private fun generateCollectionMapping(
         sourceField: FieldInfo,
+        targetField: FieldInfo,
         strategy: MappingStrategy.Collection,
+        onFail: OnFailPolicy,
     ): CodeBlock {
-        val builder = CodeBlock.builder()
-
-        // Base mapping — use safe-call map (?. ) only when the source field is nullable.
-        // A non-null List source must use plain .map { } so the result type stays non-null.
-        when (strategy.elementStrategy) {
-            is MappingStrategy.Nested -> {
-                val mapperFn = (strategy.elementStrategy as MappingStrategy.Nested).mapperFunctionName
-                if (sourceField.isNullable) {
-                    builder.add(
-                        "%N?.map·{·it.%N().getOrThrow()·}",
-                        sourceField.name,
-                        mapperFn,
-                    )
-                } else {
-                    builder.add(
-                        "%N.map·{·it.%N().getOrThrow()·}",
-                        sourceField.name,
-                        mapperFn,
-                    )
-                }
-            }
-
-            else -> {
-                builder.add("%N", sourceField.name)
-            }
+        val sourceElementType = elementTypeOf(sourceField.type)
+        val targetElementType = elementTypeOf(targetField.type)
+        if (sourceElementType == null || targetElementType == null) {
+            return CodeBlock.of("%N", sourceField.name)
         }
-
-        // When the target collection type is a Set (kotlin.collections.Set / MutableSet),
-        // `.map { }` returns a List — we must append `.toSet()` (or `?.toSet()` for a nullable
-        // source chain) so the produced value matches the Set<T> target type.
-        // List targets need no suffix: `.map { }` already returns List<T>.
-        if (strategy.isSet && strategy.elementStrategy is MappingStrategy.Nested) {
-            if (sourceField.isNullable) {
-                builder.add("?.toSet()")
-            } else {
-                builder.add(".toSet()")
-            }
-        }
-
-        // Non-stdlib collection targets (e.g. kotlinx.collections.immutable.*) go exclusively
-        // through the @CollectionWrapper / MappingStrategy.WrappedCollection path.
-        return builder.build()
+        val seamName = listElementSeamName(targetElementType.isMarkedNullable, strategy.isSet, onFail)
+        val convertLambda =
+            elementConvertLambda(strategy.elementStrategy, seamTakesTotalConvert(seamName))
+                ?: return CodeBlock.of("%N", sourceField.name)
+        return elementSeamCall(
+            receiver = CodeBlock.of("%N", sourceField.name),
+            receiverIsNullable = sourceField.isNullable,
+            seamName = seamName,
+            path = targetField.name,
+            fromLiteral = sourceElementType.fqn(),
+            toLiteral = targetElementType.fqn(),
+            convertLambda = convertLambda,
+        )
     }
 
     /**
-     * Generates code for a @CollectionWrapper field using the wrapper object's wrap() method
-     * (INTERIM shape — see [generateCollectionMapping]).
+     * @CollectionWrapper emission, both directions. The wrapper object handles ONLY the
+     * container shell; element conversion stays on the normal seam rails:
      *
-     * Non-null source:
-     *   WrapperObject.wrap(source.map { it.toXResult().getOrThrow() })   (Nested element)
-     *   WrapperObject.wrap(source)                                        (Direct element)
+     * Forward (wrap — target is the registered type):
+     *   WrapperObject.wrap(source.convertEachOrSkip(…) { … })           (non-null source)
+     *   source?.convertEachOrSkip(…) { … }?.let { WrapperObject.wrap(it) }  (nullable source)
+     *   WrapperObject.wrap(source) / source?.let { WrapperObject.wrap(it) } (Direct elements)
      *
-     * Nullable source:
-     *   source?.map { ... }?.let { WrapperObject.wrap(it) }               (Nested element)
-     *   source?.let { WrapperObject.wrap(it) }                            (Direct element)
+     * Unwrap (source is the registered type, target a plain collection):
+     *   WrapperObject.unwrap(source).convertEachOrSkip(…) { … }
+     *   source?.let { WrapperObject.unwrap(it) }?.convertEachOrSkip(…) { … }
+     *
+     * The wrap contract takes List<T>, so the forward element seams are always List-shaped;
+     * the unwrap direction picks Set seams when the plain TARGET is a Set.
      */
     private fun generateWrappedCollectionMapping(
         sourceField: FieldInfo,
+        targetField: FieldInfo,
         strategy: MappingStrategy.WrappedCollection,
+        onFail: OnFailPolicy,
     ): CodeBlock {
-        val builder = CodeBlock.builder()
         val wrapperClass = ClassName.bestGuess(strategy.wrapperObjectFqn)
-
-        when (strategy.elementStrategy) {
-            is MappingStrategy.Nested -> {
-                val mapperFn = (strategy.elementStrategy as MappingStrategy.Nested).mapperFunctionName
+        return if (strategy.useUnwrap) {
+            val unwrapped =
                 if (sourceField.isNullable) {
-                    // source?.map { it.toXResult().getOrThrow() }?.let { WrapperObject.wrap(it) }
-                    builder.add(
-                        "%N?.map·{·it.%N().getOrThrow()·}?.let·{·%T.wrap(it)·}",
-                        sourceField.name,
-                        mapperFn,
-                        wrapperClass,
-                    )
+                    CodeBlock.of("%N?.let·{·%T.unwrap(it)·}", sourceField.name, wrapperClass)
                 } else {
-                    // WrapperObject.wrap(source.map { it.toXResult().getOrThrow() })
-                    builder.add(
-                        "%T.wrap(%N.map·{·it.%N().getOrThrow()·})",
-                        wrapperClass,
-                        sourceField.name,
-                        mapperFn,
-                    )
+                    CodeBlock.of("%T.unwrap(%N)", wrapperClass, sourceField.name)
                 }
-            }
-
-            is MappingStrategy.Direct -> {
+            val sourceElementType = elementTypeOf(sourceField.type)
+            val targetElementType = elementTypeOf(targetField.type)
+            if (sourceElementType == null || targetElementType == null) return unwrapped
+            val seamName =
+                listElementSeamName(targetElementType.isMarkedNullable, isSetType(targetField.type), onFail)
+            val convertLambda =
+                elementConvertLambda(strategy.elementStrategy, seamTakesTotalConvert(seamName))
+                    ?: return unwrapped
+            elementSeamCall(
+                receiver = unwrapped,
+                receiverIsNullable = sourceField.isNullable,
+                seamName = seamName,
+                path = targetField.name,
+                fromLiteral = sourceElementType.fqn(),
+                toLiteral = targetElementType.fqn(),
+                convertLambda = convertLambda,
+            )
+        } else {
+            val directWrap =
                 if (sourceField.isNullable) {
-                    // source?.let { WrapperObject.wrap(it) }
-                    builder.add("%N?.let·{·%T.wrap(it)·}", sourceField.name, wrapperClass)
+                    CodeBlock.of("%N?.let·{·%T.wrap(it)·}", sourceField.name, wrapperClass)
                 } else {
-                    // WrapperObject.wrap(source)
-                    builder.add("%T.wrap(%N)", wrapperClass, sourceField.name)
+                    CodeBlock.of("%T.wrap(%N)", wrapperClass, sourceField.name)
                 }
-            }
-
-            else -> {
-                // Fallback: just emit the source (unlikely in practice)
-                builder.add("%N", sourceField.name)
+            val sourceElementType = elementTypeOf(sourceField.type)
+            val targetElementType = elementTypeOf(targetField.type)
+            if (sourceElementType == null || targetElementType == null) return directWrap
+            // wrap(List<T>) by contract — the inner seam is always the List-shaped one.
+            val seamName = listElementSeamName(targetElementType.isMarkedNullable, isSetTarget = false, onFail = onFail)
+            val convertLambda =
+                elementConvertLambda(strategy.elementStrategy, seamTakesTotalConvert(seamName))
+                    ?: return directWrap
+            val seamChain =
+                elementSeamCall(
+                    receiver = CodeBlock.of("%N", sourceField.name),
+                    receiverIsNullable = sourceField.isNullable,
+                    seamName = seamName,
+                    path = targetField.name,
+                    fromLiteral = sourceElementType.fqn(),
+                    toLiteral = targetElementType.fqn(),
+                    convertLambda = convertLambda,
+                )
+            if (sourceField.isNullable) {
+                CodeBlock.of("%L?.let·{·%T.wrap(it)·}", seamChain, wrapperClass)
+            } else {
+                CodeBlock.of("%T.wrap(%L)", wrapperClass, seamChain)
             }
         }
-
-        return builder.build()
     }
 
     /**
-     * Generates code for a Map<K,V1> → Map<K,V2> field using mapValues (INTERIM shape —
-     * see [generateCollectionMapping]).
+     * Map<K,V1> → Map<K,V2> emission through the convertEntries… seams (per-entry key/value
+     * ladders, keyed paths like `prices["usd"]`). Keys stay same-type in v1 — the identity
+     * `{ it }` lambda satisfies the seam's convertKey parameter; key converters are parked.
+     * Direct same-type values keep the container passthrough.
      *
-     * Non-null source + Nested values:
-     *   source.mapValues { (_, v) -> v.toV2Result().getOrThrow() }
-     *
-     * Nullable source + Nested values:
-     *   source?.mapValues { (_, v) -> v.toV2Result().getOrThrow() }
-     *
-     * Direct values (same type): passthrough → source
+     * Emission shape:
+     *   prices.convertEntriesOrSkip("prices", "kotlin.String", "kotlin.String",
+     *       "kotlin.String", "kotlin.Long", { it }) { LongStringConverter.convertFromOrNull(it) }
      *
      * [applyChainLanding] runs after this method returns, so a nullable source into a hard
      * or defaulted target lands correctly (orRequired / ?: base.x) without extra logic here.
      */
     private fun generateMapValuesMapping(
         sourceField: FieldInfo,
+        targetField: FieldInfo,
         strategy: MappingStrategy.MapValues,
-    ): CodeBlock = when (strategy.valueStrategy) {
-        is MappingStrategy.Nested -> {
-            val mapperFn = (strategy.valueStrategy as MappingStrategy.Nested).mapperFunctionName
-            if (sourceField.isNullable) {
-                CodeBlock.of(
-                    "%N?.mapValues·{·(_,·v)·->·v.%N().getOrThrow()·}",
-                    sourceField.name,
-                    mapperFn,
-                )
-            } else {
-                CodeBlock.of(
-                    "%N.mapValues·{·(_,·v)·->·v.%N().getOrThrow()·}",
-                    sourceField.name,
-                    mapperFn,
-                )
-            }
+        onFail: OnFailPolicy,
+    ): CodeBlock {
+        val sourceKeyType = sourceField.type.arguments.getOrNull(0)?.type?.resolve()
+        val targetKeyType = targetField.type.arguments.getOrNull(0)?.type?.resolve()
+        val sourceValueType = sourceField.type.arguments.getOrNull(1)?.type?.resolve()
+        val targetValueType = targetField.type.arguments.getOrNull(1)?.type?.resolve()
+        if (sourceKeyType == null || targetKeyType == null || sourceValueType == null || targetValueType == null) {
+            return CodeBlock.of("%N", sourceField.name)
         }
-        else -> // Direct (same value type) — passthrough
-            CodeBlock.of("%N", sourceField.name)
+        val seamName = mapEntrySeamName(targetValueType.isMarkedNullable, onFail)
+        val convertValueLambda =
+            elementConvertLambda(strategy.valueStrategy, seamTakesTotalConvert(seamName))
+                ?: return CodeBlock.of("%N", sourceField.name)
+        val safeCall = if (sourceField.isNullable) "?" else ""
+        return CodeBlock.of(
+            "%N$safeCall.%M(%S,·%S,·%S,·%S,·%S,·{·it·})·%L",
+            sourceField.name,
+            MemberName(SEAMS_PACKAGE, seamName),
+            targetField.name,
+            sourceKeyType.fqn(),
+            targetKeyType.fqn(),
+            sourceValueType.fqn(),
+            targetValueType.fqn(),
+            convertValueLambda,
+        )
+    }
+
+    /**
+     * Element seam for a List/Set-shaped container, per the LOCKED table:
+     *
+     * | target element | Auto | Skip | Throw |
+     * |---|---|---|---|
+     * | `T` (List)  | convertEachOrSkip      | convertEachOrSkip | convertEachOrFail      |
+     * | `T?` (List) | convertEachOrNull      | convertEachOrSkip | convertEachOrNullStrict |
+     * | Set         | convertEachOrSkipToSet | same              | convertEachOrFailToSet  |
+     */
+    private fun listElementSeamName(
+        targetElementNullable: Boolean,
+        isSetTarget: Boolean,
+        onFail: OnFailPolicy,
+    ): String = when {
+        isSetTarget -> if (onFail == OnFailPolicy.Throw) "convertEachOrFailToSet" else "convertEachOrSkipToSet"
+
+        targetElementNullable ->
+            when (onFail) {
+                OnFailPolicy.Throw -> "convertEachOrNullStrict"
+                OnFailPolicy.Skip -> "convertEachOrSkip"
+                OnFailPolicy.Auto -> "convertEachOrNull"
+            }
+
+        else -> if (onFail == OnFailPolicy.Throw) "convertEachOrFail" else "convertEachOrSkip"
+    }
+
+    /**
+     * Entry seam for a Map-shaped container, per the LOCKED table:
+     *
+     * | target value | Auto | Skip | Throw |
+     * |---|---|---|---|
+     * | `VT`  | convertEntriesOrSkip       | same                 | convertEntriesOrFail |
+     * | `VT?` | convertEntriesValueOrNull  | convertEntriesOrSkip | convertEntriesOrFail |
+     */
+    private fun mapEntrySeamName(
+        targetValueNullable: Boolean,
+        onFail: OnFailPolicy,
+    ): String = when {
+        onFail == OnFailPolicy.Throw -> "convertEntriesOrFail"
+        targetValueNullable && onFail == OnFailPolicy.Auto -> "convertEntriesValueOrNull"
+        else -> "convertEntriesOrSkip"
+    }
+
+    /**
+     * True when [seamName]'s convert parameter is total `(S) -> T` (the OrFail family) —
+     * the converter's TOTAL method is called there. Every other seam accepts a
+     * nullable-returning convert, so the converter's OrNull method rides it (sanctioned
+     * null lands as skip/null per the seam's own rung).
+     */
+    private fun seamTakesTotalConvert(seamName: String): Boolean = seamName == "convertEachOrFail" || seamName == "convertEachOrFailToSet" || seamName == "convertEntriesOrFail"
+
+    /**
+     * Convert lambda for an element-level strategy: converter call (orientation-aware,
+     * total vs OrNull per the seam) or nested sub-mapper through the Result boundary.
+     * Returns null for element strategies with no seam-side conversion (Direct passthrough
+     * stays container-level; deeper recursion is out of scope for v1).
+     */
+    private fun elementConvertLambda(
+        elementStrategy: MappingStrategy,
+        useTotalConverterMethod: Boolean,
+    ): CodeBlock? = when (elementStrategy) {
+        is MappingStrategy.Convert -> {
+            val converterClassName = ClassName.bestGuess(elementStrategy.converterFqn)
+            val totalMethod = if (elementStrategy.forward) "convertTo" else "convertFrom"
+            val convertMethod = if (useTotalConverterMethod) totalMethod else "${totalMethod}OrNull"
+            CodeBlock.of("{·%T.%N(it)·}", converterClassName, convertMethod)
+        }
+
+        is MappingStrategy.Nested ->
+            CodeBlock.of("{·it.%N().getOrThrow()·}", elementStrategy.mapperFunctionName)
+
+        else -> null
+    }
+
+    /**
+     * Shared element-seam emission:
+     * `receiver[?].seam(path, fromElementFqn, toElementFqn) { convert }`.
+     * A nullable receiver chain stays nullable — [applyChainLanding] lands it.
+     */
+    private fun elementSeamCall(
+        receiver: CodeBlock,
+        receiverIsNullable: Boolean,
+        seamName: String,
+        path: String,
+        fromLiteral: String,
+        toLiteral: String,
+        convertLambda: CodeBlock,
+    ): CodeBlock {
+        val safeCall = if (receiverIsNullable) "?" else ""
+        return CodeBlock.of(
+            "%L$safeCall.%M(%S,·%S,·%S)·%L",
+            receiver,
+            MemberName(SEAMS_PACKAGE, seamName),
+            path,
+            fromLiteral,
+            toLiteral,
+            convertLambda,
+        )
+    }
+
+    /** First type argument of a collection-shaped [type], or null when unavailable. */
+    private fun elementTypeOf(type: KSType): KSType? = type.arguments
+        .firstOrNull()
+        ?.type
+        ?.resolve()
+
+    /** True for stdlib Set/MutableSet targets — selects the Set-producing element seams. */
+    private fun isSetType(type: KSType): Boolean {
+        val fqn = type.declaration.qualifiedName?.asString() ?: return false
+        return fqn.startsWith("kotlin.collections.Set") || fqn.startsWith("kotlin.collections.MutableSet")
     }
 
     /**

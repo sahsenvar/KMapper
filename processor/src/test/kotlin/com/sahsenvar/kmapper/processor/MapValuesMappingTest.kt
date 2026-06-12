@@ -77,13 +77,13 @@ class MapValuesMappingTest {
         val (r, compilation) = compile(nestedValueSrc)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("ContainerRMappers.kt")
-        // Must contain mapValues (with or without safe-call prefix)
-        assert(gen.contains("mapValues")) {
-            "Expected mapValues in generated code:\n$gen"
+        // Must ride the per-entry seam with real key/value type-pair literals
+        assert(gen.contains("convertEntriesOrSkip(\"items\", \"kotlin.String\", \"kotlin.String\", \"ValueR\", \"ValueD\"")) {
+            "Expected convertEntriesOrSkip with key/value FQN pairs in generated code:\n$gen"
         }
-        // Must call value mapper
-        assert(gen.contains("toValueD")) {
-            "Expected toValueD() call inside mapValues:\n$gen"
+        // Must call the value mapper through the Result boundary
+        assert(gen.contains("toValueDResult().getOrThrow()")) {
+            "Expected toValueDResult().getOrThrow() call inside the entry seam:\n$gen"
         }
     }
 
@@ -126,9 +126,9 @@ class MapValuesMappingTest {
         val (r, compilation) = compile(directValueSrc)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("BagRMappers.kt")
-        // Direct passthrough: should contain the field name "tags" but NOT mapValues
-        assert(!gen.contains("mapValues")) {
-            "Direct Map<String,String> should NOT emit mapValues, but got:\n$gen"
+        // Direct passthrough: should contain the field name "tags" but NO entry seam
+        assert(!gen.contains("convertEntries")) {
+            "Direct Map<String,String> should NOT emit an entry seam, but got:\n$gen"
         }
         assert(gen.contains("tags")) {
             "Expected field name 'tags' in generated code:\n$gen"
@@ -157,9 +157,12 @@ class MapValuesMappingTest {
         val (r, compilation) = compile(nullableValueSrc)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("BoxRMappers.kt")
-        // Nullable source → safe-call ?.mapValues
-        assert(gen.contains("?.mapValues")) {
-            "Expected ?.mapValues for nullable Map source:\n$gen"
+        // Nullable source → safe-called entry seam, landed by the container ladder (orRequired)
+        assert(gen.contains("m?.convertEntriesOrSkip(")) {
+            "Expected m?.convertEntriesOrSkip( for nullable Map source:\n$gen"
+        }
+        assert(gen.contains(".orRequired(\"m\")")) {
+            "Expected the container-ladder orRequired landing for the hard target:\n$gen"
         }
     }
 
@@ -253,11 +256,11 @@ class MapValuesMappingTest {
         val (r, compilation) = compile(src)
         assertEquals(KotlinCompilation.ExitCode.OK, r.exitCode, r.messages)
         val gen = compilation.generatedFile("OrderRMappers.kt")
-        assert(gen.contains(".map·{") || gen.contains(".map {")) {
-            "Expected .map { in list mapping:\n$gen"
+        assert(gen.contains("convertEachOrSkip(\"items\"")) {
+            "Expected convertEachOrSkip in list mapping:\n$gen"
         }
-        assert(gen.contains("toItemD")) {
-            "Expected toItemD() in list mapping:\n$gen"
+        assert(gen.contains("toItemDResult().getOrThrow()")) {
+            "Expected toItemDResult().getOrThrow() in list mapping:\n$gen"
         }
     }
 }

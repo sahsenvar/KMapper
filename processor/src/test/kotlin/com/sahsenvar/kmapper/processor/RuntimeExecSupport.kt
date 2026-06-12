@@ -2,9 +2,36 @@
 
 package com.sahsenvar.kmapper.processor
 
+import com.sahsenvar.kmapper.KMapper
+import com.sahsenvar.kmapper.MappingDegradation
+import com.sahsenvar.kmapper.MappingListener
 import com.tschuchort.compiletesting.JvmCompilationResult
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import java.lang.reflect.InvocationTargetException
+
+/**
+ * Records every [MappingDegradation] dispatched through the shared [KMapper] listener registry.
+ * The kctfork classloader resolves core types parent-first, so generated code and the test
+ * observe the SAME KMapper object — registration here taps generated-code dispatches.
+ */
+class RecordingDegradationListener : MappingListener {
+    val events = mutableListOf<MappingDegradation>()
+
+    override fun onDegradation(event: MappingDegradation) {
+        events.add(event)
+    }
+}
+
+/** Runs [block] with a registered recording listener, always unregistering afterwards. */
+inline fun <T> withRecordingListener(block: (RecordingDegradationListener) -> T): T {
+    val listener = RecordingDegradationListener()
+    KMapper.addListener(listener)
+    return try {
+        block(listener)
+    } finally {
+        KMapper.removeListener(listener)
+    }
+}
 
 /**
  * Invokes a KSP-generated top-level extension function via reflection.

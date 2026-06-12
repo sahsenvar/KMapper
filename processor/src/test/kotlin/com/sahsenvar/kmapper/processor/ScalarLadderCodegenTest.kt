@@ -2,10 +2,8 @@
 
 package com.sahsenvar.kmapper.processor
 
-import com.sahsenvar.kmapper.KMapper
 import com.sahsenvar.kmapper.MappingDegradation
 import com.sahsenvar.kmapper.MappingException
-import com.sahsenvar.kmapper.MappingListener
 import com.tschuchort.compiletesting.SourceFile
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -18,30 +16,6 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-
-/**
- * Records every [MappingDegradation] dispatched through the shared [KMapper] listener registry.
- * The kctfork classloader resolves core types parent-first, so generated code and the test
- * observe the SAME KMapper object — registration here taps generated-code dispatches.
- */
-private class RecordingDegradationListener : MappingListener {
-    val events = mutableListOf<MappingDegradation>()
-
-    override fun onDegradation(event: MappingDegradation) {
-        events.add(event)
-    }
-}
-
-/** Runs [block] with a registered recording listener, always unregistering afterwards. */
-private inline fun <T> withRecordingListener(block: (RecordingDegradationListener) -> T): T {
-    val listener = RecordingDegradationListener()
-    KMapper.addListener(listener)
-    return try {
-        block(listener)
-    } finally {
-        KMapper.removeListener(listener)
-    }
-}
 
 /**
  * Golden tests for the scalar fallback-ladder codegen (plan Task 14): `Result` boundary,
