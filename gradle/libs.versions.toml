@@ -9,7 +9,7 @@ arrow = "2.1.2"
 ionspin-bignum = "0.3.10"
 # kctfork 0.12.1 — KSP2-aware maintained fork of kotlin-compile-testing
 compile-testing = "0.13.0"
-vanniktech-publish = "0.33.0"
+vanniktech-publish = "0.36.0"
 kotest = "6.1.11"
 okio = "3.17.0"
 bcv = "0.18.1"
