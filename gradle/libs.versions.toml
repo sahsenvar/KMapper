@@ -2,7 +2,7 @@
 kotlin = "2.3.10"
 ksp = "2.3.6"
 kotlinpoet = "2.3.0"
-agp = "9.1.0"
+agp = "9.2.1"
 kotlinx-datetime = "0.6.0"
 kotlinx-collections-immutable = "0.4.0"
 arrow = "2.1.2"
