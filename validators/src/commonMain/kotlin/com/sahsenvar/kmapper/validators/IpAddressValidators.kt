@@ -53,8 +53,11 @@ private fun isValidIpv6(value: String): Boolean {
         val isLast = index == groups.lastIndex
         groupCount +=
             when {
-                isLast && '.' in group -> if (isValidIpv4(group)) 2 else return false // embedded IPv4 tail = 2 groups
+                isLast && '.' in group -> if (isValidIpv4(group)) 2 else return false
+
+                // embedded IPv4 tail = 2 groups
                 group.length in 1..4 && group.all { it.isHexDigit() } -> 1
+
                 else -> return false
             }
     }

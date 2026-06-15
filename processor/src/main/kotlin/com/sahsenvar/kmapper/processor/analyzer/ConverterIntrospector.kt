@@ -148,14 +148,17 @@ class ConverterIntrospector(
                         declaredToTotal = true
                         if (reason != null) reasonTo = reason
                     }
+
                     "convertFrom" -> {
                         declaredFromTotal = true
                         if (reason != null) reasonFrom = reason
                     }
+
                     "convertToOrNull" -> {
                         declaredToOrNull = true
                         if (reason != null) orNullAnnotatedFunction = functionName
                     }
+
                     "convertFromOrNull" -> {
                         declaredFromOrNull = true
                         if (reason != null) orNullAnnotatedFunction = functionName

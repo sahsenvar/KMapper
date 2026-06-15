@@ -18,14 +18,14 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
-/**
- * Unit tests for [ConverterIntrospector] — the resolution layer's "brain" that reads a
+/*
+ * Unit tests for ConverterIntrospector — the resolution layer's "brain" that reads a
  * converter's (S, T) pair and which directions it provides from the KSP model.
  *
- * Wiring mirrors [CrossModuleHasDefaultGateTest]'s probe pattern: tiny converter fixtures are
+ * Wiring mirrors CrossModuleHasDefaultGateTest's probe pattern: tiny converter fixtures are
  * compiled with a throwaway probe processor that instantiates ConverterIntrospector against the
- * test compilation's Resolver and logs every [com.sahsenvar.kmapper.processor.analyzer.ConverterShape]
- * field as one parseable line per declaration. Assertions parse the captured messages.
+ * test compilation's Resolver and logs every ConverterShape field as one parseable line per
+ * declaration. Assertions parse the captured messages.
  */
 
 /** Probe KSP processor: logs `SHAPE:<fqn>=<all ConverterShape fields>` (or `=null`) per probed name. */

@@ -685,7 +685,9 @@ class MappingCodeGenerator(
     ): String = when (onFail) {
         // Exhaustive over the policy set — a future OnFailPolicy entry must decide its cell.
         OnFailPolicy.Throw -> "convertEntriesOrFail"
+
         OnFailPolicy.Auto -> if (targetValueNullable) "convertEntriesValueOrNull" else "convertEntriesOrSkip"
+
         OnFailPolicy.Skip -> "convertEntriesOrSkip"
     }
 
@@ -776,8 +778,10 @@ class MappingCodeGenerator(
         val innerExpr =
             when {
                 strategy.innerMapperFn == null -> CodeBlock.of("%N", sourceField.name)
+
                 sourceField.isNullable ->
                     CodeBlock.of("%N?.%N()?.getOrThrow()", sourceField.name, strategy.innerMapperFn)
+
                 else -> CodeBlock.of("%N.%N().getOrThrow()", sourceField.name, strategy.innerMapperFn)
             }
         // Emit FQN via ClassName — KotlinPoet renders it as "arrow.core.Option.fromNullable(…)".
