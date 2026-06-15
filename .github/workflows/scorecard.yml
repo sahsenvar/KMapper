@@ -9,15 +9,19 @@ on:
     branches: [ main ]
   workflow_dispatch: # allow on-demand security scans / verifying the workflow after a fix
 
-permissions:
-  security-events: write
-  id-token: write
-  contents: read
+# Top level stays read-only: the OpenSSF publish-verification rejects results from a
+# workflow that holds global write permissions (HTTP 400 "global perm is set to write").
+# The write scopes the analysis needs live at the job level instead.
+permissions: read-all
 
 jobs:
   analyze:
     name: Scorecard analysis
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write # upload the SARIF to the code-scanning dashboard
+      id-token: write # publish results to the OpenSSF Scorecard API (publish_results)
+      contents: read
 
     steps:
       - name: Checkout repository
