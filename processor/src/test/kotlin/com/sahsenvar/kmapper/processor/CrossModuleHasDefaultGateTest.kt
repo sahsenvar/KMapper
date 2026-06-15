@@ -20,11 +20,11 @@ import io.kotest.matchers.string.shouldNotContain
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import java.io.File
 
-/**
+/*
  * DESIGN GATE (empirical experiment, not a feature test):
  *
  * KMapper's redesigned default-value handling ("omit/copy") rests on one unverified assumption:
- * KSP can read [com.google.devtools.ksp.symbol.KSValueParameter.hasDefault] — just the boolean
+ * KSP can read KSValueParameter.hasDefault — just the boolean
  * flag, never the default VALUE — for classes compiled in a DIFFERENT module, i.e. resolved from
  * the classpath via Kotlin metadata rather than from source. All existing KMapper tests are
  * single-module, so this has never been proven.
