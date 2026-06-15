@@ -4,6 +4,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # arrow-core 2.2.x is built with Kotlin 2.4 (klib ABI 2.4.0) and cannot be consumed by
+      # the Kotlin/Native 2.3.10 compiler used here. Re-enable when KMapper moves to Kotlin 2.4.
+      - dependency-name: "io.arrow-kt:arrow-core"
+        versions: [">=2.2.0"]
 
   - package-ecosystem: github-actions
     directory: /
