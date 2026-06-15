@@ -25,7 +25,8 @@ jobs:
           persist-credentials: false
 
       - name: Run analysis
-        uses: ossf/scorecard-action@v2
+        # No floating major tag exists for this action — pin to a released version.
+        uses: ossf/scorecard-action@v2.4.3
         with:
           results_file: results.sarif
           results_format: sarif
