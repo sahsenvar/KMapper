@@ -24,6 +24,7 @@ import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.buildCodeBlock
+import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 
 /**
@@ -395,12 +396,11 @@ class MappingProcessor(
         val packageName = sourceClass.packageName.asString()
         val functionName = functionNameGenerator.generateMapperFunctionName(targetClass)
 
-        val sourceClassName = ClassName(packageName, sourceClass.simpleName.asString())
-        val targetClassName =
-            ClassName(
-                targetClass.packageName.asString(),
-                targetClass.simpleName.asString(),
-            )
+        // toClassName() carries ALL enclosing simple names, so a nested target/source
+        // (e.g. OptionAssetModel.DailyBar) resolves as Outer.Inner instead of a bare,
+        // unresolvable innermost name with a phantom top-level import (issue #18).
+        val sourceClassName = sourceClass.toClassName()
+        val targetClassName = targetClass.toClassName()
 
         // Pre-collect fields that will actually be emitted (skip computed; a defaulted target
         // field without a source mapping stays OMITTED — the constructor default applies).
@@ -645,12 +645,11 @@ class MappingProcessor(
         val packageName = sourceClass.packageName.asString()
         val functionName = functionNameGenerator.generateMapperFunctionName(targetClass)
 
-        val sourceClassName = ClassName(packageName, sourceClass.simpleName.asString())
-        val targetClassName =
-            ClassName(
-                targetClass.packageName.asString(),
-                targetClass.simpleName.asString(),
-            )
+        // toClassName() carries ALL enclosing simple names, so a nested target/source
+        // (e.g. OptionAssetModel.DailyBar) resolves as Outer.Inner instead of a bare,
+        // unresolvable innermost name with a phantom top-level import (issue #18).
+        val sourceClassName = sourceClass.toClassName()
+        val targetClassName = targetClass.toClassName()
 
         val reverseFieldsToEmit =
             targetFields

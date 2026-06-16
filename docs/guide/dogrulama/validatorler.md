@@ -46,7 +46,7 @@ bozuk bir validator modelde sessizce oturamaz.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-validators:2.2.0")
+    implementation("io.github.sahsenvar:kmapper-validators:2.2.1")
 }
 ```
 

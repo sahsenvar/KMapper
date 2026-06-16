@@ -7,7 +7,7 @@ garantisi* olarak boş olamayan koleksiyonlar ve açık-eksiklik tipi olarak `Op
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-arrow:2.2.0")
+    implementation("io.github.sahsenvar:kmapper-converters-arrow:2.2.1")
 }
 ```
 

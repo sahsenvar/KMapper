@@ -6,7 +6,7 @@
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-uuid:2.2.0")
+    implementation("io.github.sahsenvar:kmapper-converters-uuid:2.2.1")
 }
 ```
 
