@@ -7,7 +7,7 @@ models carry real URI types instead of raw strings.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-uri:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-converters-uri:2.1.0")
 }
 ```
 

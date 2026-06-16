@@ -7,7 +7,7 @@ yerine gerçek URI tipleri taşıyan KMP uygulamaları için.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-uri:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-converters-uri:2.1.0")
 }
 ```
 

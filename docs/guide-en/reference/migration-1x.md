@@ -18,9 +18,9 @@ Annotation **imports are unchanged** (`com.sahsenvar.kmapper.annotations.*`) —
 the new dependency:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-core:2.0.1")
-implementation("io.github.sahsenvar:kmapper-annotations:2.0.1")  // new
-ksp("io.github.sahsenvar:kmapper-compiler:2.0.1")                // renamed
+implementation("io.github.sahsenvar:kmapper-core:2.1.0")
+implementation("io.github.sahsenvar:kmapper-annotations:2.1.0")  // new
+ksp("io.github.sahsenvar:kmapper-compiler:2.1.0")                // renamed
 ```
 
 ## 2. The generated API: `toX()` → `toXResult()`

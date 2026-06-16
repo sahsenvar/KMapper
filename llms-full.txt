@@ -113,9 +113,9 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:2.0.1")
-    implementation("io.github.sahsenvar:kmapper-annotations:2.0.1")
-    ksp("io.github.sahsenvar:kmapper-compiler:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-core:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-annotations:2.1.0")
+    ksp("io.github.sahsenvar:kmapper-compiler:2.1.0")
 }
 ```
 
@@ -137,17 +137,17 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:2.0.1")
-            implementation("io.github.sahsenvar:kmapper-annotations:2.0.1")
+            implementation("io.github.sahsenvar:kmapper-core:2.1.0")
+            implementation("io.github.sahsenvar:kmapper-annotations:2.1.0")
         }
     }
 }
 
 dependencies {
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:2.0.1")
-    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:2.0.1")
-    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:2.0.1")
-    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:2.0.1")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:2.1.0")
+    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:2.1.0")
+    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:2.1.0")
+    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:2.1.0")
 }
 
 // Make every compilation see the commonMain-generated sources:
@@ -163,14 +163,14 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 Each add-on is an independent KMP artifact; add only what your models use:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-converters-immutable:2.0.1") // PersistentList & co.
-implementation("io.github.sahsenvar:kmapper-converters-arrow:2.0.1")     // NonEmptyList, Option
-implementation("io.github.sahsenvar:kmapper-converters-datetime:2.0.1")  // java.time + bridges
-implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.0.1") // BigDecimal/BigInteger
-implementation("io.github.sahsenvar:kmapper-converters-uuid:2.0.1")      // Uuid / java.util.UUID
-implementation("io.github.sahsenvar:kmapper-converters-okio:2.0.1")      // ByteString, Path
-implementation("io.github.sahsenvar:kmapper-converters-uri:2.0.1")       // URI / Uri / NSURL
-implementation("io.github.sahsenvar:kmapper-validators:2.0.1")           // Email, E.164, IP, …
+implementation("io.github.sahsenvar:kmapper-converters-immutable:2.1.0") // PersistentList & co.
+implementation("io.github.sahsenvar:kmapper-converters-arrow:2.1.0")     // NonEmptyList, Option
+implementation("io.github.sahsenvar:kmapper-converters-datetime:2.1.0")  // java.time + bridges
+implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.1.0") // BigDecimal/BigInteger
+implementation("io.github.sahsenvar:kmapper-converters-uuid:2.1.0")      // Uuid / java.util.UUID
+implementation("io.github.sahsenvar:kmapper-converters-okio:2.1.0")      // ByteString, Path
+implementation("io.github.sahsenvar:kmapper-converters-uri:2.1.0")       // URI / Uri / NSURL
+implementation("io.github.sahsenvar:kmapper-validators:2.1.0")           // Email, E.164, IP, …
 ```
 
 kotlinx-datetime types (`LocalDate`, `Instant`, …) need no add-on — their `String`/`Long`
@@ -1145,7 +1145,7 @@ map wire `List`s straight into immutable domain collections.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-immutable:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-converters-immutable:2.1.0")
 }
 ```
 
@@ -1194,7 +1194,7 @@ as a *mapping-time guarantee*, and `Option` as an explicit-absence type.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-arrow:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-converters-arrow:2.1.0")
 }
 ```
 
@@ -1258,7 +1258,7 @@ SECTION: Type Conversion — Date and Time (converters-datetime)  (type-conversi
 
 ```kotlin
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-datetime:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-converters-datetime:2.1.0")
 }
 ```
 
@@ -1321,7 +1321,7 @@ Converters for arbitrary-precision numbers:
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.1.0")
 }
 ```
 
@@ -1383,7 +1383,7 @@ Converters for `kotlin.uuid.Uuid` (KMP) and `java.util.UUID` (JVM/Android).
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-uuid:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-converters-uuid:2.1.0")
 }
 ```
 
@@ -1426,7 +1426,7 @@ three **same-pair encoding alternates** for `String ↔ ByteString`.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-okio:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-converters-okio:2.1.0")
 }
 ```
 
@@ -1482,7 +1482,7 @@ models carry real URI types instead of raw strings.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-uri:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-converters-uri:2.1.0")
 }
 ```
 
@@ -1637,7 +1637,7 @@ validator can't sit silently in a model.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-validators:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-validators:2.1.0")
 }
 ```
 
@@ -2135,9 +2135,9 @@ Annotation **imports are unchanged** (`com.sahsenvar.kmapper.annotations.*`) —
 the new dependency:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-core:2.0.1")
-implementation("io.github.sahsenvar:kmapper-annotations:2.0.1")  // new
-ksp("io.github.sahsenvar:kmapper-compiler:2.0.1")                // renamed
+implementation("io.github.sahsenvar:kmapper-core:2.1.0")
+implementation("io.github.sahsenvar:kmapper-annotations:2.1.0")  // new
+ksp("io.github.sahsenvar:kmapper-compiler:2.1.0")                // renamed
 ```
 
 ## 2. The generated API: `toX()` → `toXResult()`

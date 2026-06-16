@@ -37,7 +37,7 @@ Source Markdown in the repo: **[English](docs/guide-en/README.md)** ·
 null-safety, converters, validation, collections, enums, error handling, observability,
 multi-module setup, full annotation reference.
 
-**Prefer reading code?** The [sample gallery](sample/README.md) has 25 runnable examples
+**Prefer reading code?** The [sample gallery](sample/README.md) has 26 runnable examples
 covering every feature, ordered basic → advanced (`./gradlew sample:runSample`).
 
 ## 🤖 For AI assistants
@@ -62,9 +62,9 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:2.0.1")
-    implementation("io.github.sahsenvar:kmapper-annotations:2.0.1")
-    ksp("io.github.sahsenvar:kmapper-compiler:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-core:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-annotations:2.1.0")
+    ksp("io.github.sahsenvar:kmapper-compiler:2.1.0")
 }
 ```
 
@@ -91,7 +91,7 @@ Group `io.github.sahsenvar`:
 kotlinx-datetime (`LocalDate`, `Instant`, …) and `kotlin.time.Duration` converters are
 **core built-ins** — no add-on needed.
 
-**Latest release:** `2.0.1` (11 artifacts) — on
+**Latest release:** `2.1.0` (11 artifacts) — on
 [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core).
 2.x is the converter-subsystem redesign; upgrading from 1.x?
 [Migration guide](docs/guide-en/reference/migration-1x.md) ·

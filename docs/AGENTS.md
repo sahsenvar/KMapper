@@ -10,9 +10,9 @@ Compact rules for writing **consumer code** that uses KMapper 2.x. Full docs:
 plugins { id("com.google.devtools.ksp") }
 
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:2.0.1")
-    implementation("io.github.sahsenvar:kmapper-annotations:2.0.1")
-    ksp("io.github.sahsenvar:kmapper-compiler:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-core:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-annotations:2.1.0")
+    ksp("io.github.sahsenvar:kmapper-compiler:2.1.0")
 }
 ```
 

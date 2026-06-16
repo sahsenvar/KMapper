@@ -8,7 +8,7 @@ map wire `List`s straight into immutable domain collections.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-immutable:2.0.1")
+    implementation("io.github.sahsenvar:kmapper-converters-immutable:2.1.0")
 }
 ```
 
