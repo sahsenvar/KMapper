@@ -7,7 +7,7 @@ three **same-pair encoding alternates** for `String ↔ ByteString`.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-okio:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-converters-okio:2.2.0")
 }
 ```
 

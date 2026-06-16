@@ -13,7 +13,7 @@ kotlin {
     android {
         namespace = "com.sahsenvar.kmapper.annotations"
         compileSdk = 36
-        minSdk = 30
+        minSdk = 26
     }
     jvm()
     iosArm64()

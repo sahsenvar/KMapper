@@ -24,9 +24,9 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:2.1.0")
-    implementation("io.github.sahsenvar:kmapper-annotations:2.1.0")
-    ksp("io.github.sahsenvar:kmapper-compiler:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-core:2.2.0")
+    implementation("io.github.sahsenvar:kmapper-annotations:2.2.0")
+    ksp("io.github.sahsenvar:kmapper-compiler:2.2.0")
 }
 ```
 
@@ -48,17 +48,17 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:2.1.0")
-            implementation("io.github.sahsenvar:kmapper-annotations:2.1.0")
+            implementation("io.github.sahsenvar:kmapper-core:2.2.0")
+            implementation("io.github.sahsenvar:kmapper-annotations:2.2.0")
         }
     }
 }
 
 dependencies {
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:2.1.0")
-    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:2.1.0")
-    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:2.1.0")
-    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:2.1.0")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:2.2.0")
+    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:2.2.0")
+    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:2.2.0")
+    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:2.2.0")
 }
 
 // Make every compilation see the commonMain-generated sources:
@@ -74,14 +74,14 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 Each add-on is an independent KMP artifact; add only what your models use:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-converters-immutable:2.1.0") // PersistentList & co.
-implementation("io.github.sahsenvar:kmapper-converters-arrow:2.1.0")     // NonEmptyList, Option
-implementation("io.github.sahsenvar:kmapper-converters-datetime:2.1.0")  // java.time + bridges
-implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.1.0") // BigDecimal/BigInteger
-implementation("io.github.sahsenvar:kmapper-converters-uuid:2.1.0")      // Uuid / java.util.UUID
-implementation("io.github.sahsenvar:kmapper-converters-okio:2.1.0")      // ByteString, Path
-implementation("io.github.sahsenvar:kmapper-converters-uri:2.1.0")       // URI / Uri / NSURL
-implementation("io.github.sahsenvar:kmapper-validators:2.1.0")           // Email, E.164, IP, …
+implementation("io.github.sahsenvar:kmapper-converters-immutable:2.2.0") // PersistentList & co.
+implementation("io.github.sahsenvar:kmapper-converters-arrow:2.2.0")     // NonEmptyList, Option
+implementation("io.github.sahsenvar:kmapper-converters-datetime:2.2.0")  // java.time + bridges
+implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.2.0") // BigDecimal/BigInteger
+implementation("io.github.sahsenvar:kmapper-converters-uuid:2.2.0")      // Uuid / java.util.UUID
+implementation("io.github.sahsenvar:kmapper-converters-okio:2.2.0")      // ByteString, Path
+implementation("io.github.sahsenvar:kmapper-converters-uri:2.2.0")       // URI / Uri / NSURL
+implementation("io.github.sahsenvar:kmapper-validators:2.2.0")           // Email, E.164, IP, …
 ```
 
 kotlinx-datetime types (`LocalDate`, `Instant`, …) need no add-on — their `String`/`Long`
