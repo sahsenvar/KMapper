@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-06-16
+
+### Fixed
+
+- **Nested target/source classes now resolve in generated mappers**
+  ([#18](https://github.com/sahsenvar/KMapper/issues/18)). A `@MapTo`/`@MapFrom` whose target or
+  source is a nested class (e.g. `OptionAssetModel.DailyBar`) produced a mapper that referenced the
+  class by its innermost simple name (`DailyBar`) and imported a non-existent top-level class — the
+  generated file then failed to compile with `unresolved reference`. The processor now builds the
+  type name from **all** enclosing simple names (kotlinpoet-ksp `toClassName()`), so nested types
+  resolve as `Outer.Inner` at any nesting depth, in both directions. The `typealias` workaround is
+  no longer needed.
+
 ## [2.2.0] - 2026-06-16
 
 ### Changed
@@ -214,7 +227,8 @@ Migration guide: [docs/guide-en/reference/migration-1x.md](docs/guide-en/referen
 
 ---
 
-[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v2.2.1...HEAD
+[2.2.1]: https://github.com/sahsenvar/KMapper/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/sahsenvar/KMapper/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/sahsenvar/KMapper/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/sahsenvar/KMapper/compare/v2.0.0...v2.0.1
