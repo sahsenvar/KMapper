@@ -52,4 +52,38 @@ durumlar ekleyebilir; UI'nız "bilinmeyen" gösterir, telemetriniz kaç kez oldu
 Koleksiyon içindeki enum elemanları da eleman başına aynı muameleyi görür — bkz.
 [Koleksiyonlar](../temel-kullanim/koleksiyonlar.md).
 
+## Alternatif: kotlinx.serialization `@Serializable` enum'ları
+
+Enum'unuz zaten kotlinx.serialization `@Serializable` enum'uysa, `MappableEnum` implement edip
+wire değerlerini tekrar yazmanıza gerek yok — KMapper bunları doğrudan annotation'lardan okur:
+
+```kotlin
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
+@Serializable
+enum class OrderStatus {
+    @SerialName("pending") PENDING,
+    SHIPPED, // @SerialName yok → wire değeri entry adı, "SHIPPED"
+}
+```
+
+`String ↔ OrderStatus` alan çifti iki yönde de tıpkı `MappableEnum`'daki gibi eşlenir. Her
+entry'nin wire değeri **`@SerialName` argümanı, yoksa entry'nin kendi adıdır** — enum'un JSON'da
+(de)serialize olma biçiminin birebir aynısı, yani mapping ve serileştirme yapısı gereği uyumlu.
+
+Ayrıntılar:
+
+- **`MappableEnum` kazanır.** Enum'da ikisi de varsa `MappableEnum.wireValue` yolu kullanılır
+  (`@SerialName` yok sayılır). Hangisi uygunsa onu kullanın; ikisine birden asla gerek yok.
+- **Yalnızca String wire.** `@Serializable` enum'lar string olarak serialize olur, dolayısıyla
+  karşı taraf `String` olmalı (String olmayan taraf bilinen `enum wire type mismatch` derleme
+  hatası). `Int`-kodlu enum için `MappableEnum<Int>` kullanın.
+- **Bilinmeyen değerler** yukarıdaki gibi davranır — ladder'a biner (non-null hedefte sert,
+  nullable hedefte null'a emilir + raporlanır).
+- **Çalışma zamanı bağımlılığı yok.** KMapper annotation'ları derleme zamanında okur ve düz bir
+  `when` üretir — `kmapper-core`/`kmapper-compiler` kotlinx-serialization'a **bağımlı değildir**.
+- **Farklı değerler şart.** İki entry aynı wire değerine çözümlenirse derleme hatasıdır (decode
+  belirsiz olurdu).
+
 > Sıradaki: **[Result Sınırı ve MappingException →](../hata-yonetimi/mapping-exception.md)**

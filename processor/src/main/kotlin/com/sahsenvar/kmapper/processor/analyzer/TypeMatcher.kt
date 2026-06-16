@@ -102,6 +102,7 @@ class TypeMatcher(
     private fun neverYieldsNull(strategy: MappingStrategy): Boolean = when (strategy) {
         is MappingStrategy.Direct,
         is MappingStrategy.EnumToWire,
+        is MappingStrategy.SerializableEnumToWire,
         is MappingStrategy.Nested,
         is MappingStrategy.Collection,
         is MappingStrategy.MapValues,
@@ -110,9 +111,9 @@ class TypeMatcher(
 
         is MappingStrategy.Convert -> !resolvedDirectionDeclaresOrNull(strategy)
 
-        // EnumFromWire CAN yield null at a nullable landing: unknown wire values are an
-        // EXPECTED input class (pinned absorption — the entries-lookup throw absorbs to
-        // null on the convertOrNull seam), so the target's '?' is never dead.
+        // EnumFromWire / SerializableEnumFromWire CAN yield null at a nullable landing: an
+        // unknown wire value is an EXPECTED input class (pinned absorption — the lookup throw
+        // absorbs to null on the convertOrNull seam), so the target's '?' is never dead.
         else -> false
     }
 
@@ -448,47 +449,115 @@ class TypeMatcher(
 
         // Target is the enum (wire → enum)
         if (targetDecl?.classKind == ClassKind.ENUM_CLASS) {
-            val wireFqn = resolveEnumWireType(targetDecl, mappableEnumFqn)
-            if (wireFqn == null) {
-                logger.error(
-                    "enum '${targetDecl.simpleName.asString()}' must implement MappableEnum<...> " +
-                        "or use @ConvertWith",
-                )
-                return MappingStrategy.Unmappable
-            }
             val sourceFqn = sourceField.type.fqn()
-            if (sourceFqn != wireFqn) {
-                logger.error(
-                    "enum wire type mismatch: expected $wireFqn but source type is $sourceFqn",
-                )
+            // 1. MappableEnum wins (its declared wire type may be String OR Int).
+            val mappableWireFqn = resolveEnumWireType(targetDecl, mappableEnumFqn)
+            if (mappableWireFqn != null) {
+                if (sourceFqn != mappableWireFqn) {
+                    logger.error("enum wire type mismatch: expected $mappableWireFqn but source type is $sourceFqn")
+                    return MappingStrategy.Unmappable
+                }
+                return MappingStrategy.EnumFromWire(targetDecl.qualifiedName!!.asString())
+            }
+            // 2. @Serializable fallback (wire is always String).
+            val entries = resolveSerializableEnumEntries(targetDecl)
+            if (entries == null) {
+                logger.error(notMappableEnumMessage(targetDecl))
                 return MappingStrategy.Unmappable
             }
-            return MappingStrategy.EnumFromWire(targetDecl.qualifiedName!!.asString())
+            if (reportDuplicateWireValues(targetDecl, entries)) return MappingStrategy.Unmappable
+            if (sourceFqn != "kotlin.String") {
+                logger.error("enum wire type mismatch: expected kotlin.String but source type is $sourceFqn")
+                return MappingStrategy.Unmappable
+            }
+            return MappingStrategy.SerializableEnumFromWire(targetDecl.qualifiedName!!.asString(), entries)
         }
 
         // Source is the enum (enum → wire)
         if (sourceDecl?.classKind == ClassKind.ENUM_CLASS) {
-            val wireFqn = resolveEnumWireType(sourceDecl, mappableEnumFqn)
-            if (wireFqn == null) {
-                logger.error(
-                    "enum '${sourceDecl.simpleName.asString()}' must implement MappableEnum<...> " +
-                        "or use @ConvertWith",
-                )
-                return MappingStrategy.Unmappable
-            }
             val targetFqn = targetField.type.fqn()
-            if (targetFqn != wireFqn) {
-                logger.error(
-                    "enum wire type mismatch: expected $wireFqn but target type is $targetFqn",
-                )
+            val mappableWireFqn = resolveEnumWireType(sourceDecl, mappableEnumFqn)
+            if (mappableWireFqn != null) {
+                if (targetFqn != mappableWireFqn) {
+                    logger.error("enum wire type mismatch: expected $mappableWireFqn but target type is $targetFqn")
+                    return MappingStrategy.Unmappable
+                }
+                return MappingStrategy.EnumToWire
+            }
+            val entries = resolveSerializableEnumEntries(sourceDecl)
+            if (entries == null) {
+                logger.error(notMappableEnumMessage(sourceDecl))
                 return MappingStrategy.Unmappable
             }
-            return MappingStrategy.EnumToWire
+            if (reportDuplicateWireValues(sourceDecl, entries)) return MappingStrategy.Unmappable
+            if (targetFqn != "kotlin.String") {
+                logger.error("enum wire type mismatch: expected kotlin.String but target type is $targetFqn")
+                return MappingStrategy.Unmappable
+            }
+            return MappingStrategy.SerializableEnumToWire(sourceDecl.qualifiedName!!.asString(), entries)
         }
 
         // Should not reach here, but guard anyway
         logger.error("Unexpected enum resolution state for ${sourceField.name}")
         return MappingStrategy.Unmappable
+    }
+
+    private fun notMappableEnumMessage(enumDecl: KSClassDeclaration): String = "enum '${enumDecl.simpleName.asString()}' must implement MappableEnum<...>, " +
+        "be annotated @Serializable (kotlinx.serialization), or use @ConvertWith"
+
+    /**
+     * Per-entry wire values for a `@kotlinx.serialization.Serializable` enum (the
+     * MappableEnum-free path), read by FQN with no runtime serialization dependency. Each entry's
+     * wire value is its `@SerialName("…")` argument, else its declared name — matching how the
+     * enum serializes in JSON. Returns null when the enum is NOT `@Serializable` (so the caller
+     * emits the not-mappable error instead).
+     */
+    private fun resolveSerializableEnumEntries(enumDecl: KSClassDeclaration): List<Pair<String, String>>? {
+        val isSerializable =
+            enumDecl.annotations.any { annotation ->
+                annotation.shortName.asString() == "Serializable" &&
+                    annotation.annotationType.resolve().declaration.qualifiedName?.asString() ==
+                    "kotlinx.serialization.Serializable"
+            }
+        if (!isSerializable) return null
+
+        return enumDecl.declarations
+            .filterIsInstance<KSClassDeclaration>()
+            .filter { it.classKind == ClassKind.ENUM_ENTRY }
+            .map { entry ->
+                val entryName = entry.simpleName.asString()
+                val serialName =
+                    entry.annotations
+                        .firstOrNull { annotation ->
+                            annotation.shortName.asString() == "SerialName" &&
+                                annotation.annotationType.resolve().declaration.qualifiedName?.asString() ==
+                                "kotlinx.serialization.SerialName"
+                        }?.arguments
+                        ?.firstOrNull { it.name?.asString() == "value" }
+                        ?.value as? String
+                entryName to (serialName ?: entryName)
+            }.toList()
+    }
+
+    /** Logs and returns true if two entries resolve to the same wire value (an ambiguous decode). */
+    private fun reportDuplicateWireValues(
+        enumDecl: KSClassDeclaration,
+        entries: List<Pair<String, String>>,
+    ): Boolean {
+        val firstEntryByWire = mutableMapOf<String, String>()
+        for ((entryName, wireValue) in entries) {
+            val priorEntry = firstEntryByWire[wireValue]
+            if (priorEntry != null) {
+                logger.error(
+                    "@Serializable enum '${enumDecl.simpleName.asString()}' has duplicate wire value " +
+                        "\"$wireValue\" on entries $priorEntry and $entryName — each entry must serialize " +
+                        "to a distinct value.",
+                )
+                return true
+            }
+            firstEntryByWire[wireValue] = entryName
+        }
+        return false
     }
 
     /**

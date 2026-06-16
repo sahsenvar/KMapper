@@ -297,6 +297,32 @@ public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$OptionW
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$SerializableEnumFromWire : com/sahsenvar/kmapper/processor/model/MappingStrategy {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$SerializableEnumFromWire;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$SerializableEnumFromWire;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$SerializableEnumFromWire;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEntries ()Ljava/util/List;
+	public final fun getEnumFqn ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$SerializableEnumToWire : com/sahsenvar/kmapper/processor/model/MappingStrategy {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$SerializableEnumToWire;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$SerializableEnumToWire;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$SerializableEnumToWire;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEntries ()Ljava/util/List;
+	public final fun getEnumFqn ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$Unmappable : com/sahsenvar/kmapper/processor/model/MappingStrategy {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Unmappable;
 	public fun equals (Ljava/lang/Object;)Z

@@ -1725,6 +1725,42 @@ new statuses before your app ships, your UI shows "unknown", your telemetry coun
 Enum elements inside collections get the same treatment per element — see
 [Collections](../basic-usage/collections.md).
 
+## Alternative: kotlinx.serialization `@Serializable` enums
+
+If your enum is already a kotlinx.serialization `@Serializable` enum, you don't have to
+implement `MappableEnum` and repeat the wire values — KMapper reads them straight from the
+annotations:
+
+```kotlin
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
+@Serializable
+enum class OrderStatus {
+    @SerialName("pending") PENDING,
+    SHIPPED, // no @SerialName → wire value is the entry name, "SHIPPED"
+}
+```
+
+A field pair `String ↔ OrderStatus` maps in both directions, exactly as with `MappableEnum`.
+The wire value of each entry is its **`@SerialName` argument, else the entry's declared name**
+— identical to how the enum (de)serializes in JSON, so the mapping and your serialization
+agree by construction.
+
+Details:
+
+- **`MappableEnum` wins.** If an enum has both, the `MappableEnum.wireValue` path is used
+  (the `@SerialName` annotations are ignored). Use whichever one fits; you never need both.
+- **String wire only.** `@Serializable` enums serialize as strings, so the other side must be
+  `String` (a non-`String` side is the usual `enum wire type mismatch` compile error). For an
+  `Int`-coded enum, use `MappableEnum<Int>`.
+- **Unknown values** behave exactly as above — they ride the ladder (hard at a non-null
+  target, absorbed to `null` + reported at a nullable one).
+- **No runtime dependency.** KMapper reads the annotations at compile time and generates a
+  plain `when` — `kmapper-core`/`kmapper-compiler` do **not** depend on kotlinx-serialization.
+- **Distinct values required.** Two entries resolving to the same wire value is a compile
+  error (the decode would be ambiguous).
+
 > Next: **[The Result Boundary and MappingException →](../error-handling/mapping-exception.md)**
 
 ==============================================================================

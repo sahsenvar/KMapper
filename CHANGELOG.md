@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **kotlinx.serialization enums as a `MappableEnum` alternative.** A `@Serializable` enum can
+  now participate in mapping without implementing `MappableEnum`: KMapper reads each entry's
+  wire value from its `@SerialName` argument (else the entry name) and generates a compile-time
+  `when` — `String` wire only, no runtime kotlinx-serialization dependency. `MappableEnum` wins
+  when an enum has both; duplicate wire values are a compile error. See the
+  [enum guide](docs/guide-en/enum/mappable-enum.md).
+
 ## [2.0.1] - 2026-06-12
 
 ### Added — AI-friendliness package

@@ -66,6 +66,26 @@ sealed class MappingStrategy {
     data object EnumToWire : MappingStrategy()
 
     /**
+     * Wire String → enum via kotlinx.serialization `@Serializable`/`@SerialName` (the
+     * MappableEnum-free path). [entries] is the resolved `entrySimpleName → wireValue` list
+     * (wireValue = `@SerialName` argument, else the entry name); the generator emits a
+     * compile-time `when` over these — no runtime serializer. Wire type is always String.
+     */
+    data class SerializableEnumFromWire(
+        val enumFqn: String,
+        val entries: List<Pair<String, String>>,
+    ) : MappingStrategy()
+
+    /**
+     * Enum → wire String via `@Serializable`/`@SerialName` — the mirror of
+     * [SerializableEnumFromWire]; generated as a `when` mapping each entry to its wire literal.
+     */
+    data class SerializableEnumToWire(
+        val enumFqn: String,
+        val entries: List<Pair<String, String>>,
+    ) : MappingStrategy()
+
+    /**
      * Collection mapping whose container shell is handled by a @CollectionWrapper object,
      * in either direction. Element conversion stays on the normal seam rails:
      *   forward (wrap):  `WrapperObject.wrap(<element seam chain>)`
