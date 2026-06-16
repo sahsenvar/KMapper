@@ -12,6 +12,7 @@ dependencies {
     ksp(project(":processor"))
     implementation(libs.kotlinx.collections.immutable)
     implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.serialization.core) // @Serializable/@SerialName enums (annotations only)
     implementation(libs.arrow.core)
 }
 

@@ -15,6 +15,7 @@ import sample.converters.runParameterizedConvertersDemo
 import sample.converters.runPerFieldOverrideDemo
 import sample.converters.runSanctionedNullDemo
 import sample.enums.runEnumMappingDemo
+import sample.enums.runSerializableEnumMappingDemo
 import sample.fields.runExternalParametersDemo
 import sample.fields.runFieldRenamingDemo
 import sample.fields.runIgnoreFamilyDemo
@@ -62,6 +63,8 @@ fun main() {
     runSanctionedNullDemo()
     banner("sample.enums.EnumMapping")
     runEnumMappingDemo()
+    banner("sample.enums.SerializableEnumMapping")
+    runSerializableEnumMappingDemo()
     banner("sample.fields.ExternalParameters")
     runExternalParametersDemo()
     banner("sample.fields.FieldRenaming")

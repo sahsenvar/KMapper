@@ -5,6 +5,7 @@ kotlinpoet = "2.3.0"
 agp = "9.2.1"
 kotlinx-datetime = "0.6.0"
 kotlinx-collections-immutable = "0.5.0"
+kotlinx-serialization = "1.8.1"
 # Pinned to 2.1.x: arrow-core 2.2.x is compiled with Kotlin 2.4 (klib ABI 2.4.0), which the
 # Kotlin/Native 2.3.10 compiler used here cannot consume — it breaks every native target.
 # Revisit when KMapper upgrades to Kotlin 2.4 (see the arrow-core dependabot ignore).
@@ -26,6 +27,8 @@ kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinx-collections-immutable" }
+# Annotations only (@Serializable/@SerialName) — read by the processor via FQN; used in tests/sample. No runtime dep in core/compiler.
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
 compile-testing-core = { module = "dev.zacsweers.kctfork:core", version.ref = "compile-testing" }
 compile-testing-ksp = { module = "dev.zacsweers.kctfork:ksp", version.ref = "compile-testing" }
 arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }

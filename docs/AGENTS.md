@@ -81,8 +81,10 @@ discovery is by type pair; no per-field annotation needed for the normal case.
 - **Generated names:** function is `toXResult()` (not `toX()`); file lands in
   `build/generated/ksp/<target>/kotlin/…` named after the RECEIVER class (`@MapFrom`
   generates onto the source/wire class).
-- **Enums:** implement `MappableEnum<W>` with explicit `wireValue` — name/ordinal mapping
-  does not exist. Unknown wire value: nullable enum target → `null` + report; non-null → error.
+- **Enums:** implement `MappableEnum<W>` with explicit `wireValue`, **or** annotate a
+  kotlinx.serialization `@Serializable` enum (wire value = `@SerialName` else entry name,
+  String only; `MappableEnum` wins if both). Name/ordinal mapping does not exist. Unknown wire
+  value: nullable enum target → `null` + report; non-null → error.
 - **Don't catch around mappers** — branch on the `Result`. `CancellationException` always
   propagates.
 - `kotlinx-datetime` types and `kotlin.time.Duration` need **no add-on** (core built-ins);

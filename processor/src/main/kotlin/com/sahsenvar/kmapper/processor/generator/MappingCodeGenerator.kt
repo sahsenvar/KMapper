@@ -115,6 +115,17 @@ class MappingCodeGenerator(
                         landingShape = landingShape,
                     )
 
+                is MappingStrategy.SerializableEnumFromWire ->
+                    generateSerializableEnumFromWireMapping(sourceField, targetField, strategy, landingShape, onFail)
+
+                is MappingStrategy.SerializableEnumToWire ->
+                    applyChainLanding(
+                        generateSerializableEnumToWireMapping(sourceField, strategy),
+                        chainIsNullable = sourceField.isNullable,
+                        targetField = targetField,
+                        landingShape = landingShape,
+                    )
+
                 is MappingStrategy.External -> CodeBlock.of("%N", targetField.name)
 
                 // Unmappable is handled above; this branch is unreachable but required for exhaustiveness
@@ -430,6 +441,86 @@ class MappingCodeGenerator(
     }
 
     /**
+     * Serializable enum (@SerialName) wire → enum, riding the SAME seam as [generateEnumFromWireMapping]
+     * so unknown wire values follow the fallback ladder. The convert lambda is a compile-time `when`
+     * over the per-entry wire literals (no runtime serializer); an unknown value throws with an EMPTY
+     * path so the seam prefixes the target field name.
+     */
+    private fun generateSerializableEnumFromWireMapping(
+        sourceField: FieldInfo,
+        targetField: FieldInfo,
+        strategy: MappingStrategy.SerializableEnumFromWire,
+        landingShape: LandingShape,
+        onFail: OnFailPolicy,
+    ): CodeBlock = emitSeamCall(
+        sourceField = sourceField,
+        targetField = targetField,
+        landingShape = landingShape,
+        onFail = onFail,
+        fromLiteral = sourceField.type.fqn(),
+        toLiteral = strategy.enumFqn.substringAfterLast("."),
+        convertLambda = serializableEnumFromWireLambda(strategy.enumFqn, strategy.entries),
+    )
+
+    /** `{ wire -> when (wire) { "<serialName>" -> Enum.ENTRY … else -> throw UnknownEnumValue } }`. */
+    private fun serializableEnumFromWireLambda(
+        enumFqn: String,
+        entries: List<Pair<String, String>>,
+    ): CodeBlock {
+        val enumClassName = ClassName.bestGuess(enumFqn)
+        val enumSimpleName = enumFqn.substringAfterLast(".")
+        val mappingExceptionClass = ClassName(SEAMS_PACKAGE, "MappingException")
+        val builder =
+            CodeBlock
+                .builder()
+                .add("{ wire ->\n")
+                .indent()
+                .beginControlFlow("when (wire)")
+        for ((entryName, wireValue) in entries) {
+            builder.addStatement("%S -> %T.%N", wireValue, enumClassName, entryName)
+        }
+        builder.addStatement("else -> throw %T.UnknownEnumValue(%S, %S, wire)", mappingExceptionClass, "", enumSimpleName)
+        return builder
+            .endControlFlow()
+            .unindent()
+            .add("}")
+            .build()
+    }
+
+    /**
+     * Serializable enum → wire String — a compile-time `when` over the enum entries (exhaustive,
+     * never fails, so no seam). Nullable source flows through `?.let`; [applyChainLanding] lands
+     * the container after this returns (mirrors [generateEnumToWireMapping]).
+     */
+    private fun generateSerializableEnumToWireMapping(
+        sourceField: FieldInfo,
+        strategy: MappingStrategy.SerializableEnumToWire,
+    ): CodeBlock = if (sourceField.isNullable) {
+        CodeBlock
+            .builder()
+            .add("%N?.let·{ ", sourceField.name)
+            .add(serializableEnumToWireWhen(strategy.enumFqn, strategy.entries, CodeBlock.of("it")))
+            .add(" }")
+            .build()
+    } else {
+        serializableEnumToWireWhen(strategy.enumFqn, strategy.entries, CodeBlock.of("%N", sourceField.name))
+    }
+
+    /** `when (<subject>) { Enum.ENTRY -> "<serialName>" … }` — exhaustive over all entries, no else. */
+    private fun serializableEnumToWireWhen(
+        enumFqn: String,
+        entries: List<Pair<String, String>>,
+        subject: CodeBlock,
+    ): CodeBlock {
+        val enumClassName = ClassName.bestGuess(enumFqn)
+        val builder = CodeBlock.builder().beginControlFlow("when (%L)", subject)
+        for ((entryName, wireValue) in entries) {
+            builder.addStatement("%T.%N -> %S", enumClassName, entryName, wireValue)
+        }
+        return builder.endControlFlow().build()
+    }
+
+    /**
      * Element-ladder collection emission: Convert/Nested elements ride the convertEach…
      * seams selected by the (target element shape × onFail) table — see [listElementSeamName];
      * Direct same-type elements keep the container passthrough (no seam). Container-level
@@ -724,6 +815,17 @@ class MappingCodeGenerator(
         is MappingStrategy.EnumFromWire -> enumEntriesLookupLambda(elementStrategy.enumFqn)
 
         is MappingStrategy.EnumToWire -> CodeBlock.of("{·it.wireValue·}")
+
+        is MappingStrategy.SerializableEnumFromWire ->
+            serializableEnumFromWireLambda(elementStrategy.enumFqn, elementStrategy.entries)
+
+        is MappingStrategy.SerializableEnumToWire ->
+            CodeBlock
+                .builder()
+                .add("{ ")
+                .add(serializableEnumToWireWhen(elementStrategy.enumFqn, elementStrategy.entries, CodeBlock.of("it")))
+                .add(" }")
+                .build()
 
         else -> null
     }

@@ -14,7 +14,7 @@ from the most basic usage to the most advanced within its category.
 | 4 | **Converters** (`sample.converters`) | `BuiltInConverters.kt` → `CustomConverter.kt` → `PerFieldOverride.kt` → `OnFailPolicies.kt` → `SanctionedNull.kt` → `ParameterizedConverters.kt` → `OneWayConverters.kt` | auto-discovery, writing converters, `@ConvertWith(use, onFail)`, `convertToOrNull`, format variants, `@UnsupportedDirection` |
 | 5 | **Collections** (`sample.collections`) | `ListMapping.kt` → `SetAndMapMapping.kt` → `ElementPolicies.kt` → `WrappedCollections.kt` | element ladder (salvage by default), Set/Map semantics, `OnFail.Throw`/`Skip` on elements, `@CollectionWrapper` (PersistentList, NonEmptyList) |
 | 6 | **Nested objects** (`sample.nested`) | `NestedObjects.kt` → `DeepErrorPaths.kt` | sub-mappers, error paths like `customer.address.zipCode`, bounding the blast radius |
-| 7 | **Enums** (`sample.enums`) | `EnumMapping.kt` | `MappableEnum`, unknown wire values, absorption at nullable targets |
+| 7 | **Enums** (`sample.enums`) | `EnumMapping.kt` → `SerializableEnumMapping.kt` | `MappableEnum`, kotlinx.serialization `@SerialName` enums, unknown wire values, absorption at nullable targets |
 | 8 | **Validation** (`sample.validation`) | `FieldValidation.kt` | field-anchored `@Validate`, custom validators, the validators add-on |
 | 9 | **Observability** (`sample.observability`) | `ListenersAndSink.kt` | `MappingListener`, the degradation sink, "crash in debug, observe in prod" |
 | 10 | **Hand-written mappers** (`sample.handwritten`) | `CoreOnlyMapping.kt` | using `kmapper-core` alone — the same seams generated code uses, no annotations/KSP |
