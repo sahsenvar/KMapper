@@ -14,7 +14,7 @@ kotlin {
     android {
         namespace = "com.sahsenvar.kmapper.immutable"
         compileSdk = 36
-        minSdk = 30
+        minSdk = 26
     }
     jvm()
     iosArm64()

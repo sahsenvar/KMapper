@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-06-16
+
+### Changed
+
+- **Lowered Android `minSdk` from 30 to 26** across every Android-targeted module
+  (`kmapper-core`, `kmapper-annotations`, all converter add-ons, and `kmapper-validators`).
+  KMapper now supports **Android 8.0 (API 26)** and up instead of Android 11 (API 30) —
+  a purely additive widening, no behaviour change for existing consumers. API 26 is the floor
+  where `java.time` (backing the kotlinx-datetime built-ins and `kmapper-converters-datetime`)
+  is available natively, so **no core-library desugaring is required**. `compileSdk` stays 36.
+
 ## [2.1.0] - 2026-06-16
 
 ### Added
@@ -203,7 +214,8 @@ Migration guide: [docs/guide-en/reference/migration-1x.md](docs/guide-en/referen
 
 ---
 
-[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/sahsenvar/KMapper/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/sahsenvar/KMapper/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/sahsenvar/KMapper/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/sahsenvar/KMapper/compare/v1.0.0...v2.0.0

@@ -13,7 +13,7 @@ kotlin {
     android {
         namespace = "com.sahsenvar.kmapper.datetime"
         compileSdk = 36
-        minSdk = 30
+        minSdk = 26
     }
     // JVM/Android only: the 2.0 audit moved the kotlinx-datetime converters into core
     // built-ins, so this module carries java.time converters and bridges exclusively —
