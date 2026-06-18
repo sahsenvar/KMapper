@@ -4,6 +4,7 @@ package com.sahsenvar.kmapper.processor
 
 import com.sahsenvar.kmapper.MappingDegradation
 import com.sahsenvar.kmapper.MappingException
+import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -160,6 +161,69 @@ class NestedLadderCodegenTest :
                         event.path shouldBe "address"
                         event.cause.shouldBeInstanceOf<MappingException>().path shouldBe "address.zipCode"
                     }
+                }
+            }
+        }
+
+        // Regression: issue #20 — a singular NULLABLE nested @MapTo field that ALSO carries a
+        // constructor default (`val bar: BarModel? = null`) lands in the copy stage, where the
+        // seam fallback was `base.bar` (statically `BarModel?`). The `convertOrElse` fallback
+        // parameter was constrained to `T : Any`, so the GENERATED code failed to compile with
+        // "actual type is 'BarModel?', but 'Any' was expected". A nullable LIST escaped because
+        // chain landings use `?: base.x` (elvis), not the seam's fallback parameter.
+        given("a singular nullable nested target field WITH a constructor default (issue #20)") {
+            val source =
+                SourceFile.kotlin(
+                    "NullableNestedDefault.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+
+                    data class BarDomainModel(val v: Int? = null)
+                    data class FooDomainModel(val bar: BarDomainModel? = null)
+
+                    @MapTo(BarDomainModel::class)
+                    data class BarDataModel(val v: Int? = null)
+
+                    @MapTo(FooDomainModel::class)
+                    data class FooDataModel(val bar: BarDataModel? = null)
+                    """.trimIndent(),
+                )
+            val (result, compilation) = compile(source)
+
+            `when`("the processor runs") {
+                then("the generated mapper compiles (no 'Any' vs nullable-fallback mismatch)") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                }
+
+                then("the nullable nested field rides convertOrElse with the nullable base default") {
+                    compilation.generatedFile("FooDataModelMappers.kt") shouldContain
+                        "convertOrElse(\"bar\", \"BarDataModel\", \"BarDomainModel\", base.bar)"
+                }
+            }
+
+            `when`("a present nested value is mapped") {
+                then("it maps through to the domain nested model") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "FooDataModelMappersKt",
+                            "toFooDomainModelResult",
+                            result.newInstance("FooDataModel", result.newInstance("BarDataModel", 7)),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    outcome.getOrNull()!!.prop("bar")!!.prop("v") shouldBe 7
+                }
+            }
+
+            `when`("the nested source is null") {
+                then("the nullable target lands as null (declared default = null)") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "FooDataModelMappersKt",
+                            "toFooDomainModelResult",
+                            result.newInstance("FooDataModel", null as Any?),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    outcome.getOrNull()!!.prop("bar").shouldBeNull()
                 }
             }
         }

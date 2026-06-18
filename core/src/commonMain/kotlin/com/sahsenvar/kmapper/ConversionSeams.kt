@@ -144,6 +144,37 @@ inline fun <S : Any, T : Any> S?.convertOrElse(
 }
 
 /**
+ * Nullable-default variant of [convertOrElse], Auto: identical ladder, but the [fallback] is the
+ * target field's OWN default, which is statically nullable (`val x: T? = …`), so the landing type
+ * is `T?`. The copy stage reaches this overload whenever a nullable target field also carries a
+ * constructor default — `base.x` is then typed `T?`, which the non-null [fallback]`: T` overload
+ * cannot accept (issue #20). A `null` default and the type's null absence form coincide here, so
+ * source-null/sanctioned-null/broken all land on [fallback] (`null` in the common case), while a
+ * non-null declared default is still honoured (the ladder's "declared default" rung).
+ * Only [Exception]s are absorbed: [CancellationException] and [Error]s always propagate.
+ */
+@JvmName("convertOrElseNullable") // JVM-only disambiguation: T and T? erase to the same signature
+inline fun <S : Any, T : Any> S?.convertOrElse(
+    path: String,
+    from: String,
+    to: String,
+    fallback: T?,
+    convert: (S) -> T?,
+): T? {
+    if (this == null) return fallback
+    return try {
+        convert(this) ?: fallback
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (cause: Exception) {
+        reportDegradation {
+            MappingDegradation.AbsorbedConversionError(path, from, to, toMappingException(path, from, to, cause))
+        }
+        fallback
+    }
+}
+
+/**
  * Defaulted target, `OnFail.Throw`: broken → rethrow typed via [toMappingException] (hard);
  * absent and sanctioned null → [fallback], silent.
  * [CancellationException] rethrows untouched.
@@ -155,6 +186,30 @@ inline fun <S : Any, T : Any> S?.convertOrElseStrict(
     fallback: T,
     convert: (S) -> T?,
 ): T {
+    if (this == null) return fallback
+    return try {
+        convert(this) ?: fallback
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (cause: Throwable) {
+        throw toMappingException(path, from, to, cause)
+    }
+}
+
+/**
+ * Nullable-default variant of [convertOrElseStrict] (`OnFail.Throw` on a nullable defaulted
+ * target): broken → rethrow typed (hard); absent and sanctioned null → the (nullable) [fallback].
+ * The same erasure-clash disambiguation as [convertOrElse]'s nullable overload (issue #20).
+ * [CancellationException] rethrows untouched.
+ */
+@JvmName("convertOrElseStrictNullable") // JVM-only disambiguation: T and T? erase to the same signature
+inline fun <S : Any, T : Any> S?.convertOrElseStrict(
+    path: String,
+    from: String,
+    to: String,
+    fallback: T?,
+    convert: (S) -> T?,
+): T? {
     if (this == null) return fallback
     return try {
         convert(this) ?: fallback

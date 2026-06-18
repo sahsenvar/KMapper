@@ -7,7 +7,7 @@
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-okio:2.2.1")
+    implementation("io.github.sahsenvar:kmapper-converters-okio:2.2.2")
 }
 ```
 

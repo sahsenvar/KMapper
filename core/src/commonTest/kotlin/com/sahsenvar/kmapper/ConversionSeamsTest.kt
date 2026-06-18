@@ -241,6 +241,74 @@ class ConversionSeamsTest :
             }
         }
 
+        // issue #20: a nullable target field that ALSO carries a constructor default lands in the
+        // copy stage with `base.<field>` (statically nullable) as the fallback. The non-null
+        // overload's `fallback: T` (T : Any) cannot accept it, so these nullable-fallback overloads
+        // exist. A null default and the type's null absence form coincide (the common case), while a
+        // NON-NULL declared default on a nullable field is still honoured (the declared-default rung).
+        context("convertOrElse nullable-fallback overload (nullable defaulted target — issue #20)") {
+            val nullDefault: Int? = null
+            test("ok: converted value returned, the null fallback ignored, silent") {
+                ("5" as String?).convertOrElse("n", "String", "Int", nullDefault, parseOrNull) shouldBe 5
+                recorder.events shouldBe emptyList()
+            }
+            test("absent: source null → the (null) fallback, silent") {
+                (null as String?).convertOrElse("n", "String", "Int", nullDefault, parseOrNull).shouldBeNull()
+                recorder.events shouldBe emptyList()
+            }
+            test("sanctioned null: convert→null lands on the (null) fallback, silent") {
+                ("" as String?).convertOrElse("n", "String", "Int", nullDefault, parseOrNull).shouldBeNull()
+                recorder.events shouldBe emptyList()
+            }
+            test("broken: null fallback returned + AbsorbedConversionError carrying the typed cause") {
+                val originalCause = IllegalStateException("boom")
+                ("x" as String?).convertOrElse<String, Int>("n", "String", "Int", nullDefault) { _ -> throw originalCause }
+                    .shouldBeNull()
+                val event = recorder.events.single().shouldBeInstanceOf<MappingDegradation.AbsorbedConversionError>()
+                event.path shouldBe "n"
+                event.cause.shouldBeInstanceOf<MappingException.TypeConversionFailed>().cause shouldBeSameInstanceAs originalCause
+            }
+            test("a NON-NULL default on a nullable target is honoured on absence (declared-default rung, not discarded to null)") {
+                val presentDefault: FallbackMarker? = FallbackMarker()
+                val resolved =
+                    (null as String?).convertOrElse<String, FallbackMarker>(
+                        "n",
+                        "String",
+                        "FallbackMarker",
+                        presentDefault,
+                    ) { _ -> FallbackMarker() }
+                resolved shouldBeSameInstanceAs presentDefault
+                recorder.events shouldBe emptyList()
+            }
+        }
+
+        context("convertOrElseStrict nullable-fallback overload (nullable defaulted target, OnFail.Throw — issue #20)") {
+            val nullDefault: Int? = null
+            test("ok / absent / sanctioned stay soft and silent") {
+                ("5" as String?).convertOrElseStrict("n", "String", "Int", nullDefault, parseOrNull) shouldBe 5
+                (null as String?).convertOrElseStrict("n", "String", "Int", nullDefault, parseOrNull).shouldBeNull()
+                ("" as String?).convertOrElseStrict("n", "String", "Int", nullDefault, parseOrNull).shouldBeNull()
+                recorder.events shouldBe emptyList()
+            }
+            test("broken: rethrows typed, nothing reported") {
+                val failure = shouldThrow<MappingException.TypeConversionFailed> {
+                    ("abc" as String?).convertOrElseStrict("n", "String", "Int", nullDefault, parseOrNull)
+                }
+                failure.path shouldBe "n"
+                recorder.events shouldBe emptyList()
+            }
+            test("a NON-NULL default is honoured on absence even under Throw") {
+                val presentDefault: FallbackMarker? = FallbackMarker()
+                (null as String?).convertOrElseStrict<String, FallbackMarker>(
+                    "n",
+                    "String",
+                    "FallbackMarker",
+                    presentDefault,
+                ) { _ -> FallbackMarker() } shouldBeSameInstanceAs presentDefault
+                recorder.events shouldBe emptyList()
+            }
+        }
+
         context("cancellation and Error transparency (CE/Error contract)") {
             test("CancellationException through absorbing convertOrNull propagates as the SAME instance — never absorbed into null, nothing reported") {
                 val cancellation = CancellationException("scope cancelled")

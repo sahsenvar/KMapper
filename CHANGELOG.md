@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-06-18
+
+### Fixed
+
+- **Singular nullable nested `@MapTo` field with a constructor default now compiles**
+  ([#20](https://github.com/sahsenvar/KMapper/issues/20)). A nullable nested or converter-backed
+  target that *also* carried a constructor default (`val bar: BarModel? = null`) rode the copy
+  stage with `base.bar` — statically `BarModel?` — as the seam fallback, but
+  `convertOrElse`/`convertOrElseStrict` pinned that fallback to `T : Any`. The generated mapper
+  then failed to compile with `Argument type mismatch: actual type is 'BarModel?', but 'Any' was
+  expected`. Added nullable-fallback overloads of both seams (`fallback: T?` → returns `T?`),
+  preserving the fallback ladder for both `null` and non-null declared defaults; overload
+  resolution keeps non-null defaulted targets on the original seam, so their behaviour is
+  unchanged. A nullable **list** was never affected (chain landings use `?: base.x` elvis, not the
+  seam fallback parameter) — only singular nullable nested/converter/enum-from-wire fields.
+
 ## [2.2.1] - 2026-06-16
 
 ### Fixed
@@ -227,7 +243,8 @@ Migration guide: [docs/guide-en/reference/migration-1x.md](docs/guide-en/referen
 
 ---
 
-[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v2.2.1...HEAD
+[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v2.2.2...HEAD
+[2.2.2]: https://github.com/sahsenvar/KMapper/compare/v2.2.1...v2.2.2
 [2.2.1]: https://github.com/sahsenvar/KMapper/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/sahsenvar/KMapper/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/sahsenvar/KMapper/compare/v2.0.1...v2.1.0

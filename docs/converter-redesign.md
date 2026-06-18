@@ -169,6 +169,18 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
     an unmapped field becomes an external parameter. Decouples "Kotlin construction
     convenience" from "wire fallback". Ignore-family logic: `@IgnoreMap` removes the *field*
     from the mapper's view; `@IgnoreDefaultValue` removes only the field's *default*.
+17f. **Nullable-defaulted copy-stage seam (rows 4/8, issue #20).** A nullable target field that
+    *also* carries a constructor default (`val x: T? = …`) rides the copy stage with `base.x` —
+    statically `T?` — as the seam fallback. The base `convertOrElse`/`convertOrElseStrict` pin
+    `fallback: T` (`T : Any`), so the generated call would not compile ("actual type `T?`, but
+    `Any` was expected"). Resolved with **nullable-fallback overloads** (`fallback: T?` →
+    returns `T?`, `@JvmName`-disambiguated for the JVM erasure clash), NOT by re-routing nullable
+    defaulted fields to the `convertOrNull` (rows 3/7) shape — that would silently discard a
+    *non-null* declared default (the "declared default" rung). Overload resolution keeps non-null
+    defaulted targets on the original `fallback: T` seam, so behavior there is unchanged.
+    Chain-shaped strategies (collections/maps/Option) were always immune: they land via
+    `?: base.x` (elvis), never through the seam's fallback parameter — which is why a nullable
+    *list* never reproduced the bug, only a singular nullable nested/converter field.
 
 ## E2) Validation
 
