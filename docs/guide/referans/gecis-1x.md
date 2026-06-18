@@ -18,9 +18,9 @@ Annotation **import'ları değişmedi** (`com.sahsenvar.kmapper.annotations.*`) 
 bağımlılığı eklersiniz:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-core:2.2.1")
-implementation("io.github.sahsenvar:kmapper-annotations:2.2.1")  // yeni
-ksp("io.github.sahsenvar:kmapper-compiler:2.2.1")                // yeniden adlandı
+implementation("io.github.sahsenvar:kmapper-core:2.2.2")
+implementation("io.github.sahsenvar:kmapper-annotations:2.2.2")  // yeni
+ksp("io.github.sahsenvar:kmapper-compiler:2.2.2")                // yeniden adlandı
 ```
 
 ## 2. Üretilen API: `toX()` → `toXResult()`

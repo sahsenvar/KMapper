@@ -8,7 +8,7 @@ domain koleksiyonlarına eşleyin.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-immutable:2.2.1")
+    implementation("io.github.sahsenvar:kmapper-converters-immutable:2.2.2")
 }
 ```
 

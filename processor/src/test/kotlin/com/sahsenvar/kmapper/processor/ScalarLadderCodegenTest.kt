@@ -456,4 +456,128 @@ class ScalarLadderCodegenTest :
                 }
             }
         }
+
+        // Regression: issue #20, converter-backed sibling of the nested case. A NULLABLE target
+        // field that ALSO carries a constructor default (`val age: Int? = null`) rides the copy
+        // stage, where the fallback is `base.age` (statically `Int?`). The seam fallback parameter
+        // was `T : Any`, so the generated `convertOrElse(..., base.age)` failed to compile until the
+        // nullable-fallback overload landed. The `Convert` strategy reaches the SAME seam as nested.
+        given("a converter-backed NULLABLE target WITH a default — Auto (issue #20)") {
+            val source =
+                SourceFile.kotlin(
+                    "NullableDefaultConvert.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+
+                    data class AgeDomainModel(val age: Int? = null)
+
+                    @MapTo(AgeDomainModel::class)
+                    data class AgeDataModel(val age: String?)
+                    """.trimIndent(),
+                )
+            val (result, compilation) = compile(source)
+
+            `when`("the processor runs") {
+                then("the generated mapper compiles and rides convertOrElse with the nullable base default") {
+                    result.exitCode shouldBe com.tschuchort.compiletesting.KotlinCompilation.ExitCode.OK
+                    compilation.generatedFile("AgeDataModelMappers.kt") shouldContain
+                        "convertOrElse(\"age\", \"kotlin.String\", \"kotlin.Int\", base.age)"
+                }
+            }
+
+            `when`("the source converts cleanly") {
+                then("the converted value lands") {
+                    result.invokeResultMapper(
+                        "AgeDataModelMappersKt",
+                        "toAgeDomainModelResult",
+                        result.newInstance("AgeDataModel", "42"),
+                    ).getOrNull()!!.prop("age") shouldBe 42
+                }
+            }
+
+            `when`("the source is absent (null)") {
+                then("the nullable target lands as null (declared default = null), silently") {
+                    withRecordingListener { listener ->
+                        val outcome =
+                            result.invokeResultMapper(
+                                "AgeDataModelMappersKt",
+                                "toAgeDomainModelResult",
+                                result.newInstance("AgeDataModel", null as String?),
+                            )
+                        outcome.isSuccess.shouldBeTrue()
+                        outcome.getOrNull()!!.prop("age").shouldBeNull()
+                        listener.events.shouldBeEmpty()
+                    }
+                }
+            }
+
+            `when`("the source is broken") {
+                then("the null default applies AND an AbsorbedConversionError is reported") {
+                    withRecordingListener { listener ->
+                        val outcome =
+                            result.invokeResultMapper(
+                                "AgeDataModelMappersKt",
+                                "toAgeDomainModelResult",
+                                result.newInstance("AgeDataModel", "not-a-number"),
+                            )
+                        outcome.isSuccess.shouldBeTrue()
+                        outcome.getOrNull()!!.prop("age").shouldBeNull()
+                        listener.events.shouldHaveSize(1)
+                        listener.events.single().shouldBeInstanceOf<MappingDegradation.AbsorbedConversionError>().path shouldBe "age"
+                    }
+                }
+            }
+        }
+
+        given("a converter-backed NULLABLE target WITH a default — OnFail.Throw (issue #20)") {
+            val source =
+                SourceFile.kotlin(
+                    "NullableDefaultStrict.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.ConvertWith
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import com.sahsenvar.kmapper.annotations.OnFail
+
+                    data class AgeDomainModel(val age: Int? = null)
+
+                    @MapTo(AgeDomainModel::class)
+                    data class AgeDataModel(@ConvertWith(onFail = OnFail.Throw) val age: String?)
+                    """.trimIndent(),
+                )
+            val (result, compilation) = compile(source)
+
+            `when`("the processor runs") {
+                then("the generated mapper compiles and rides convertOrElseStrict with the nullable base default") {
+                    result.exitCode shouldBe com.tschuchort.compiletesting.KotlinCompilation.ExitCode.OK
+                    compilation.generatedFile("AgeDataModelMappers.kt") shouldContain
+                        "convertOrElseStrict(\"age\", \"kotlin.String\", \"kotlin.Int\", base.age)"
+                }
+            }
+
+            `when`("the source is broken") {
+                then("the mapping fails hard despite the nullable+default escape") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "AgeDataModelMappersKt",
+                            "toAgeDomainModelResult",
+                            result.newInstance("AgeDataModel", "abc"),
+                        )
+                    outcome.isFailure.shouldBeTrue()
+                    outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.TypeConversionFailed>().path shouldBe "age"
+                }
+            }
+
+            `when`("the source is absent (null)") {
+                then("absence stays type-driven — null lands silently even under Throw") {
+                    val outcome =
+                        result.invokeResultMapper(
+                            "AgeDataModelMappersKt",
+                            "toAgeDomainModelResult",
+                            result.newInstance("AgeDataModel", null as String?),
+                        )
+                    outcome.isSuccess.shouldBeTrue()
+                    outcome.getOrNull()!!.prop("age").shouldBeNull()
+                }
+            }
+        }
     })
