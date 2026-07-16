@@ -101,6 +101,53 @@ class NestedClassMappingTest {
     }
 
     @Test
+    fun `nested field mapping across packages imports the nested extension function`() {
+        // Issue #44: when the nested source type and its parent source type live in different
+        // packages, the nested extension `fun Money.toXResult()` is generated under Money's
+        // package, but the parent mapper (generated under the parent's package) called it with
+        // a bare identifier and no import — an unresolved-reference COMPILATION_ERROR.
+        val moneySource =
+            SourceFile.kotlin(
+                "Money.kt",
+                """
+                package example.domain.money
+
+                data class Money(val amount: Long)
+                """.trimIndent(),
+            )
+        val accountSource =
+            SourceFile.kotlin(
+                "Account.kt",
+                """
+                package example.domain.account
+
+                import example.domain.money.Money
+
+                data class Account(val expectedInvestment: Money)
+                """.trimIndent(),
+            )
+        val requestSource =
+            SourceFile.kotlin(
+                "Requests.kt",
+                """
+                package example.data.request
+
+                import com.sahsenvar.kmapper.annotations.MapFrom
+                import example.domain.account.Account
+                import example.domain.money.Money
+
+                @MapFrom(Account::class)
+                data class AccountRequest(val expectedInvestment: ExpectedInvestmentRequest)
+
+                @MapFrom(Money::class)
+                data class ExpectedInvestmentRequest(val amount: Long)
+                """.trimIndent(),
+            )
+        val (result, _) = compile(moneySource, accountSource, requestSource)
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    }
+
+    @Test
     fun `nested source via MapFrom resolves the enclosing-qualified receiver`() {
         val src =
             SourceFile.kotlin(

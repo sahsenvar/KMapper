@@ -19,10 +19,15 @@ sealed class MappingStrategy {
     ) : MappingStrategy()
 
     /**
-     * Nested object mapping (recursive mapper call).
+     * Nested object mapping (recursive mapper call). [mapperFunctionName] is a top-level
+     * extension function generated in [sourcePackageName] (the SOURCE type's package) — the
+     * generator must reference it via a package-qualified `MemberName` (not a bare identifier)
+     * so KotlinPoet emits the import when the parent mapper lives in a different package
+     * (issue #44).
      */
     data class Nested(
         val mapperFunctionName: String,
+        val sourcePackageName: String,
     ) : MappingStrategy()
 
     /**
@@ -83,6 +88,19 @@ sealed class MappingStrategy {
     data class SerializableEnumToWire(
         val enumFqn: String,
         val entries: List<Pair<String, String>>,
+    ) : MappingStrategy()
+
+    /**
+     * Enum → Enum mapping by matching constant names (parity with the String↔Enum bridges
+     * above) — no wire type involved. [entryNames] is every SOURCE enum entry's simple name,
+     * in declaration order; each is guaranteed (by construction — TypeMatcher validates this
+     * at resolution time) to have a same-named entry on the target enum, so the generator
+     * emits an exhaustive `when` with no `else` branch and this conversion can never fail.
+     */
+    data class EnumToEnum(
+        val sourceEnumFqn: String,
+        val targetEnumFqn: String,
+        val entryNames: List<String>,
     ) : MappingStrategy()
 
     /**

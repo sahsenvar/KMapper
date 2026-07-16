@@ -157,6 +157,57 @@ class ConverterConfigTest :
             }
         }
 
+        given("a @KMapperConfig converter registered for a data-class pair used as a nested field") {
+            // Issue #44: the data-class nested-mapper auto-strategy was checked before the
+            // @KMapperConfig custom-converter lookup, so a registered converter for a
+            // (data class, data class) pair was silently ignored whenever that pair showed up
+            // as a nested field — the parent mapper always generated a call into the implicit
+            // nested mapper instead of the configured converter.
+            val converterSource =
+                SourceFile.kotlin(
+                    "MoneyConverter.kt",
+                    """
+                    import com.sahsenvar.kmapper.converter.MapTypeConverter
+
+                    data class Money(val amount: Long)
+
+                    object MoneyExpectedInvestmentConverter :
+                        MapTypeConverter<Money, ExpectedInvestmentRequest>(Money::class, ExpectedInvestmentRequest::class) {
+                        override fun convertTo(source: Money) = ExpectedInvestmentRequest(amount = source.amount)
+                        override fun convertFrom(target: ExpectedInvestmentRequest) = Money(amount = target.amount)
+                    }
+
+                    """.trimIndent(),
+                )
+            val modelSource =
+                SourceFile.kotlin(
+                    "AccountModel.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapFrom
+                    import com.sahsenvar.kmapper.annotations.KMapperConfig
+
+                    data class Account(val expectedInvestment: Money)
+
+                    @KMapperConfig(converters = [MoneyExpectedInvestmentConverter::class])
+                    object Cfg
+
+                    @MapFrom(Account::class)
+                    data class AccountRequest(val expectedInvestment: ExpectedInvestmentRequest)
+
+                    @MapFrom(Money::class)
+                    data class ExpectedInvestmentRequest(val amount: Long)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(listOf(converterSource, modelSource), "AccountMappers.kt")
+
+                then("the registered converter wins over the implicit nested-mapper strategy") {
+                    generated shouldContain "MoneyExpectedInvestmentConverter.convertTo(it)"
+                }
+            }
+        }
+
         given("a type pair with no registered converter at all") {
             val modelSource =
                 SourceFile.kotlin(

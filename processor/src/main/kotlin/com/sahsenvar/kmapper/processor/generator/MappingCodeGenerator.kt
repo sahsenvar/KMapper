@@ -126,6 +126,14 @@ class MappingCodeGenerator(
                         landingShape = landingShape,
                     )
 
+                is MappingStrategy.EnumToEnum ->
+                    applyChainLanding(
+                        generateEnumToEnumMapping(sourceField, strategy),
+                        chainIsNullable = sourceField.isNullable,
+                        targetField = targetField,
+                        landingShape = landingShape,
+                    )
+
                 is MappingStrategy.External -> CodeBlock.of("%N", targetField.name)
 
                 // Unmappable is handled above; this branch is unreachable but required for exhaustiveness
@@ -227,8 +235,18 @@ class MappingCodeGenerator(
         onFail = onFail,
         fromLiteral = sourceField.type.declaration.simpleName.asString(),
         toLiteral = targetField.type.declaration.simpleName.asString(),
-        convertLambda = CodeBlock.of("{·it.%N().getOrThrow()·}", strategy.mapperFunctionName),
+        convertLambda = CodeBlock.of("{·it.%M().getOrThrow()·}", nestedMapperMemberName(strategy)),
     )
+
+    /**
+     * `MemberName`-qualified reference to a [MappingStrategy.Nested] mapper call: the extension
+     * function lives in the SOURCE type's package (see [MappingStrategy.Nested]), which may
+     * differ from the package the current file is generated in. Emitting via `%M` (instead of a
+     * bare `%N` identifier) lets KotlinPoet add the cross-package import automatically — a
+     * plain name has no import tracking and left the generated file with an unresolved
+     * reference whenever the packages differed (issue #44).
+     */
+    private fun nestedMapperMemberName(strategy: MappingStrategy.Nested): MemberName = MemberName(strategy.sourcePackageName, strategy.mapperFunctionName)
 
     /**
      * Shared seam-call emission: `receiver.seam(path, from, to[, base.field]) { convert }`.
@@ -516,6 +534,40 @@ class MappingCodeGenerator(
         val builder = CodeBlock.builder().beginControlFlow("when (%L)", subject)
         for ((entryName, wireValue) in entries) {
             builder.addStatement("%T.%N -> %S", enumClassName, entryName, wireValue)
+        }
+        return builder.endControlFlow().build()
+    }
+
+    /**
+     * Enum → Enum by constant name — a compile-time `when` over every SOURCE entry (exhaustive,
+     * never fails: TypeMatcher already verified each source entry has a same-named target
+     * entry), so no seam is needed. Nullable source flows through `?.let`; [applyChainLanding]
+     * lands the container after this returns (mirrors [generateEnumToWireMapping]).
+     */
+    private fun generateEnumToEnumMapping(
+        sourceField: FieldInfo,
+        strategy: MappingStrategy.EnumToEnum,
+    ): CodeBlock = if (sourceField.isNullable) {
+        CodeBlock
+            .builder()
+            .add("%N?.let·{ ", sourceField.name)
+            .add(enumToEnumWhen(strategy, CodeBlock.of("it")))
+            .add(" }")
+            .build()
+    } else {
+        enumToEnumWhen(strategy, CodeBlock.of("%N", sourceField.name))
+    }
+
+    /** `when (<subject>) { SourceEnum.ENTRY -> TargetEnum.ENTRY … }` — exhaustive, no else. */
+    private fun enumToEnumWhen(
+        strategy: MappingStrategy.EnumToEnum,
+        subject: CodeBlock,
+    ): CodeBlock {
+        val sourceClassName = ClassName.bestGuess(strategy.sourceEnumFqn)
+        val targetClassName = ClassName.bestGuess(strategy.targetEnumFqn)
+        val builder = CodeBlock.builder().beginControlFlow("when (%L)", subject)
+        for (entryName in strategy.entryNames) {
+            builder.addStatement("%T.%N -> %T.%N", sourceClassName, entryName, targetClassName, entryName)
         }
         return builder.endControlFlow().build()
     }
@@ -810,7 +862,7 @@ class MappingCodeGenerator(
         }
 
         is MappingStrategy.Nested ->
-            CodeBlock.of("{·it.%N().getOrThrow()·}", elementStrategy.mapperFunctionName)
+            CodeBlock.of("{·it.%M().getOrThrow()·}", nestedMapperMemberName(elementStrategy))
 
         is MappingStrategy.EnumFromWire -> enumEntriesLookupLambda(elementStrategy.enumFqn)
 
@@ -824,6 +876,14 @@ class MappingCodeGenerator(
                 .builder()
                 .add("{ ")
                 .add(serializableEnumToWireWhen(elementStrategy.enumFqn, elementStrategy.entries, CodeBlock.of("it")))
+                .add(" }")
+                .build()
+
+        is MappingStrategy.EnumToEnum ->
+            CodeBlock
+                .builder()
+                .add("{ ")
+                .add(enumToEnumWhen(elementStrategy, CodeBlock.of("it")))
                 .add(" }")
                 .build()
 

@@ -103,6 +103,7 @@ class TypeMatcher(
         is MappingStrategy.Direct,
         is MappingStrategy.EnumToWire,
         is MappingStrategy.SerializableEnumToWire,
+        is MappingStrategy.EnumToEnum,
         is MappingStrategy.Nested,
         is MappingStrategy.Collection,
         is MappingStrategy.MapValues,
@@ -310,24 +311,31 @@ class TypeMatcher(
             return MappingStrategy.Direct
         }
 
-        // 4. Check nested object mapping
-        if (isDataClass(sourceField.type) && isDataClass(targetField.type)) {
-            return MappingStrategy.Nested(nestedMapperFunctionName(targetField.type))
-        }
-
-        // 5. Check enum mapping via MappableEnum
-        val sourceDecl = sourceField.type.declaration as? KSClassDeclaration
-        val targetDecl = targetField.type.declaration as? KSClassDeclaration
-        if (sourceDecl?.classKind == ClassKind.ENUM_CLASS || targetDecl?.classKind == ClassKind.ENUM_CLASS) {
-            return determineEnumStrategy(sourceField, targetField, sourceDecl, targetDecl)
-        }
-
-        // 6. @KMapperConfig (pair, either orientation)
+        // 4. @KMapperConfig (pair, either orientation) — an explicit module-wide registration
+        //    for this exact pair wins over the shape-based auto-strategies below (nested
+        //    data-class, enum). Without this, two data classes registered together under
+        //    @KMapperConfig would silently fall through to the implicit nested-mapper
+        //    strategy whenever the pair showed up as a nested field (issue #44).
         val customConverterFqn =
             customConverters[sourceField.type.fqn() to targetField.type.fqn()]
                 ?: customConverters[targetField.type.fqn() to sourceField.type.fqn()]
         if (customConverterFqn != null) {
             return resolveConverter(customConverterFqn, sourceField, targetField)
+        }
+
+        // 5. Check nested object mapping
+        if (isDataClass(sourceField.type) && isDataClass(targetField.type)) {
+            return MappingStrategy.Nested(
+                nestedMapperFunctionName(targetField.type),
+                sourceField.type.declaration.packageName.asString(),
+            )
+        }
+
+        // 6. Check enum mapping via MappableEnum
+        val sourceDecl = sourceField.type.declaration as? KSClassDeclaration
+        val targetDecl = targetField.type.declaration as? KSClassDeclaration
+        if (sourceDecl?.classKind == ClassKind.ENUM_CLASS || targetDecl?.classKind == ClassKind.ENUM_CLASS) {
+            return determineEnumStrategy(sourceField, targetField, sourceDecl, targetDecl)
         }
 
         // 7. Built-in registry (pair, either orientation)
@@ -345,7 +353,9 @@ class TypeMatcher(
 
     /**
      * Shared element-level resolution for the three container shapes (plain Collection,
-     * Map values, @CollectionWrapper targets): same type → Direct, data-class pair → Nested,
+     * Map values, @CollectionWrapper targets): same type → Direct, a registered @KMapperConfig
+     * converter for the element pair → Convert (wins over the data-class auto-strategy, same
+     * precedence fix as the field-level resolution — issue #44), data-class pair → Nested,
      * anything else recurses into the full pair-keyed converter resolution with synthetic
      * element-typed FieldInfos (directive > custom > built-in, compile errors included).
      */
@@ -355,18 +365,27 @@ class TypeMatcher(
         sourceElementType: KSType,
         targetElementType: KSType,
         isReverse: Boolean,
-    ): MappingStrategy = when {
-        isSameType(sourceElementType, targetElementType) -> MappingStrategy.Direct
+    ): MappingStrategy {
+        if (isSameType(sourceElementType, targetElementType)) return MappingStrategy.Direct
 
-        isDataClass(sourceElementType) && isDataClass(targetElementType) ->
-            MappingStrategy.Nested(nestedMapperFunctionName(targetElementType))
+        val elementSourceField = sourceField.copy(type = sourceElementType, isNullable = sourceElementType.isMarkedNullable)
+        val elementTargetField = targetField.copy(type = targetElementType, isNullable = targetElementType.isMarkedNullable)
 
-        else ->
-            resolveStrategy(
-                sourceField.copy(type = sourceElementType, isNullable = sourceElementType.isMarkedNullable),
-                targetField.copy(type = targetElementType, isNullable = targetElementType.isMarkedNullable),
-                isReverse,
+        val customConverterFqn =
+            customConverters[sourceElementType.fqn() to targetElementType.fqn()]
+                ?: customConverters[targetElementType.fqn() to sourceElementType.fqn()]
+        if (customConverterFqn != null) {
+            return resolveConverter(customConverterFqn, elementSourceField, elementTargetField)
+        }
+
+        if (isDataClass(sourceElementType) && isDataClass(targetElementType)) {
+            return MappingStrategy.Nested(
+                nestedMapperFunctionName(targetElementType),
+                sourceElementType.declaration.packageName.asString(),
             )
+        }
+
+        return resolveStrategy(elementSourceField, elementTargetField, isReverse)
     }
 
     /**
@@ -447,6 +466,12 @@ class TypeMatcher(
     ): MappingStrategy {
         val mappableEnumFqn = "com.sahsenvar.kmapper.MappableEnum"
 
+        // Enum → Enum: match constants by name, parity with the String↔Enum bridges below —
+        // no wire type is involved, so this must run before either wire-type branch (issue #37).
+        if (sourceDecl?.classKind == ClassKind.ENUM_CLASS && targetDecl?.classKind == ClassKind.ENUM_CLASS) {
+            return determineEnumToEnumStrategy(sourceDecl, targetDecl)
+        }
+
         // Target is the enum (wire → enum)
         if (targetDecl?.classKind == ClassKind.ENUM_CLASS) {
             val sourceFqn = sourceField.type.fqn()
@@ -501,6 +526,40 @@ class TypeMatcher(
         logger.error("Unexpected enum resolution state for ${sourceField.name}")
         return MappingStrategy.Unmappable
     }
+
+    /**
+     * Enum → Enum by constant name: every SOURCE entry must have a same-named TARGET entry.
+     * Extra TARGET-only entries are fine (nothing maps to them going this direction). A source
+     * entry with no match is a guided compile error — no silent runtime throw, since the whole
+     * point of resolving this at compile time is that a mismatched pair never reaches runtime.
+     */
+    private fun determineEnumToEnumStrategy(
+        sourceDecl: KSClassDeclaration,
+        targetDecl: KSClassDeclaration,
+    ): MappingStrategy {
+        val sourceEntryNames = enumEntryNames(sourceDecl)
+        val targetEntryNames = enumEntryNames(targetDecl).toSet()
+        val unmatched = sourceEntryNames.filterNot { it in targetEntryNames }
+        if (unmatched.isNotEmpty()) {
+            logger.error(
+                "enum '${sourceDecl.simpleName.asString()}' has constant(s) ${unmatched.joinToString()} with no " +
+                    "matching entry on '${targetDecl.simpleName.asString()}' — enum-to-enum mapping requires every " +
+                    "source constant to exist on the target by name; add the missing entry, or use @ConvertWith.",
+            )
+            return MappingStrategy.Unmappable
+        }
+        return MappingStrategy.EnumToEnum(
+            sourceDecl.qualifiedName!!.asString(),
+            targetDecl.qualifiedName!!.asString(),
+            sourceEntryNames,
+        )
+    }
+
+    private fun enumEntryNames(enumDecl: KSClassDeclaration): List<String> = enumDecl.declarations
+        .filterIsInstance<KSClassDeclaration>()
+        .filter { it.classKind == ClassKind.ENUM_ENTRY }
+        .map { it.simpleName.asString() }
+        .toList()
 
     private fun notMappableEnumMessage(enumDecl: KSClassDeclaration): String = "enum '${enumDecl.simpleName.asString()}' must implement MappableEnum<...>, " +
         "be annotated @Serializable (kotlinx.serialization), or use @ConvertWith"
