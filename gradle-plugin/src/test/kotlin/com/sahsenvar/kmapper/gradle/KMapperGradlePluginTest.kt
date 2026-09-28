@@ -13,11 +13,10 @@ class KMapperGradlePluginTest :
     FunSpec({
 
         // `also`, not `apply`: Project declares its own member `apply(...)` that would win.
-        fun kotlinProjectWithKsp(): Project =
-            ProjectBuilder.builder().build().also { project ->
-                project.pluginManager.apply("org.jetbrains.kotlin.jvm")
-                project.pluginManager.apply("com.google.devtools.ksp")
-            }
+        fun kotlinProjectWithKsp(): Project = ProjectBuilder.builder().build().also { project ->
+            project.pluginManager.apply("org.jetbrains.kotlin.jvm")
+            project.pluginManager.apply("com.google.devtools.ksp")
+        }
 
         fun Project.kspWrapperOption(): String? {
             (this as ProjectInternal).evaluate()
