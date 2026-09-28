@@ -11,5 +11,6 @@ class MappingProcessorProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor = MappingProcessor(
         codeGenerator = environment.codeGenerator,
         logger = environment.logger,
+        options = environment.options,
     )
 }

@@ -17,10 +17,19 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
  * Uses kctfork 0.12.1 (KSP2-aware fork). configureKsp{} must be called before compile()
  * so that the KSP tool is properly registered with the compilation.
  */
-fun compile(vararg sources: SourceFile): Pair<JvmCompilationResult, KotlinCompilation> {
+fun compile(vararg sources: SourceFile): Pair<JvmCompilationResult, KotlinCompilation> = compile(sources.toList(), kspOptions = emptyMap())
+
+/**
+ * [compile] with KSP processor options, e.g. `mapOf("kmapper.wrapper" to "KtResult")` — what the
+ * Gradle `KMapper { wrapper = … }` extension passes.
+ */
+fun compile(
+    sources: List<SourceFile>,
+    kspOptions: Map<String, String>,
+): Pair<JvmCompilationResult, KotlinCompilation> {
     val compilation =
         KotlinCompilation().apply {
-            this.sources = sources.toList()
+            this.sources = sources
             inheritClassPath = true // :core (annotations, MappingException, converters) on classpath
             messageOutputStream = System.out
             // Match the JVM target of :core's jvm() target so inline funs from core can be inlined.
@@ -31,6 +40,7 @@ fun compile(vararg sources: SourceFile): Pair<JvmCompilationResult, KotlinCompil
     compilation.configureKsp {
         @Suppress("UNCHECKED_CAST")
         (symbolProcessorProviders as MutableList).add(MappingProcessorProvider())
+        processorOptions.putAll(kspOptions)
     }
     return compilation.compile() to compilation
 }

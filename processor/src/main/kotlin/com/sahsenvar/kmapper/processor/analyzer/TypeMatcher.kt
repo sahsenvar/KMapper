@@ -645,9 +645,9 @@ class TypeMatcher(
 
     /**
      * Generated-mapper call name for a nested target type — mirrors
-     * FunctionNameGenerator.generateMapperFunctionName atomically (`to{Simple}Result`).
+     * FunctionNameGenerator.generateMapperFunctionName atomically (`to{Simple}`).
      */
-    private fun nestedMapperFunctionName(targetType: KSType): String = "to${targetType.declaration.simpleName.asString()}Result"
+    private fun nestedMapperFunctionName(targetType: KSType): String = "to${targetType.declaration.simpleName.asString()}"
 
     private fun isSameType(
         source: KSType,

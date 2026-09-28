@@ -217,7 +217,7 @@ class MappingCodeGenerator(
 
     /**
      * Nested mapping through the same seams: the sub-mapper IS the converter
-     * (`{ it.toXResult().getOrThrow() }`). Inner hard MappingExceptions propagate unwrapped
+     * (`{ it.toX() }`). Inner hard MappingExceptions propagate unwrapped
      * and the seam prefixes this field's path segment (`withPathPrefix`) — deep paths like
      * `address.zipCode` accumulate level by level. From/to literals are the class SIMPLE
      * names (codegen literals, R8-safe).
@@ -235,7 +235,7 @@ class MappingCodeGenerator(
         onFail = onFail,
         fromLiteral = sourceField.type.declaration.simpleName.asString(),
         toLiteral = targetField.type.declaration.simpleName.asString(),
-        convertLambda = CodeBlock.of("{·it.%M().getOrThrow()·}", nestedMapperMemberName(strategy)),
+        convertLambda = CodeBlock.of("{·it.%M()·}", nestedMapperMemberName(strategy)),
     )
 
     /**
@@ -321,8 +321,8 @@ class MappingCodeGenerator(
      * validation: a field's validators fire whenever it enters a mapping, as source BEFORE the
      * conversion and as target AFTER). Returns [expr] unchanged when both lists are empty.
      *
-     * Runs inside the mapper's `runCatching`, so a thrown ValidationFailed becomes
-     * `Result.failure` at the boundary.
+     * A thrown ValidationFailed propagates out of the plain `toX()` core (a `KtResult` wrapper
+     * turns it into `Result.failure`).
      *
      * Emission:
      * - Source-field validators fire FIRST on the SOURCE field value (before the expr is evaluated).
@@ -581,7 +581,7 @@ class MappingCodeGenerator(
      *
      * Emission shapes:
      *   tags.convertEachOrSkip("tags", "kotlin.String", "kotlin.Long") { LongStringConverter.convertFromOrNull(it) }
-     *   tags?.convertEachOrFail("tags", "TagDataModel", "TagDomainModel") { it.toTagDomainModelResult().getOrThrow() }
+     *   tags?.convertEachOrFail("tags", "TagDataModel", "TagDomainModel") { it.toTagDomainModel() }
      */
     private fun generateCollectionMapping(
         sourceField: FieldInfo,
@@ -844,7 +844,7 @@ class MappingCodeGenerator(
 
     /**
      * Convert lambda for an element-level strategy: converter call (orientation-aware,
-     * total vs OrNull per the seam), nested sub-mapper through the Result boundary, or the
+     * total vs OrNull per the seam), nested sub-mapper through its plain core, or the
      * enum bridges mirroring their scalar emissions (entries lookup for wire→enum — an
      * unknown wire value throws into the seam and rides its rung; `wireValue` read for
      * enum→wire). Returns null for element strategies with no seam-side conversion (Direct
@@ -862,7 +862,7 @@ class MappingCodeGenerator(
         }
 
         is MappingStrategy.Nested ->
-            CodeBlock.of("{·it.%M().getOrThrow()·}", nestedMapperMemberName(elementStrategy))
+            CodeBlock.of("{·it.%M()·}", nestedMapperMemberName(elementStrategy))
 
         is MappingStrategy.EnumFromWire -> enumEntriesLookupLambda(elementStrategy.enumFqn)
 
@@ -927,8 +927,8 @@ class MappingCodeGenerator(
      *
      * innerExpr variants:
      *   no nested mapper, any nullability: source                                  (fromNullable accepts null)
-     *   nested mapper, non-null source:    source.toInnerResult().getOrThrow()
-     *   nested mapper, nullable source:    source?.toInnerResult()?.getOrThrow()
+     *   nested mapper, non-null source:    source.toInner()
+     *   nested mapper, nullable source:    source?.toInner()
      *
      * fromNullable(null) == Option.None, fromNullable(x) == Option.Some(x).
      * The FQN is emitted as a literal string — no arrow-core Gradle dep needed in :processor.
@@ -942,9 +942,9 @@ class MappingCodeGenerator(
                 strategy.innerMapperFn == null -> CodeBlock.of("%N", sourceField.name)
 
                 sourceField.isNullable ->
-                    CodeBlock.of("%N?.%N()?.getOrThrow()", sourceField.name, strategy.innerMapperFn)
+                    CodeBlock.of("%N?.%N()", sourceField.name, strategy.innerMapperFn)
 
-                else -> CodeBlock.of("%N.%N().getOrThrow()", sourceField.name, strategy.innerMapperFn)
+                else -> CodeBlock.of("%N.%N()", sourceField.name, strategy.innerMapperFn)
             }
         // Emit FQN via ClassName — KotlinPoet renders it as "arrow.core.Option.fromNullable(…)".
         // ClassName construction requires only String args — no arrow classpath needed.
@@ -953,7 +953,7 @@ class MappingCodeGenerator(
     }
 
     /**
-     * Generates: source.getOrNull() [?.toInnerResult()?.getOrThrow()]
+     * Generates: source.getOrNull() [?.toInner()]
      *
      * The result is nullable (Inner?). The landing-site handling (orRequired for hard
      * targets, ?: base.x in the copy stage) is applied by [applyChainLanding] after this
@@ -965,7 +965,7 @@ class MappingCodeGenerator(
     ): CodeBlock {
         val getOrNull = CodeBlock.of("%N.getOrNull()", sourceField.name)
         return if (strategy.innerMapperFn != null) {
-            CodeBlock.of("%L?.%N()?.getOrThrow()", getOrNull, strategy.innerMapperFn)
+            CodeBlock.of("%L?.%N()", getOrNull, strategy.innerMapperFn)
         } else {
             getOrNull
         }

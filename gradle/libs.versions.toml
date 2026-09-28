@@ -6,6 +6,8 @@ agp = "9.2.1"
 kotlinx-datetime = "0.6.0"
 kotlinx-collections-immutable = "0.5.1"
 kotlinx-serialization = "1.11.0"
+# KMapperWrapper.Flow. 1.10.x is compiled with Kotlin 2.1, so native consumers are not forced up.
+kotlinx-coroutines = "1.10.2"
 # Pinned to 2.1.x: arrow-core 2.2.x is compiled with Kotlin 2.4 (klib ABI 2.4.0), which the
 # Kotlin/Native 2.3.10 compiler used here cannot consume — it breaks every native target.
 # Revisit when KMapper upgrades to Kotlin 2.4 (see the arrow-core dependabot ignore).
@@ -26,6 +28,8 @@ ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.re
 kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinx-collections-immutable" }
 # Annotations only (@Serializable/@SerialName) — read by the processor via FQN; used in tests/sample. No runtime dep in core/compiler.
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }

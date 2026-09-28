@@ -10,11 +10,17 @@ class FunctionNameGenerator(
     private val logger: KSPLogger,
 ) {
     /**
-     * Generate mapper function name: "to{TargetName}Result" — the `Result` suffix is part of
-     * the boundary contract (`fun Source.toXResult(): Result<X>`); nested-mapper call sites
-     * (TypeMatcher's strategy construction) follow the same naming atomically.
+     * Generate the plain core mapper name: "to{TargetName}" (`fun Source.toX(): X`). Nested-mapper
+     * call sites (TypeMatcher's strategy construction) follow the same naming atomically; return
+     * wrappers append their `@WrapperSuffix` to it (see [generateWrapperFunctionName]).
      */
-    fun generateMapperFunctionName(targetClass: KSClassDeclaration): String = "to${targetClass.simpleName.asString()}Result"
+    fun generateMapperFunctionName(targetClass: KSClassDeclaration): String = "to${targetClass.simpleName.asString()}"
+
+    /** Generate a wrapper function name: "to{TargetName}{suffix}", e.g. `toXResult`. */
+    fun generateWrapperFunctionName(
+        targetClass: KSClassDeclaration,
+        suffix: String,
+    ): String = generateMapperFunctionName(targetClass) + suffix
 
     /**
      * Generate file name: "{SourceClass}Mappers"
