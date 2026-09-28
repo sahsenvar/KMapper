@@ -148,6 +148,74 @@ class NestedClassMappingTest {
     }
 
     @Test
+    fun `nullable defaulted nested field across packages imports the nested extension and maps at runtime`() {
+        // Issue #59: the NULLABLE variant of #44 routes the nested call through the
+        // `convertOrElse { … }` lambda (a different generator path than the non-null field),
+        // which must import the cross-package nested extension just the same.
+        val moneySource =
+            SourceFile.kotlin(
+                "Money.kt",
+                """
+                package example.domain.money
+
+                data class Money(val amount: Long)
+                """.trimIndent(),
+            )
+        val orderInputSource =
+            SourceFile.kotlin(
+                "OrderInput.kt",
+                """
+                package example.domain.input
+
+                import example.domain.money.Money
+
+                data class OrderInput(val limitPrice: Money? = null)
+                """.trimIndent(),
+            )
+        val requestSource =
+            SourceFile.kotlin(
+                "Requests.kt",
+                """
+                package example.data.request
+
+                import com.sahsenvar.kmapper.annotations.MapFrom
+                import example.domain.input.OrderInput
+                import example.domain.money.Money
+
+                @MapFrom(Money::class)
+                data class MoneyRequest(val amount: Long = 0)
+
+                @MapFrom(OrderInput::class)
+                data class OrderRequest(val limitPrice: MoneyRequest? = null)
+                """.trimIndent(),
+            )
+        val (result, compilation) = compile(moneySource, orderInputSource, requestSource)
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        val generated = compilation.generatedFile("OrderInputMappers.kt")
+        assert(generated.contains("import example.domain.money.toMoneyRequestResult")) {
+            "Expected the cross-package nested extension to be imported in:\n$generated"
+        }
+
+        val money = result.newInstance("example.domain.money.Money", 42L)
+        val withPrice =
+            result.invokeResultMapper(
+                "example.domain.input.OrderInputMappersKt",
+                "toOrderRequestResult",
+                result.newInstance("example.domain.input.OrderInput", money),
+            ).getOrThrow()
+        assertEquals(42L, withPrice!!.prop("limitPrice")!!.prop("amount"))
+
+        val withoutPrice =
+            result.invokeResultMapper(
+                "example.domain.input.OrderInputMappersKt",
+                "toOrderRequestResult",
+                result.newInstance("example.domain.input.OrderInput", null),
+            ).getOrThrow()
+        assertEquals(null, withoutPrice!!.prop("limitPrice"))
+    }
+
+    @Test
     fun `nested source via MapFrom resolves the enclosing-qualified receiver`() {
         val src =
             SourceFile.kotlin(

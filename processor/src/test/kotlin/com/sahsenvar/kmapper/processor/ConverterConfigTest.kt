@@ -6,6 +6,7 @@ import com.tschuchort.compiletesting.SourceFile
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
@@ -204,6 +205,59 @@ class ConverterConfigTest :
 
                 then("the registered converter wins over the implicit nested-mapper strategy") {
                     generated shouldContain "MoneyExpectedInvestmentConverter.convertTo(it)"
+                }
+            }
+        }
+
+        given("a @KMapperConfig converter for a natively @MapFrom-bound pair on a NULLABLE, defaulted field") {
+            // Issue #59: the exact consumer shape — the pair is ALSO bound by a native @MapFrom,
+            // the field is nullable with a default (the convertOrElse path), and the converter
+            // declares its reverse direction unsupported. The converter must still win.
+            val converterSource =
+                SourceFile.kotlin(
+                    "OrderMoneyConverter.kt",
+                    """
+                    import com.sahsenvar.kmapper.converter.MapTypeConverter
+                    import com.sahsenvar.kmapper.converter.UnsupportedDirection
+
+                    data class Money(val amount: Long)
+
+                    object MoneyToOrderMoneyRequestConverter :
+                        MapTypeConverter<Money, OrderMoneyRequest>(Money::class, OrderMoneyRequest::class) {
+                        override fun convertTo(source: Money) = OrderMoneyRequest(amount = source.amount)
+
+                        @UnsupportedDirection("request money is write-only")
+                        override fun convertFrom(target: OrderMoneyRequest): Money = unsupported()
+                    }
+                    """.trimIndent(),
+                )
+            val modelSource =
+                SourceFile.kotlin(
+                    "OrderModel.kt",
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapFrom
+                    import com.sahsenvar.kmapper.annotations.KMapperConfig
+
+                    data class OrderInput(val limitPrice: Money? = null)
+
+                    @KMapperConfig(converters = [MoneyToOrderMoneyRequestConverter::class])
+                    object Cfg
+
+                    @MapFrom(Money::class)
+                    data class OrderMoneyRequest(val amount: Long = 0)
+
+                    @MapFrom(OrderInput::class)
+                    data class OrderRequest(val limitPrice: OrderMoneyRequest? = null)
+                    """.trimIndent(),
+                )
+
+            `when`("the processor runs") {
+                val generated = okAndReadGenerated(listOf(converterSource, modelSource), "OrderInputMappers.kt")
+
+                then("the registered converter wins inside the convertOrElse lambda") {
+                    // Defaulted landing → the OrNull seam, so an unconvertible value falls back to the default.
+                    generated shouldContain "MoneyToOrderMoneyRequestConverter.convertToOrNull(it)"
+                    generated shouldNotContain "toOrderMoneyRequestResult"
                 }
             }
         }

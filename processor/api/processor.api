@@ -231,6 +231,21 @@ public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$EnumFro
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$EnumToEnum : com/sahsenvar/kmapper/processor/model/MappingStrategy {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$EnumToEnum;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$EnumToEnum;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$EnumToEnum;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEntryNames ()Ljava/util/List;
+	public final fun getSourceEnumFqn ()Ljava/lang/String;
+	public final fun getTargetEnumFqn ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$EnumToWire : com/sahsenvar/kmapper/processor/model/MappingStrategy {
 	public static final field INSTANCE Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$EnumToWire;
 	public fun equals (Ljava/lang/Object;)Z
@@ -261,12 +276,14 @@ public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$MapValu
 }
 
 public final class com/sahsenvar/kmapper/processor/model/MappingStrategy$Nested : com/sahsenvar/kmapper/processor/model/MappingStrategy {
-	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun component1 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Nested;
-	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Nested;Ljava/lang/String;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Nested;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Nested;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Nested;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/model/MappingStrategy$Nested;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getMapperFunctionName ()Ljava/lang/String;
+	public final fun getSourcePackageName ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
