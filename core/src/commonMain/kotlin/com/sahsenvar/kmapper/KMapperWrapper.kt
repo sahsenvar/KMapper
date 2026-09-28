@@ -1,8 +1,8 @@
 package com.sahsenvar.kmapper
 
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.flow as flowOf
 import kotlinx.coroutines.flow.Flow as CoroutinesFlow
+import kotlinx.coroutines.flow.flow as flowOf
 
 /**
  * Chooses the RETURN SHAPE of a generated mapper — `@MapTo(X::class, wrapper = …)` /

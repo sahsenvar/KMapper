@@ -26,10 +26,9 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 class ReturnWrapperTest :
     BehaviorSpec({
 
-        fun modelSource(wrapperArgument: String = "") =
-            SourceFile.kotlin(
-                "Models.kt",
-                """
+        fun modelSource(wrapperArgument: String = "") = SourceFile.kotlin(
+            "Models.kt",
+            """
                 import com.sahsenvar.kmapper.KMapperWrapper
                 import com.sahsenvar.kmapper.annotations.MapTo
 
@@ -37,8 +36,8 @@ class ReturnWrapperTest :
 
                 @MapTo(UserDomainModel::class$wrapperArgument)
                 data class UserDataModel(val id: String, val name: String)
-                """.trimIndent(),
-            )
+            """.trimIndent(),
+        )
 
         fun compileOk(
             sources: List<SourceFile>,
@@ -345,4 +344,3 @@ class ReturnWrapperTest :
             }
         }
     })
-
