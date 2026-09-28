@@ -14,7 +14,7 @@ kotlinx-coroutines = "1.10.2"
 arrow = "2.1.2"
 ionspin-bignum = "0.3.10"
 # kctfork 0.12.1 — KSP2-aware maintained fork of kotlin-compile-testing
-compile-testing = "0.13.0"
+compile-testing = "0.14.0"
 vanniktech-publish = "0.37.0"
 kotest = "6.2.5"
 okio = "3.18.2"
