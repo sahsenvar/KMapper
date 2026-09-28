@@ -95,6 +95,39 @@ fun JvmCompilationResult.invokeResultMapper(
 }
 
 /**
+ * Invokes the plain core mapper (`fun Src.toX(): X`) reflectively and captures a thrown
+ * exception as [Result.failure], mirroring the ergonomics [invokeResultMapper] gave callers
+ * back when the boundary itself returned `Result<X>`.
+ *
+ * The plain core has no `Result` boundary — it returns `X` directly and throws
+ * [com.sahsenvar.kmapper.MappingException] on hard failure — so this helper does the
+ * `runCatching` the generated code no longer does, letting tests written against the old
+ * `toXResult()` shape keep asserting `.isFailure` / `.exceptionOrNull()` / `.getOrThrow()`
+ * against the DEFAULT plain path. Method lookup mirrors [invokeResultMapper]'s (matched by
+ * name, unmangled since the plain core has no value-class return), and
+ * [InvocationTargetException] is unwrapped so the real thrown exception is what gets captured.
+ */
+fun JvmCompilationResult.invokeMapperCatching(
+    fileKtClass: String,
+    fnName: String,
+    receiver: Any?,
+    vararg extraArgs: Any?,
+): Result<Any?> {
+    val method =
+        classLoader
+            .loadClass(fileKtClass)
+            .declaredMethods
+            .first { it.name == fnName }
+    return runCatching {
+        try {
+            method.invoke(null, receiver, *extraArgs)
+        } catch (e: InvocationTargetException) {
+            throw e.targetException
+        }
+    }
+}
+
+/**
  * Instantiates a class from the compilation classloader by matching constructor arity.
  *
  * Selects the first declared constructor whose parameter count matches [args].size,

@@ -17,7 +17,7 @@ class SetCollectionMappingTest {
      * Non-null Set<TagRemote> → Set<TagDomain> where TagRemote is @MapTo(TagDomain::class).
      * Generated code must:
      *   - compile (exit code OK)
-     *   - ride the Set seam: `tags.convertEachOrSkipToSet(...) { it.toTagDomainResult().getOrThrow() }`
+     *   - ride the Set seam: `tags.convertEachOrSkipToSet(...) { it.toTagDomain() }`
      *   - NOT use a safe-call chain (non-null source)
      */
     @Test
@@ -43,8 +43,8 @@ class SetCollectionMappingTest {
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
 
         // Must call the element mapper
-        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
-            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomain()")) {
+            "Expected toTagDomain() element mapper call:\n$gen"
         }
         // Must select the Set-producing seam so the result type is Set, not List
         assert(gen.contains("tags.convertEachOrSkipToSet(\"tags\", \"TagRemote\", \"TagDomain\")")) {
@@ -83,8 +83,8 @@ class SetCollectionMappingTest {
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
 
         // Must call the element mapper
-        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
-            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomain()")) {
+            "Expected toTagDomain() element mapper call:\n$gen"
         }
         // Nullable source must safe-call into the Set seam
         assert(gen.contains("tags?.convertEachOrSkipToSet(")) {
@@ -119,8 +119,8 @@ class SetCollectionMappingTest {
         val gen = compilation.generatedFile("ProductRemoteMappers.kt")
 
         // Must call the element mapper
-        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
-            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomain()")) {
+            "Expected toTagDomain() element mapper call:\n$gen"
         }
         // Must keep the List-shaped seam for a List target
         assert(gen.contains("convertEachOrSkip(") && !gen.contains("convertEachOrSkipToSet")) {

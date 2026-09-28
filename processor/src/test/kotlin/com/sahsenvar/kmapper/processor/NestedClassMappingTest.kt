@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
  * must be referenced in the generated mapper by its fully-enclosed name — not just its innermost
  * simple name. Building the `ClassName` from package + innermost simple name only (the pre-fix bug,
  * issue #18) emitted `import <pkg>.DailyBar` for a non-existent top-level class and a bare
- * `Result<DailyBar>`, so the generated file failed to compile with `unresolved reference`.
+ * `DailyBar` return type, so the generated file failed to compile with `unresolved reference`.
  *
  * The kctfork harness compiles the generated source as part of the same compilation, so the
  * regression surfaces directly as a COMPILATION_ERROR — a passing (OK) compile is the proof, and
@@ -65,9 +65,9 @@ class NestedClassMappingTest {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
         val bar =
-            result.invokeResultMapper(
+            result.invokeMapperCatching(
                 "DailyBarRemoteMappersKt",
-                "toDailyBarResult",
+                "toDailyBar",
                 result.newInstance("DailyBarRemote", "2026-01-01", 1.5),
             ).getOrThrow()
         assertEquals("2026-01-01", bar!!.prop("time"))
@@ -103,7 +103,7 @@ class NestedClassMappingTest {
     @Test
     fun `nested field mapping across packages imports the nested extension function`() {
         // Issue #44: when the nested source type and its parent source type live in different
-        // packages, the nested extension `fun Money.toXResult()` is generated under Money's
+        // packages, the nested extension `fun Money.toX()` is generated under Money's
         // package, but the parent mapper (generated under the parent's package) called it with
         // a bare identifier and no import — an unresolved-reference COMPILATION_ERROR.
         val moneySource =
@@ -193,23 +193,23 @@ class NestedClassMappingTest {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
         val generated = compilation.generatedFile("OrderInputMappers.kt")
-        assert(generated.contains("import example.domain.money.toMoneyRequestResult")) {
+        assert(generated.contains("import example.domain.money.toMoneyRequest")) {
             "Expected the cross-package nested extension to be imported in:\n$generated"
         }
 
         val money = result.newInstance("example.domain.money.Money", 42L)
         val withPrice =
-            result.invokeResultMapper(
+            result.invokeMapperCatching(
                 "example.domain.input.OrderInputMappersKt",
-                "toOrderRequestResult",
+                "toOrderRequest",
                 result.newInstance("example.domain.input.OrderInput", money),
             ).getOrThrow()
         assertEquals(42L, withPrice!!.prop("limitPrice")!!.prop("amount"))
 
         val withoutPrice =
-            result.invokeResultMapper(
+            result.invokeMapperCatching(
                 "example.domain.input.OrderInputMappersKt",
-                "toOrderRequestResult",
+                "toOrderRequest",
                 result.newInstance("example.domain.input.OrderInput", null),
             ).getOrThrow()
         assertEquals(null, withoutPrice!!.prop("limitPrice"))

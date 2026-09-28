@@ -181,8 +181,8 @@ class OptionMappingTest {
             "Expected toTagD() nested mapper call:\n$gen"
         }
         // Non-null nested: direct .toTagD() not ?.toTagD()
-        assert(gen.contains("maybeTag.toTagDResult().getOrThrow()")) {
-            "Non-null nested should emit .toTagDResult().getOrThrow() not ?.toTagDResult():\n$gen"
+        assert(gen.contains("maybeTag.toTagD()")) {
+            "Non-null nested should emit .toTagD() not ?.toTagD():\n$gen"
         }
     }
 

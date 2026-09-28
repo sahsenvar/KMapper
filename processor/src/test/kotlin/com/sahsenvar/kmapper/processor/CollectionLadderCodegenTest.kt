@@ -56,9 +56,9 @@ class CollectionLadderCodegenTest :
                 then("the survivors land, the broken element drops with its indexed path") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "OrderDataModelMappersKt",
-                                "toOrderDomainModelResult",
+                                "toOrderDomainModel",
                                 result.newInstance("OrderDataModel", listOf("7", "broken", "9")),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -75,9 +75,9 @@ class CollectionLadderCodegenTest :
                 then("an empty list maps to an empty list with zero events") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "OrderDataModelMappersKt",
-                                "toOrderDomainModelResult",
+                                "toOrderDomainModel",
                                 result.newInstance("OrderDataModel", emptyList<String>()),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -91,9 +91,9 @@ class CollectionLadderCodegenTest :
                 then("the mapping still succeeds with an empty list and one event per element") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "OrderDataModelMappersKt",
-                                "toOrderDomainModelResult",
+                                "toOrderDomainModel",
                                 result.newInstance("OrderDataModel", listOf("a", "b", "c")),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -131,9 +131,9 @@ class CollectionLadderCodegenTest :
                 then("it drops with a DroppedNullElement report at the indexed path") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "CleanDataModelMappersKt",
-                                "toCleanDomainModelResult",
+                                "toCleanDomainModel",
                                 result.newInstance("CleanDataModel", listOf("1", null, "3")),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -186,9 +186,9 @@ class CollectionLadderCodegenTest :
                 then("length and index alignment survive; only the broken element reports") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "AlignedDataModelMappersKt",
-                                "toAlignedDomainModelResult",
+                                "toAlignedDomainModel",
                                 result.newInstance("AlignedDataModel", listOf("1", null, "x")),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -229,9 +229,9 @@ class CollectionLadderCodegenTest :
             `when`("an element is broken at runtime") {
                 then("the whole mapping fails hard at the indexed path") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "StrictDataModelMappersKt",
-                            "toStrictDomainModelResult",
+                            "toStrictDomainModel",
                             result.newInstance("StrictDataModel", listOf("1", "broken", "3")),
                         )
                     outcome.isFailure.shouldBeTrue()
@@ -291,9 +291,9 @@ class CollectionLadderCodegenTest :
                 then("the entry drops with the keyed path; the clean entry survives") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "PriceDataModelMappersKt",
-                                "toPriceDomainModelResult",
+                                "toPriceDomainModel",
                                 result.newInstance("PriceDataModel", mapOf("usd" to "100", "eur" to "broken")),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -333,9 +333,9 @@ class CollectionLadderCodegenTest :
                 then("the declared default applies SILENTLY (container ladder, not element ladder)") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "TaggedDataModelMappersKt",
-                                "toTaggedDomainModelResult",
+                                "toTaggedDomainModel",
                                 result.newInstance("TaggedDataModel", null as Any?),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -433,9 +433,9 @@ class CollectionLadderCodegenTest :
                             .first { it.parameterCount == 1 }
                             .newInstance(listOf(item))
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "InventoryDataModelMappersKt",
-                            "toInventoryDomainModelResult",
+                            "toInventoryDomainModel",
                             result.newInstance("InventoryDataModel", box),
                         )
                     outcome.isSuccess.shouldBeTrue()
@@ -529,9 +529,9 @@ class CollectionLadderCodegenTest :
                 then("the broken element skips with its event; the survivors wrap into the Box") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "LotDataModelMappersKt",
-                                "toLotDomainModelResult",
+                                "toLotDomainModel",
                                 result.newInstance("LotDataModel", listOf("1", "broken", "3")),
                             )
                         outcome.isSuccess.shouldBeTrue()
