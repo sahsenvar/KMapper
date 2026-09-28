@@ -42,9 +42,9 @@ fun runListMappingDemo() {
             FeedItemResponse("oops", "Broken row from a flaky backend"),
             FeedItemResponse("3", "Wrappers deep dive"),
         ),
-    ).toFeedResult().getOrThrow()
+    ).toFeed()
     println("salvaged feed (2 of 3) -> $feed")
 
     // Absent list -> container ladder -> the declared default (emptyList), silently.
-    println("absent list            -> ${FeedResponse(items = null).toFeedResult().getOrThrow()}")
+    println("absent list            -> ${FeedResponse(items = null).toFeed()}")
 }

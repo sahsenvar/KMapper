@@ -34,28 +34,26 @@ data class SubscriberRow(
     val topics: List<String>,
 )
 
-/** Hand-written equivalent of what `@MapTo(Subscriber::class)` would generate. */
-fun SubscriberRow.toSubscriberResult(): Result<Subscriber> = runCatching {
-    Subscriber(
-        id = id.convertOrFail("id", "kotlin.String", "kotlin.Long") { LongStringConverter.convertFrom(it) },
-        age = age.convertOrNull("age", "kotlin.String", "kotlin.Int") { IntStringConverter.convertFromOrNull(it) },
-        topics = topics.convertEachOrSkip("topics", "kotlin.String", "kotlin.Long") {
-            LongStringConverter.convertFromOrNull(it)
-        },
-    )
-}
+/** Hand-written equivalent of what plain `@MapTo(Subscriber::class)` would generate. */
+fun SubscriberRow.toSubscriber(): Subscriber = Subscriber(
+    id = id.convertOrFail("id", "kotlin.String", "kotlin.Long") { LongStringConverter.convertFrom(it) },
+    age = age.convertOrNull("age", "kotlin.String", "kotlin.Int") { IntStringConverter.convertFromOrNull(it) },
+    topics = topics.convertEachOrSkip("topics", "kotlin.String", "kotlin.Long") {
+        LongStringConverter.convertFromOrNull(it)
+    },
+)
 
 fun main() = runCoreOnlyMappingDemo()
 
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runCoreOnlyMappingDemo() {
-    val subscriber = SubscriberRow(id = "7", age = "44", topics = listOf("1", "oops", "3"))
-        .toSubscriberResult()
-        .getOrThrow()
+    val subscriber = SubscriberRow(id = "7", age = "44", topics = listOf("1", "oops", "3")).toSubscriber()
     println("hand-written, same rails -> $subscriber")
     //  Subscriber(id=7, age=44, topics=[1, 3])   — the broken topic was skipped AND reported
 
-    val broken = SubscriberRow(id = "x", age = null, topics = emptyList()).toSubscriberResult()
+    // Same rails as generated code: the plain function THROWS, so wrap it yourself if you want
+    // the failure as a value (or let @MapTo add a wrapper=... for you — see ResultBoundary.kt).
+    val broken = runCatching { SubscriberRow(id = "x", age = null, topics = emptyList()).toSubscriber() }
     println("same error discipline    -> ${broken.exceptionOrNull()?.message}")
     //  Cannot convert id: kotlin.String -> kotlin.Long
 }

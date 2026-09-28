@@ -50,13 +50,13 @@ fun main() = runSanctionedNullDemo()
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runSanctionedNullDemo() {
     // Sanctioned null: blank -> null, silently — EVEN under OnFail.Throw.
-    println(CheckoutRequest(9900, discount = "").toCheckoutResult().getOrThrow())
+    println(CheckoutRequest(9900, discount = "").toCheckout())
     //  Checkout(totalCents=9900, discount=null)
 
     // A real code converts.
-    println(CheckoutRequest(9900, discount = "SUMMER26").toCheckoutResult().getOrThrow())
+    println(CheckoutRequest(9900, discount = "SUMMER26").toCheckout())
 
     // Garbage is a FAILURE (Throw hardens it) — sanctioned null does not cover "broken".
-    val outcome = CheckoutRequest(9900, discount = "drop table").toCheckoutResult()
+    val outcome = runCatching { CheckoutRequest(9900, discount = "drop table").toCheckout() }
     println("broken code -> isFailure=${outcome.isFailure}")
 }

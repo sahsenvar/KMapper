@@ -34,19 +34,19 @@ fun main() = runFallbackLadderDemo()
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runFallbackLadderDemo() {
     // Everything present and clean.
-    println(ProfileResponse("1", "grace", "5").toProfileResult().getOrThrow())
+    println(ProfileResponse("1", "grace", "5").toProfile())
     //  Profile(id=1, nickname=grace, retries=5)
 
     // Absence follows the type: nickname -> null, retries -> default 3. Silent, by declaration.
-    println(ProfileResponse("2", null, null).toProfileResult().getOrThrow())
+    println(ProfileResponse("2", null, null).toProfile())
     //  Profile(id=2, nickname=null, retries=3)
 
     // Brokenness absorbed where an escape exists ("abc" is not an Int -> default 3, REPORTED).
-    println(ProfileResponse("3", "ada", "abc").toProfileResult().getOrThrow())
+    println(ProfileResponse("3", "ada", "abc").toProfile())
     //  Profile(id=3, nickname=ada, retries=3)
 
-    // No escape on id -> the whole mapping fails, as a value.
-    val failure = ProfileResponse("oops", null, null).toProfileResult()
+    // No escape on id -> the whole mapping fails — the plain core THROWS.
+    val failure = runCatching { ProfileResponse("oops", null, null).toProfile() }
     println("hard failure -> ${failure.exceptionOrNull()?.message}")
     //  Cannot convert id: kotlin.String -> kotlin.Long
 }

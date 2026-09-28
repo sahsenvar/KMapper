@@ -52,7 +52,7 @@ fun main() = runParameterizedConvertersDemo()
 
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runParameterizedConvertersDemo() {
-    val card = ProductPricing(price = 189.005, discountRate = 12.34).toProductCardResult().getOrThrow()
+    val card = ProductPricing(price = 189.005, discountRate = 12.34).toProductCard()
     println("formatted -> $card")
     //  ProductCard(price=189.01, discountRate=12.3%)
 }

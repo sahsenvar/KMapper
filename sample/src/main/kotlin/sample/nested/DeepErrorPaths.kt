@@ -71,16 +71,18 @@ fun runDeepErrorPathsDemo() {
     val venue = VenueResponse(
         name = "Convention Center",
         location = GeoPointResponse(lat = "41.0", lon = "not-a-longitude"),
-    ).toVenueResult().getOrThrow()
+    ).toVenue()
     println("absorbed at the declared escape -> $venue")
     //  Venue(name=Convention Center, location=null)
 
     // B: same kind of break under a REQUIRED chain — the whole mapping fails, and the
     // exception's path walks you straight to the culprit.
-    val outcome = ParcelResponse(
-        trackingId = 990017,
-        address = ParcelAddressResponse(street = "1 Compiler Way", zipCode = "not-a-zip"),
-    ).toParcelResult()
+    val outcome = runCatching {
+        ParcelResponse(
+            trackingId = 990017,
+            address = ParcelAddressResponse(street = "1 Compiler Way", zipCode = "not-a-zip"),
+        ).toParcel()
+    }
     val failure = outcome.exceptionOrNull() as MappingException
     println("hard deep failure -> path='${failure.path}'")
     println("                  -> ${failure.message}")

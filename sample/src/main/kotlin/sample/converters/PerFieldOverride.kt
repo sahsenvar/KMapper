@@ -39,8 +39,6 @@ fun main() = runPerFieldOverrideDemo()
 
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runPerFieldOverrideDemo() {
-    val history = PriceHistoryResponse(current = "189.00 EUR", previous = "EUR#15900")
-        .toPriceHistoryResult()
-        .getOrThrow()
+    val history = PriceHistoryResponse(current = "189.00 EUR", previous = "EUR#15900").toPriceHistory()
     println("mixed converters on one class -> $history")
 }

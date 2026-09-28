@@ -11,8 +11,8 @@ import com.sahsenvar.kmapper.annotations.MapTo
  * it talks about (`targetClass`) — otherwise the rename would be ambiguous.
  *
  * Generated here:
- *     fun ProductResponse.toProductResult():        Result<Product>
- *     fun ProductResponse.toProductSummaryResult(): Result<ProductSummary>
+ *     fun ProductResponse.toProduct():        Product
+ *     fun ProductResponse.toProductSummary(): ProductSummary
  */
 data class Product(
     val sku: String,
@@ -39,6 +39,6 @@ fun main() = runMultipleTargetsDemo()
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runMultipleTargetsDemo() {
     val response = ProductResponse(sku = "KB-2026", title = "Split Keyboard", priceCents = 18_900)
-    println("full domain object -> ${response.toProductResult().getOrThrow()}")
-    println("list-row summary   -> ${response.toProductSummaryResult().getOrThrow()}")
+    println("full domain object -> ${response.toProduct()}")
+    println("list-row summary   -> ${response.toProductSummary()}")
 }

@@ -47,17 +47,17 @@ fun main() = runFieldValidationDemo()
 
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runFieldValidationDemo() {
-    println(RegistrationForm("Grace", "grace@navy.mil", "SAVE-20").toMemberResult().getOrThrow())
+    println(RegistrationForm("Grace", "grace@navy.mil", "SAVE-20").toMember())
 
-    val badEmail = RegistrationForm("Grace", "not-an-email", "SAVE-20").toMemberResult()
+    val badEmail = runCatching { RegistrationForm("Grace", "not-an-email", "SAVE-20").toMember() }
     println("source-side validator -> ${badEmail.exceptionOrNull()?.message}")
     //  Validation failed for 'email': must be a valid email
 
-    val blankName = RegistrationForm("   ", "grace@navy.mil", "SAVE-20").toMemberResult()
+    val blankName = runCatching { RegistrationForm("   ", "grace@navy.mil", "SAVE-20").toMember() }
     println("target-side validator -> ${blankName.exceptionOrNull()?.message}")
     //  Validation failed for 'displayName': must not be blank
 
-    val badCoupon = RegistrationForm("Grace", "grace@navy.mil", "save20").toMemberResult()
+    val badCoupon = runCatching { RegistrationForm("Grace", "grace@navy.mil", "save20").toMember() }
     println("custom validator -> ${badCoupon.exceptionOrNull()?.message}")
     //  Validation failed for 'couponCode': must be a coupon code like SAVE-20
 }

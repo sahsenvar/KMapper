@@ -48,15 +48,16 @@ fun main() = runSerializableEnumMappingDemo()
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runSerializableEnumMappingDemo() {
     // @SerialName decodes; a bare entry name decodes by its own name.
-    println("@SerialName  -> ${TicketPayload(1, "low").toTicketResult().getOrThrow()}")
+    println("@SerialName  -> ${TicketPayload(1, "low").toTicket()}")
     //  Ticket(id=1, priority=LOW)
-    println("entry name   -> ${TicketPayload(2, "URGENT").toTicketResult().getOrThrow()}")
+    println("entry name   -> ${TicketPayload(2, "URGENT").toTicket()}")
     //  Ticket(id=2, priority=URGENT)
 
     val unknown = TicketPayload(id = 3, priority = "frozen") // not a known serial name
-    println("strict fails -> ${unknown.toTicketResult().exceptionOrNull()?.message}")
+    val strictFailure = runCatching { unknown.toTicket() }
+    println("strict fails -> ${strictFailure.exceptionOrNull()?.message}")
     //  Unknown wire value 'frozen' for enum Priority at priority
 
-    println("view absorbs -> ${unknown.toTicketViewResult().getOrThrow()}")
+    println("view absorbs -> ${unknown.toTicketView()}")
     //  TicketView(id=3, priority=null)   (+ a degradation report)
 }

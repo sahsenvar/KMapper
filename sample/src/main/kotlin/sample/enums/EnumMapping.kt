@@ -43,12 +43,13 @@ fun main() = runEnumMappingDemo()
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runEnumMappingDemo() {
     val known = OrderEvent(id = 1, status = "shipped")
-    println("strict       -> ${known.toTrackedOrderResult().getOrThrow()}")
+    println("strict       -> ${known.toTrackedOrder()}")
 
     val unknown = OrderEvent(id = 2, status = "teleported") // server got creative
-    println("strict fails -> ${unknown.toTrackedOrderResult().exceptionOrNull()?.message}")
+    val strictFailure = runCatching { unknown.toTrackedOrder() }
+    println("strict fails -> ${strictFailure.exceptionOrNull()?.message}")
     //  Unknown wire value 'teleported' for enum OrderStatus at status
 
-    println("preview absorbs -> ${unknown.toOrderPreviewResult().getOrThrow()}")
+    println("preview absorbs -> ${unknown.toOrderPreview()}")
     //  OrderPreview(id=2, status=null)   (+ a degradation report)
 }
