@@ -14,3 +14,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # init / analyze / upload-sarif must move together: separate PRs leave init and analyze
+      # on different versions, and CodeQL then fails with "Loaded a configuration file for
+      # version X, but running version Y".
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
