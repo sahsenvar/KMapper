@@ -43,6 +43,7 @@ public abstract interface annotation class com/sahsenvar/kmapper/annotations/Map
 
 public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapFrom : java/lang/annotation/Annotation {
 	public abstract fun source ()Ljava/lang/Class;
+	public abstract fun wrapper ()Ljava/lang/Class;
 }
 
 public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapFrom$Container : java/lang/annotation/Annotation {
@@ -51,6 +52,7 @@ public abstract interface annotation class com/sahsenvar/kmapper/annotations/Map
 
 public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapTo : java/lang/annotation/Annotation {
 	public abstract fun target ()Ljava/lang/Class;
+	public abstract fun wrapper ()Ljava/lang/Class;
 }
 
 public abstract interface annotation class com/sahsenvar/kmapper/annotations/MapTo$Container : java/lang/annotation/Annotation {
