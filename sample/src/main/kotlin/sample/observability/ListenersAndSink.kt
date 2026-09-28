@@ -49,9 +49,7 @@ fun runListenersAndSinkDemo() {
 
     KMapper.addListener(listener)
     try {
-        val snapshot = SnapshotPacket(cpuLoad = "not-a-double", retries = "many")
-            .toSnapshotResult()
-            .getOrThrow()
+        val snapshot = SnapshotPacket(cpuLoad = "not-a-double", retries = "many").toSnapshot()
         println("mapped (degraded but alive) -> $snapshot")
         //  Snapshot(cpuLoad=null, retries=3)
 
@@ -62,7 +60,7 @@ fun runListenersAndSinkDemo() {
 
         // Declared absence is SILENT — re-run with nulls and watch nothing arrive:
         seen.clear()
-        SnapshotPacket(cpuLoad = null, retries = null).toSnapshotResult().getOrThrow()
+        SnapshotPacket(cpuLoad = null, retries = null).toSnapshot()
         println("absent inputs reported ${seen.size} events (absence is your design, not a bug)")
     } finally {
         KMapper.removeListener(listener) // always pair add/remove — the registry is process-wide

@@ -7,7 +7,8 @@ import com.sahsenvar.kmapper.annotations.MapTo
  *
  * A nested data-class field is just another conversion: if `AddressResponse` is `@MapTo`
  * `Address`, then any field of type `AddressResponse -> Address` automatically calls the
- * sub-mapper. No annotations on the field, arbitrary depth, same Result discipline.
+ * sub-mapper's plain core, `it.toAddress()`. No annotations on the field, arbitrary depth,
+ * same throwing discipline all the way down.
  */
 data class Address(
     val street: String,
@@ -52,6 +53,6 @@ fun runNestedObjectsDemo() {
             name = "Grace Hopper",
             address = AddressResponse(street = "1 Compiler Way", zipCode = "34000"),
         ),
-    ).toShipmentResult().getOrThrow()
+    ).toShipment()
     println("three levels deep -> $shipment")
 }

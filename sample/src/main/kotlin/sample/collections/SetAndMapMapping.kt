@@ -34,7 +34,7 @@ fun runSetAndMapMappingDemo() {
             "mouse-x" to "not-a-number", // broken value -> entry dropped, reported
             "desk-9" to "4",
         ),
-    ).toInventoryResult().getOrThrow()
+    ).toInventory()
 
     println("warehouses (converged) -> ${inventory.warehouseIds}")
     println("stock (salvaged)       -> ${inventory.stock}")

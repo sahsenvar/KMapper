@@ -42,7 +42,7 @@ fun main() = runOneWayConvertersDemo()
 
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runOneWayConvertersDemo() {
-    val stored = CardForm(number = "4111111111111111").toStoredCardResult().getOrThrow()
+    val stored = CardForm(number = "4111111111111111").toStoredCard()
     println("redacted -> $stored")
 
     // The reverse mapping does not compile. If you add:
