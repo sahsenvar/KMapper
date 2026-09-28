@@ -180,14 +180,24 @@ class ReturnWrapperResolver(
         }
 
         val returnShape = function.returnType?.resolve() ?: return reject()
+        val receiverShape = function.parameters[0].type.resolve()
+        // The receiver must carry the source (S, Flow<S>, List<S>, …) — otherwise the generated
+        // extension would have no way to hand the mapper its input.
+        if (!receiverShape.mentionsTypeParameter(sourceTypeParameter.name.asString())) return reject()
         return WrapFunction(
-            receiverShape = function.parameters[0].type.resolve(),
+            receiverShape = receiverShape,
             returnShape = returnShape,
             sourceTypeParameter = sourceTypeParameter.name.asString(),
             targetTypeParameter = targetTypeParameter.name.asString(),
             typeParameterOrder = function.typeParameters.map { it.name.asString() },
         )
     }
+}
+
+private fun KSType.mentionsTypeParameter(typeParameterName: String): Boolean {
+    val declaration = declaration
+    if (declaration is KSTypeParameter) return declaration.name.asString() == typeParameterName
+    return arguments.any { it.type?.resolve()?.mentionsTypeParameter(typeParameterName) == true }
 }
 
 /**

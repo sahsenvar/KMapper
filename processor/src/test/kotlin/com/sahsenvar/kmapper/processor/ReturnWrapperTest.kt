@@ -314,6 +314,30 @@ class ReturnWrapperTest :
                     )
                 messages shouldContain "unsupported shape"
             }
+            then("a wrap function whose receiver does not carry the source is a compile error") {
+                val messages =
+                    errMessages(
+                        SourceFile.kotlin(
+                            "Bad.kt",
+                            """
+                            import com.sahsenvar.kmapper.KMapperWrapper
+                            import com.sahsenvar.kmapper.WrapperSuffix
+                            import com.sahsenvar.kmapper.annotations.MapTo
+
+                            @WrapperSuffix("Bad")
+                            object SourcelessWrapper : KMapperWrapper {
+                                fun <S, T> wrap(source: String, map: (S) -> T): List<T> = emptyList()
+                            }
+
+                            data class UserDomainModel(val id: Int)
+
+                            @MapTo(UserDomainModel::class, wrapper = SourcelessWrapper::class)
+                            data class UserDataModel(val id: Int)
+                            """.trimIndent(),
+                        ),
+                    )
+                messages shouldContain "unsupported shape"
+            }
             then("an unresolvable module-wide option is a compile error") {
                 val (result, _) = compile(listOf(modelSource()), kspOptions = mapOf("kmapper.wrapper" to "com.missing.Nope"))
                 result.exitCode shouldBe KotlinCompilation.ExitCode.COMPILATION_ERROR
