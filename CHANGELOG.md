@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `KMapper { wrapper = KMapperWrapper.KtResult }`, or without the plugin set
     `ksp { arg("kmapper.wrapper", "KtResult") }`. `toXResult()` is then generated next to `toX()`.
 - `kmapper-core` now depends on `kotlinx-coroutines-core` (`api`, 1.10.2) for `KMapperWrapper.Flow`.
+- **Built with Kotlin 2.4.10** (was 2.3.10). Kotlin/Native (iOS) consumers need Kotlin 2.4+, because klibs
+  are not readable by older compilers. JVM/Android consumers on Kotlin 2.3 are unaffected.
 
 ### Added
 
