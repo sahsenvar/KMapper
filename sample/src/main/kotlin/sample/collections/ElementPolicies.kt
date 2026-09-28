@@ -41,16 +41,18 @@ fun runElementPoliciesDemo() {
         invoiceLines = listOf("100", "250"),
         readings = listOf("21.5", null, "abc", "23.0"), // null passes through; "abc" -> null (reported)
         tagIds = listOf("1", null, "x", "4"),
-    ).toMeasurementsResult().getOrThrow()
+    ).toMeasurements()
     println("readings keep alignment -> ${clean.readings}") // [21.5, null, null, 23.0]
     println("tagIds get compacted    -> ${clean.tagIds}") //    [1, 4]
 
     // One bad invoice line under Throw -> the WHOLE mapping fails, with the indexed path.
-    val outcome = MeasurementsResponse(
-        invoiceLines = listOf("100", "n/a"),
-        readings = emptyList(),
-        tagIds = emptyList(),
-    ).toMeasurementsResult()
+    val outcome = runCatching {
+        MeasurementsResponse(
+            invoiceLines = listOf("100", "n/a"),
+            readings = emptyList(),
+            tagIds = emptyList(),
+        ).toMeasurements()
+    }
     println("all-or-nothing          -> ${outcome.exceptionOrNull()?.message}")
     //  Cannot convert invoiceLines[1]: kotlin.String -> kotlin.Long
 }

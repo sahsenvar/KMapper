@@ -1,11 +1,22 @@
 # SSS
 
-## Üretilen fonksiyon neden fırlatmak yerine `Result` dönüyor?
+## Üretilen fonksiyon neden `Result` dönmek yerine fırlatıyor?
 
-Çünkü wire verisi eninde sonunda bozuk *gelecek* ve fırlatan bir mapper, başkasının kötü
-deploy'unu sizin crash'inize çevirir. `Result` ile hata imzanın parçasıdır: çağrı noktası
-karar verir (`getOrThrow` / `getOrElse` / `fold`) ve karar code review'da görünür.
-[Ayrıntılar](../hata-yonetimi/mapping-exception.md).
+Çünkü düz, fırlatan bir fonksiyon her Kotlin çağıranın zaten bildiği şekildir; iç içe
+mapping'ler de her seviyede bir `Result`'ı açmak zorunda kalmadıklarında daha yalın bileşir —
+iç mapper yalnızca içteki `toX()`'i çağırır, hata kendiliğinden yukarı taşınır. Hatayı imzanın
+parçası yapmak — `Result`, `Flow`, ya da kendi sarmalayıcı tipiniz — istiyorsanız bu bir
+annotation uzağınızda ve düz fonksiyonun asla yerine geçmez: bkz.
+[Dönüş Sarmalayıcıları](../temel-kullanim/donus-sarmalayicilari.md) ve
+[Hata Yönetimi](../hata-yonetimi/mapping-exception.md).
+
+## 3.0.0'a güncelledim ve `toXResult()` kayboldu. Ne yapmalıyım?
+
+Birini seçin: çağrı noktalarını `dto.toUser()`'a çevirin (+ yerel olarak hâlâ `Result`
+istediğiniz yerlerde `runCatching { }`), ya da eski şekli her yerde tek bir modül geneli
+ayarla koruyun — `KMapper { wrapper = KMapperWrapper.KtResult }` (Gradle plugin'i) ya da
+`ksp { arg("kmapper.wrapper", "KtResult") }`. Bkz.
+[Dönüş Sarmalayıcıları → 2.x'ten geçiş](../temel-kullanim/donus-sarmalayicilari.md#2xten-geçiş).
 
 ## Bozuk değerim neden hataya dönüşmedi?
 

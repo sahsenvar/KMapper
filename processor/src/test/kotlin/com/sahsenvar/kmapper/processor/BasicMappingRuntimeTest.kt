@@ -12,11 +12,12 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
- * Runtime-execution tests for the KSP mapping processor at the Result boundary.
+ * Runtime-execution tests for the KSP mapping processor's plain `toX()` core.
  *
  * Compiles source with the processor attached, classloads the generated mappers, and
- * invokes them reflectively via [invokeResultMapper]. The library never throws at the
- * caller: hard failures surface as `Result.failure` carrying the typed [MappingException].
+ * invokes them reflectively via [invokeMapperCatching]. The generated core itself throws
+ * the typed [MappingException] on hard failure; the helper wraps that in `Result.failure`
+ * so these tests can keep asserting the boundary the same way.
  *
  * A FAILURE here is a real production bug — do NOT weaken these assertions.
  */
@@ -41,9 +42,9 @@ class BasicMappingRuntimeTest :
             `when`("the mapper runs") {
                 then("all fields copy through and the boundary reports success") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "UserDataModelMappersKt",
-                            "toUserDomainModelResult",
+                            "toUserDomainModel",
                             result.newInstance("UserDataModel", "42", "a@b.com"),
                         )
                     outcome.isSuccess.shouldBeTrue()
@@ -72,9 +73,9 @@ class BasicMappingRuntimeTest :
             `when`("the source value is null") {
                 then("the boundary reports failure with RequiredFieldMissing") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "StrictDataModelMappersKt",
-                            "toStrictDomainModelResult",
+                            "toStrictDomainModel",
                             result.newInstance("StrictDataModel", null as String?),
                         )
                     outcome.isFailure.shouldBeTrue()
@@ -104,9 +105,9 @@ class BasicMappingRuntimeTest :
             `when`("the source parses cleanly") {
                 then("the converted integer lands in the domain model") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "CountDataModelMappersKt",
-                            "toCountDomainModelResult",
+                            "toCountDomainModel",
                             result.newInstance("CountDataModel", "7"),
                         )
                     outcome.isSuccess.shouldBeTrue()
@@ -117,9 +118,9 @@ class BasicMappingRuntimeTest :
             `when`("the source is malformed") {
                 then("the raw converter exception is wrapped as TypeConversionFailed — never escapes raw") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "CountDataModelMappersKt",
-                            "toCountDomainModelResult",
+                            "toCountDomainModel",
                             result.newInstance("CountDataModel", "abc"),
                         )
                     outcome.isFailure.shouldBeTrue()
@@ -156,9 +157,9 @@ class BasicMappingRuntimeTest :
             `when`("the source value is absent (null)") {
                 then("the constructor default substitutes silently") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "ProfileDataModelMappersKt",
-                            "toProfileDomainModelResult",
+                            "toProfileDomainModel",
                             result.newInstance("ProfileDataModel", "Alice", null as String?),
                         )
                     outcome.isSuccess.shouldBeTrue()
@@ -171,9 +172,9 @@ class BasicMappingRuntimeTest :
             `when`("the source value is present") {
                 then("the converted value overrides the default") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "ProfileDataModelMappersKt",
-                            "toProfileDomainModelResult",
+                            "toProfileDomainModel",
                             result.newInstance("ProfileDataModel", "Alice", "55"),
                         )
                     outcome.isSuccess.shouldBeTrue()

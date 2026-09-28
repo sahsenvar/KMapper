@@ -23,6 +23,8 @@ kotlin {
         commonMain.dependencies {
             // api, not implementation: built-in converter signatures expose Instant/LocalDate/...
             api(libs.kotlinx.datetime)
+            // api: KMapperWrapper.Flow exposes kotlinx.coroutines.flow.Flow in its signatures.
+            api(libs.kotlinx.coroutines.core)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -30,6 +32,7 @@ kotlin {
             implementation(libs.kotest.property)
             // kotest-framework-engine also provides io.kotest.datatest.withData (merged in Kotest 6.x)
             implementation(libs.kotest.framework.engine)
+            implementation(libs.kotlinx.coroutines.test)
         }
         jvmTest.dependencies {
             implementation(kotlin("test"))

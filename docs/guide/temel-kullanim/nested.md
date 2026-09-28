@@ -24,7 +24,7 @@ Her seviyenin kendi `@MapTo`'su olmalı (her çift açık bir tanımdır — yap
 en üstteki çağrı bütün ağacı eşler:
 
 ```kotlin
-val order = orderResponse.toOrderResult().getOrThrow()
+val order = orderResponse.toOrder()
 ```
 
 ## Hatalar tam yolu taşır
@@ -40,9 +40,9 @@ karartmasından aynen sağ çıkar. Koleksiyonlar indeks segmenti ekler: `items[
 
 ## Hasar yarıçapını sınırlamak
 
-Varsayılan olarak herhangi bir yerdeki sert hata `toOrderResult()`'ın tamamını düşürür — tek
-`Result`, tek sınır. Payload'un bir *bölümü* isteğe bağlıysa bunu tiple beyan edin; hata
-orada durur:
+Varsayılan olarak herhangi bir yerdeki sert hata `toOrder()` çağrısının tamamını düşürür — en
+dış seviyede, bir kere fırlar. Payload'un bir *bölümü* isteğe bağlıysa bunu tiple beyan edin;
+hata orada durur:
 
 ```kotlin
 data class Order(

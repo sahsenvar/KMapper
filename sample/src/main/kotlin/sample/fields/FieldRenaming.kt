@@ -30,8 +30,6 @@ fun main() = runFieldRenamingDemo()
 
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runFieldRenamingDemo() {
-    val article = ArticleResponse(id = 7, titleText = "Compile-time mapping", byline = "S. Senvar")
-        .toArticleResult()
-        .getOrThrow()
+    val article = ArticleResponse(id = 7, titleText = "Compile-time mapping", byline = "S. Senvar").toArticle()
     println("renamed fields -> $article")
 }

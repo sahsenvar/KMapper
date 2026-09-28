@@ -47,12 +47,10 @@ fun main() = runCustomConverterDemo()
 
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runCustomConverterDemo() {
-    val item = PricedItemResponse(name = "Split Keyboard", price = "189.00 EUR")
-        .toPricedItemResult()
-        .getOrThrow()
+    val item = PricedItemResponse(name = "Split Keyboard", price = "189.00 EUR").toPricedItem()
     println("custom-converted -> $item")
 
     // A malformed price is handled exactly like a broken built-in conversion:
-    val broken = PricedItemResponse(name = "?", price = "free!!").toPricedItemResult()
+    val broken = runCatching { PricedItemResponse(name = "?", price = "free!!").toPricedItem() }
     println("malformed price  -> ${broken.exceptionOrNull()?.message}")
 }

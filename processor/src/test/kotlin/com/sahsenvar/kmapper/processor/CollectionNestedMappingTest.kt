@@ -11,7 +11,7 @@ class CollectionNestedMappingTest {
     /**
      * Non-null List<NestedSource> → List<NestedDomain> where NestedSource is itself @MapTo-mapped.
      * Generated code must ride the element seam without a safe call:
-     * `tags.convertEachOrSkip("tags", "TagRemote", "TagDomain") { it.toTagDomainResult().getOrThrow() }`.
+     * `tags.convertEachOrSkip("tags", "TagRemote", "TagDomain") { it.toTagDomain() }`.
      */
     @Test
     fun `non-null list of mapped elements uses map not safe-call map`() {
@@ -42,15 +42,15 @@ class CollectionNestedMappingTest {
         assert(!gen.contains("?.convertEachOrSkip")) {
             "Generated code must NOT use ?.convertEachOrSkip for non-null List source:\n$gen"
         }
-        // Must call the element mapper through the Result boundary
-        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
-            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
+        // Must call the plain core element mapper directly (no Result boundary, no getOrThrow)
+        assert(gen.contains("toTagDomain()")) {
+            "Expected toTagDomain() element mapper call:\n$gen"
         }
     }
 
     /**
      * Nullable List<NestedSource>? → List<NestedDomain>?: null passthrough via a safe-called
-     * element seam chain — `tags?.convertEachOrSkip(...) { it.toTagDomainResult().getOrThrow() }`.
+     * element seam chain — `tags?.convertEachOrSkip(...) { it.toTagDomain() }`.
      */
     @Test
     fun `nullable list of mapped elements uses safe-call map`() {
@@ -77,8 +77,8 @@ class CollectionNestedMappingTest {
         assert(gen.contains("tags?.convertEachOrSkip(")) {
             "Expected tags?.convertEachOrSkip( for nullable List source:\n$gen"
         }
-        assert(gen.contains("toTagDomainResult().getOrThrow()")) {
-            "Expected toTagDomainResult().getOrThrow() element mapper call:\n$gen"
+        assert(gen.contains("toTagDomain()")) {
+            "Expected toTagDomain() element mapper call:\n$gen"
         }
     }
 }

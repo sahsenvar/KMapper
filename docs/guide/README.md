@@ -11,14 +11,16 @@ data class User(val id: Long, val joined: LocalDate)
 data class UserResponse(val id: Long, val joined: String)
 
 // Derleme zamanında sizin için üretilir:
-val user: Result<User> = UserResponse(7, "2026-06-12").toUserResult()
+val user: User = UserResponse(7, "2026-06-12").toUser()
 ```
 
 Bu üç satırı elle yazdığınız her mapper'dan ayıran üç şey var:
 
-1. **Hatalar birer değerdir.** Üretilen fonksiyon `Result<User>` döner — bozuk wire verisi,
-   parsing yığınının derinliklerinde patlayan bir crash değil, tipli bir `MappingException`
-   olarak gelir.
+1. **Hatalar tiplidir, sessiz değildir.** `toX()`, sert bir hatada tipli bir
+   `MappingException` fırlatır — bozuk wire verisi parsing yığınının derinliklerinde patlayan
+   alakasız bir crash'e karışmaz. Hatayı yine de bir *değer* olarak mı istiyorsunuz? Bir
+   [dönüş sarmalayıcısı](temel-kullanim/donus-sarmalayicilari.md) ile katılın —
+   `toXResult(): Result<User>`, `toXFlow(): Flow<User>` ya da kendi yazdığınız bir tip.
 2. **Hatalar yol (path) taşır.** Üç nesne derinlikteki bozuk bir tarih
    `Cannot convert order.customer.joined: …` der — *hangi kaydın hangi alanı* kırıldı, bilirsiniz.
 3. **Dönüşüm görünür ve değiştirilebilirdir.** `String → LocalDate` bir built-in converter
@@ -57,6 +59,7 @@ Grup `io.github.sahsenvar`:
 | `kmapper-core` | KMP | Bağımsız runtime: exception'lar, converter taban sınıfı + built-in'ler, validator'lar, seam'ler, gözlemlenebilirlik. Kod üretimi olmadan da kullanılabilir. |
 | `kmapper-annotations` | KMP | Tanım annotation'ları (`@MapTo`, `@FieldMap`, `@ConvertWith`, …) |
 | `kmapper-compiler` | JVM (KSP) | Kod üreteci |
+| `kmapper-gradle-plugin` | Gradle | İsteğe bağlı `KMapper { wrapper = … }` extension'ı — modül geneli [dönüş sarmalayıcısını](temel-kullanim/donus-sarmalayicilari.md) ayarlar |
 | `kmapper-converters-immutable` | KMP | kotlinx-collections-immutable wrapper'ları |
 | `kmapper-converters-arrow` | KMP | Arrow `NonEmptyList`/`NonEmptySet` wrapper'ları, `Option` |
 | `kmapper-converters-datetime` | JVM/Android | `java.time` converter'ları ve kotlinx ↔ java köprüleri |

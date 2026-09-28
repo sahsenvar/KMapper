@@ -13,9 +13,31 @@ open annotation class com.sahsenvar.kmapper.converter/UnsupportedDirection : kot
         final fun <get-reason>(): kotlin/String // com.sahsenvar.kmapper.converter/UnsupportedDirection.reason.<get-reason>|<get-reason>(){}[0]
 }
 
+open annotation class com.sahsenvar.kmapper/WrapperSuffix : kotlin/Annotation { // com.sahsenvar.kmapper/WrapperSuffix|null[0]
+    constructor <init>(kotlin/String) // com.sahsenvar.kmapper/WrapperSuffix.<init>|<init>(kotlin.String){}[0]
+
+    final val suffix // com.sahsenvar.kmapper/WrapperSuffix.suffix|{}suffix[0]
+        final fun <get-suffix>(): kotlin/String // com.sahsenvar.kmapper/WrapperSuffix.suffix.<get-suffix>|<get-suffix>(){}[0]
+}
+
 abstract interface <#A: kotlin/Any> com.sahsenvar.kmapper/MappableEnum { // com.sahsenvar.kmapper/MappableEnum|null[0]
     abstract val wireValue // com.sahsenvar.kmapper/MappableEnum.wireValue|{}wireValue[0]
         abstract fun <get-wireValue>(): #A // com.sahsenvar.kmapper/MappableEnum.wireValue.<get-wireValue>|<get-wireValue>(){}[0]
+}
+
+abstract interface com.sahsenvar.kmapper/KMapperWrapper { // com.sahsenvar.kmapper/KMapperWrapper|null[0]
+    final object Default : com.sahsenvar.kmapper/KMapperWrapper // com.sahsenvar.kmapper/KMapperWrapper.Default|null[0]
+
+    final object Flow : com.sahsenvar.kmapper/KMapperWrapper { // com.sahsenvar.kmapper/KMapperWrapper.Flow|null[0]
+        final fun <#A2: kotlin/Any?, #B2: kotlin/Any?> wrap(#A2, kotlin/Function1<#A2, #B2>): kotlinx.coroutines.flow/Flow<#B2> // com.sahsenvar.kmapper/KMapperWrapper.Flow.wrap|wrap(0:0;kotlin.Function1<0:0,0:1>){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
+        final fun <#A2: kotlin/Any?, #B2: kotlin/Any?> wrap(kotlinx.coroutines.flow/Flow<#A2>, kotlin/Function1<#A2, #B2>): kotlinx.coroutines.flow/Flow<#B2> // com.sahsenvar.kmapper/KMapperWrapper.Flow.wrap|wrap(kotlinx.coroutines.flow.Flow<0:0>;kotlin.Function1<0:0,0:1>){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
+    }
+
+    final object KtResult : com.sahsenvar.kmapper/KMapperWrapper { // com.sahsenvar.kmapper/KMapperWrapper.KtResult|null[0]
+        final inline fun <#A2: kotlin/Any?, #B2: kotlin/Any?> wrap(#A2, kotlin/Function1<#A2, #B2>): kotlin/Result<#B2> // com.sahsenvar.kmapper/KMapperWrapper.KtResult.wrap|wrap(0:0;kotlin.Function1<0:0,0:1>){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
+    }
+
+    final object None : com.sahsenvar.kmapper/KMapperWrapper // com.sahsenvar.kmapper/KMapperWrapper.None|null[0]
 }
 
 abstract interface com.sahsenvar.kmapper/MappingListener { // com.sahsenvar.kmapper/MappingListener|null[0]

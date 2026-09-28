@@ -58,11 +58,11 @@ fun runWrappedCollectionsDemo() {
     val catalog = CatalogResponse(
         tags = listOf(TagResponse("kotlin"), TagResponse("multiplatform")),
         skus = listOf("KB-2026", "KB-2026", "MX-1"), // sets deduplicate, as sets do
-    ).toCatalogResult().getOrThrow()
+    ).toCatalog()
     println("immutable containers -> $catalog")
 
     // NonEmptyList encodes "at least one" in the TYPE; an empty wire list cannot satisfy it.
-    println("team of two  -> ${ReviewTeamResponse(listOf("ada", "grace")).toReviewTeamResult().getOrThrow()}")
-    val empty = ReviewTeamResponse(emptyList()).toReviewTeamResult()
+    println("team of two  -> ${ReviewTeamResponse(listOf("ada", "grace")).toReviewTeam()}")
+    val empty = runCatching { ReviewTeamResponse(emptyList()).toReviewTeam() }
     println("empty source -> isFailure=${empty.isFailure} (${empty.exceptionOrNull()?.message})")
 }

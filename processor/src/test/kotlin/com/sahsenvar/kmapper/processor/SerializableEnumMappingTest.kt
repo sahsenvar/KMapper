@@ -101,13 +101,13 @@ class SerializableEnumMappingTest {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
         // @SerialName value decodes; bare entry name decodes too.
-        val active = result.invokeResultMapper("AccountRemoteMappersKt", "toAccountDomainResult", result.newInstance("AccountRemote", "active")).getOrThrow()
+        val active = result.invokeMapperCatching("AccountRemoteMappersKt", "toAccountDomain", result.newInstance("AccountRemote", "active")).getOrThrow()
         assertEquals("ACTIVE", active!!.prop("status").toString())
-        val banned = result.invokeResultMapper("AccountRemoteMappersKt", "toAccountDomainResult", result.newInstance("AccountRemote", "BANNED")).getOrThrow()
+        val banned = result.invokeMapperCatching("AccountRemoteMappersKt", "toAccountDomain", result.newInstance("AccountRemote", "BANNED")).getOrThrow()
         assertEquals("BANNED", banned!!.prop("status").toString())
 
         // Unknown wire value at a non-null target → hard UnknownEnumValue carrying the field path.
-        val outcome = result.invokeResultMapper("AccountRemoteMappersKt", "toAccountDomainResult", result.newInstance("AccountRemote", "teleported"))
+        val outcome = result.invokeMapperCatching("AccountRemoteMappersKt", "toAccountDomain", result.newInstance("AccountRemote", "teleported"))
         assertTrue(outcome.isFailure)
         val exception = outcome.exceptionOrNull()
         assertTrue(exception is MappingException.UnknownEnumValue, "expected UnknownEnumValue, got $exception")
@@ -136,9 +136,9 @@ class SerializableEnumMappingTest {
         assert(gen.contains("convertOrNull(\"status\"")) { "Expected the null-absorbing seam in:\n$gen" }
 
         // Unknown value → null (absorbed); known value still maps; null passes through.
-        val unknown = result.invokeResultMapper("AccountRemoteMappersKt", "toAccountDomainResult", result.newInstance("AccountRemote", "teleported")).getOrThrow()
+        val unknown = result.invokeMapperCatching("AccountRemoteMappersKt", "toAccountDomain", result.newInstance("AccountRemote", "teleported")).getOrThrow()
         assertEquals(null, unknown!!.prop("status"))
-        val known = result.invokeResultMapper("AccountRemoteMappersKt", "toAccountDomainResult", result.newInstance("AccountRemote", "active")).getOrThrow()
+        val known = result.invokeMapperCatching("AccountRemoteMappersKt", "toAccountDomain", result.newInstance("AccountRemote", "active")).getOrThrow()
         assertEquals("ACTIVE", known!!.prop("status").toString())
     }
 

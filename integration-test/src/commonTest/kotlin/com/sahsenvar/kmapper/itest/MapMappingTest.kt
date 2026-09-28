@@ -14,13 +14,13 @@ class MapMappingTest {
                 attrs = mapOf("a" to AttrR("alpha"), "b" to AttrR("beta")),
                 meta = mapOf("x" to "1", "y" to "2"),
             )
-        val domain = source.toCatalogDResult().getOrThrow()
+        val domain = source.toCatalogD()
         domain.attrs shouldContainExactly mapOf("a" to AttrD("alpha"), "b" to AttrD("beta"))
     }
 
     @Test
     fun `empty attr map produces empty map`() {
-        val domain = CatalogR(attrs = emptyMap(), meta = emptyMap()).toCatalogDResult().getOrThrow()
+        val domain = CatalogR(attrs = emptyMap(), meta = emptyMap()).toCatalogD()
         domain.attrs.isEmpty() shouldBe true
     }
 
@@ -30,7 +30,7 @@ class MapMappingTest {
             CatalogR(
                 attrs = mapOf("key" to AttrR("v")),
                 meta = emptyMap(),
-            ).toCatalogDResult().getOrThrow()
+            ).toCatalogD()
         domain.attrs["key"] shouldBe AttrD("v")
     }
 
@@ -39,13 +39,13 @@ class MapMappingTest {
     @Test
     fun `passthrough string-to-string map is identity`() {
         val meta = mapOf("env" to "prod", "version" to "2")
-        val domain = CatalogR(attrs = emptyMap(), meta = meta).toCatalogDResult().getOrThrow()
+        val domain = CatalogR(attrs = emptyMap(), meta = meta).toCatalogD()
         domain.meta shouldContainExactly meta
     }
 
     @Test
     fun `empty passthrough map is empty`() {
-        val domain = CatalogR(attrs = emptyMap(), meta = emptyMap()).toCatalogDResult().getOrThrow()
+        val domain = CatalogR(attrs = emptyMap(), meta = emptyMap()).toCatalogD()
         domain.meta.isEmpty() shouldBe true
     }
 }

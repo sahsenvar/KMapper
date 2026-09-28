@@ -128,7 +128,11 @@ Check that artifacts appear under:
   kmapper-core-iossimulatorarm64/<version>/
   kmapper-processor/<version>/
   kmapper-converters-immutable/<version>/
+  kmapper-gradle-plugin/<version>/
   ...
+
+~/.m2/repository/io/github/sahsenvar/kmapper/
+  io.github.sahsenvar.kmapper.gradle.plugin/<version>/   # the plugin marker artifact
 ```
 
 ---

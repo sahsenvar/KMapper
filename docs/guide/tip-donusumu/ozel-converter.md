@@ -22,8 +22,10 @@ Kurallar:
 - **Zengin tip önce** (`<Money, String>`): `convertTo` ikinci tipe *doğru* gider,
   `convertFrom` oradan döner.
 - **Bozuk girdide fırlatın.** `convertFrom("garbage")` fırlatmalı
-  (`IllegalArgumentException` uygundur) — [ladder](../temel-kullanim/null-safety.md) ve
-  `Result` sınırı onu tipli, yol taşıyan bir hataya çevirir. Asla tahmini değer döndürmeyin.
+  (`IllegalArgumentException` uygundur) — [ladder](../temel-kullanim/null-safety.md) onu tipli,
+  yol taşıyan bir `MappingException`'a çevirir (`toX()` tarafından fırlatılır, ya da bir
+  [dönüş sarmalayıcısı](../temel-kullanim/donus-sarmalayicilari.md) eklediyseniz değer olarak
+  teslim edilir). Asla tahmini değer döndürmeyin.
 
 [@KMapperConfig](kmapperconfig.md)'e bir kez kaydedin — sonrasında modüldeki her
 `Money`/`String` alan çifti otomatik ona çözümlenir.

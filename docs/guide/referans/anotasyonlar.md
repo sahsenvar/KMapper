@@ -7,10 +7,19 @@ artifact'i).
 
 | Annotation | Hedef | Amaç |
 |------------|-------|------|
-| `@MapTo(target)` | sınıf (tekrarlanabilir) | `Source.toTargetResult()` üret — kaynakta tanımlanır |
-| `@MapFrom(source)` | sınıf (tekrarlanabilir) | aynı üretim, hedefte tanımlanır |
+| `@MapTo(target, wrapper)` | sınıf (tekrarlanabilir) | `Source.toTarget(): Target` üret (+ `wrapper`'ın eklediği, ör. `toTargetResult()`) — kaynakta tanımlanır |
+| `@MapFrom(source, wrapper)` | sınıf (tekrarlanabilir) | aynı üretim, hedefte tanımlanır |
 
 → [@MapTo ve @MapFrom](../temel-kullanim/mapto-mapfrom.md)
+
+## Dönüş sarmalayıcıları
+
+| Annotation | Hedef | Amaç |
+|------------|-------|------|
+| `KMapperWrapper` (interface, annotation değil) | — | `Default` \| `None` \| `KtResult` \| `Flow`, ya da onu uygulayan kendi `object`'iniz |
+| `@WrapperSuffix(suffix)` | sınıf (bir `KMapperWrapper` object'i) | üretilen fonksiyon suffix'ini adlandırır, ör. `"Result"` → `toXResult()` |
+
+→ [Dönüş Sarmalayıcıları](../temel-kullanim/donus-sarmalayicilari.md)
 
 ## Alan direktifleri
 

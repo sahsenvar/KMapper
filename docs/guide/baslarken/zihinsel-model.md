@@ -28,8 +28,10 @@ dönüştürülmüş değer  >  constructor default  >  null  >  hata
 
 Bozuk bir değer, beyan edilmiş bir kaçışa (default ya da nullable) emilebilir — ama
 eksiklikten farklı olarak **her emilme raporlanır**
-([degradation sink](../gozlemleme/listener.md)). Mapping'in tamamı zaten `Result<T>` döner;
-`.getOrThrow()` demediğiniz sürece sert bir hata bile uygulamanızı çökertmez.
+([degradation sink](../gozlemleme/listener.md)). Emilmemiş sert bir hata, `toX()`'in tipli bir
+`MappingException` fırlatmasına yol açar — bunu fırlamak yerine bir değer olarak mı
+istiyorsunuz? Bir [dönüş sarmalayıcısı](../temel-kullanim/donus-sarmalayicilari.md) ekleyin
+(`toXResult(): Result<T>`, `toXFlow()` ya da kendi yazdığınız).
 
 Ayrım önemli: *eksiklik veridir, bozukluk sinyaldir.* 99 sağlam alanla kullanıcıya hizmet
 etmeye devam edersiniz; telemetriniz 1 bozuk alanı size söyler.

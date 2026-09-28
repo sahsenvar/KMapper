@@ -1,35 +1,60 @@
-# Result Sınırı ve MappingException
+# Hata Yönetimi ve MappingException
 
-KMapper'ın hata sözleşmesi tek cümlede: **çalışma zamanında başarısız olabilecek her şey,
-yol taşıyan bir `MappingException` içeren `Result` hatası olarak gelir; daha erken
-bilinebilecek her şey ise build'i düşürür.**
+KMapper'ın hata sözleşmesi tek cümlede: **çalışma zamanında başarısız olabilecek her şey, düz
+`toX()`'ten yol taşıyan, tipli bir `MappingException` olarak fırlar; daha erken bilinebilecek
+her şey ise build'i düşürür.** Hatanın fırlamak yerine bir değer olarak teslim edilmesini mi
+istiyorsunuz? Bu, üzerine eklenen isteğe bağlı bir katman — bkz.
+[Dönüş Sarmalayıcıları](../temel-kullanim/donus-sarmalayicilari.md).
 
-## Result sınırı
+## Düz mapper fırlatır
 
-Üretilen her mapper `Result<T>` döner:
+Üretilen her mapper, önce ve her zaman, `fun Source.toX(): X`'tir:
 
 ```kotlin
-val result: Result<User> = response.toUserResult()
+val user: User = response.toUser() // sert hatada MappingException fırlatır
 ```
 
-Hata politikasını *çağrı noktasında*, stdlib araçlarıyla seçersiniz:
+`Result` yok, `getOrThrow()` sıçraması yok — sert hata, Kotlin'de başarısız olabilen herhangi
+bir fonksiyon gibi bir exception'dır. Anlamlı olduğu yerde yakalayın, ya da yukarı taşınmasına
+izin verin:
 
 ```kotlin
-// bozuk-veride-çök (testler, debug build'leri, gerçekten zorunlu veri):
-val user = result.getOrThrow()
+val user = try {
+    response.toUser()
+} catch (exception: MappingException) {
+    log(exception)
+    User.GUEST
+}
+```
 
-// geri düşüş:
-val user = result.getOrElse { User.GUEST }
+## Hatayı değer olarak mı istiyorsunuz? Bir sarmalayıcı ekleyin
 
-// dallanma:
+Eski `Result<X>` dönen şekli — ya da bir `Flow<X>`'i, ya da tamamen başka bir şeyi — istiyorsanız
+bunu mapping bazında ya da modül genelinde beyan edin; extension, `toX()`'in **yerine değil,
+yanına** üretilir:
+
+```kotlin
+@MapTo(User::class, wrapper = KMapperWrapper.KtResult::class)
+data class UserResponse(/* … */)
+
+// ikisi de üretilir:
+// fun UserResponse.toUser(): User
+// fun UserResponse.toUserResult(): Result<User>
+
+val result: Result<User> = response.toUserResult()
 result.fold(
     onSuccess = { render(it) },
     onFailure = { e -> showError(); log(e) },
 )
 ```
 
-Pratik bir kalıp: debug'da `getOrThrow()`, release'te `getOrElse` + telemetri — bozuk wire
-verisi gece build'ini çökertir, kullanıcıyı değil.
+Built-in sarmalayıcıların (`None`, `KtResult`, `Flow`) tam kapsamı, modül geneli Gradle/KSP
+ayarı ve kendi sarmalayıcınızı yazmak için: [Dönüş Sarmalayıcıları](../temel-kullanim/donus-sarmalayicilari.md).
+
+Hiçbir sarmalayıcı gerektirmeyen pratik bir kalıp: debug build'lerinde ve testlerde `toX()`'in
+fırlamasına izin verin (bozuk wire verisi gece build'ini gürültülü şekilde çökertir), ve yalnızca
+production telemetrisiyle konuşan çağrı noktasını `runCatching { … }` ile ya da `KtResult` ile
+sarmalanmış bir mapping ile sarın.
 
 ## Exception taksonomisi
 

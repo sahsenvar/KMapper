@@ -37,7 +37,7 @@ how it becomes the side you do control.
 KSP generates an extension function:
 
 ```kotlin
-fun UserResponse.toUserResult(): Result<User>
+fun UserResponse.toUser(): User
 ```
 
 Two fields copied straight across; `joined` routed through the built-in
@@ -47,26 +47,24 @@ registration needed).
 ## 3. Use it
 
 ```kotlin
-val user: User = UserResponse(7, "grace@navy.mil", "2026-06-12")
-    .toUserResult()
-    .getOrThrow()
+val user: User = UserResponse(7, "grace@navy.mil", "2026-06-12").toUser()
 ```
 
-The generated function returns `Result<User>`: *you* decide at the call site whether a failure
-throws (`getOrThrow`), falls back (`getOrElse`), or branches (`fold`).
+The generated function returns the plain `User` and throws a typed `MappingException` on a
+hard failure. Want the failure as a value instead — `Result<User>`, a `Flow<User>`, or your
+own wrapper type? See [Return Wrappers](../basic-usage/return-wrappers.md); it's an opt-in
+added on top of `toUser()`, per mapping or module-wide, never a replacement for it.
 
 ## 4. Break it — on purpose
 
 ```kotlin
-val broken = UserResponse(7, "grace@navy.mil", "not-a-date").toUserResult()
-
-println(broken.exceptionOrNull()?.message)
+val broken = UserResponse(7, "grace@navy.mil", "not-a-date").toUser()
+// throws MappingException.TypeConversionFailed:
 // Cannot convert joined: String -> LocalDate failed for value "not-a-date" …
 ```
 
-No crash — the failure arrived as a value, naming the exact field. In nested models the path
-grows with it (`customer.address.zipCode`); see
-[Nested Models](../basic-usage/nested-models.md).
+The exception names the exact field. In nested models the path grows with it
+(`customer.address.zipCode`); see [Nested Models](../basic-usage/nested-models.md).
 
 ## 5. What if the wire value is missing?
 

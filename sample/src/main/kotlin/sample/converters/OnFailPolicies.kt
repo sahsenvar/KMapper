@@ -33,15 +33,15 @@ fun main() = runOnFailPoliciesDemo()
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runOnFailPoliciesDemo() {
     // Absent is absent under BOTH policies — nothing to be strict about.
-    println(ApplicationForm("Grace", age = null, score = null).toApplicantResult().getOrThrow())
+    println(ApplicationForm("Grace", age = null, score = null).toApplicant())
     //  Applicant(name=Grace, age=null, score=null)
 
     // Broken + Auto -> absorbed to null (and reported to the sink).
-    println(ApplicationForm("Ada", age = "36", score = "n/a").toApplicantResult().getOrThrow())
+    println(ApplicationForm("Ada", age = "36", score = "n/a").toApplicant())
     //  Applicant(name=Ada, age=36, score=null)
 
     // Broken + Throw -> hard failure. An invalid PRESENT value is a contract violation.
-    val outcome = ApplicationForm("Bob", age = "thirty", score = "10").toApplicantResult()
+    val outcome = runCatching { ApplicationForm("Bob", age = "thirty", score = "10").toApplicant() }
     println("strict field failed -> ${outcome.exceptionOrNull()?.message}")
     //  Cannot convert age: kotlin.String -> kotlin.Int
 }

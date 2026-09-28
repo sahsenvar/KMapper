@@ -5,9 +5,9 @@ import arrow.core.Some
 import com.sahsenvar.kmapper.MappingException
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 
 class EndToEndMappingTest {
     private fun valid() = UserR(
@@ -20,7 +20,7 @@ class EndToEndMappingTest {
 
     @Test
     fun `full happy-path mapping`() {
-        val domain = valid().toUserDResult().getOrThrow()
+        val domain = valid().toUserD()
         domain.id shouldBe "42"
         domain.joined shouldBe LocalDate(2026, 6, 4)
         domain.status shouldBe Status.ACTIVE
@@ -30,35 +30,39 @@ class EndToEndMappingTest {
 
     @Test
     fun `null required id fails with RequiredFieldMissing carrying the field path`() {
-        val outcome = valid().copy(id = null).toUserDResult()
-        outcome.isFailure shouldBe true
-        val exception = outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.RequiredFieldMissing>()
+        val exception =
+            assertFailsWith<MappingException.RequiredFieldMissing> {
+                valid().copy(id = null).toUserD()
+            }
         exception.path shouldBe "id"
     }
 
     @Test
     fun `unknown enum value fails with UnknownEnumValue carrying the field path`() {
-        val outcome = valid().copy(status = "???").toUserDResult()
-        outcome.isFailure shouldBe true
-        val exception = outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.UnknownEnumValue>()
+        val exception =
+            assertFailsWith<MappingException.UnknownEnumValue> {
+                valid().copy(status = "???").toUserD()
+            }
         exception.path shouldBe "status"
         exception.value shouldBe "???"
     }
 
     @Test
     fun `empty roles fails with EmptyCollection carrying the field path`() {
-        val outcome = valid().copy(roles = emptyList()).toUserDResult()
-        outcome.isFailure shouldBe true
-        val exception = outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.EmptyCollection>()
+        val exception =
+            assertFailsWith<MappingException.EmptyCollection> {
+                valid().copy(roles = emptyList()).toUserD()
+            }
         exception.path shouldBe "roles"
         exception.detail shouldBe "NonEmptyList source was empty"
     }
 
     @Test
     fun `malformed date fails with TypeConversionFailed carrying the field path`() {
-        val outcome = valid().copy(joined = "not-a-date").toUserDResult()
-        outcome.isFailure shouldBe true
-        val exception = outcome.exceptionOrNull().shouldBeInstanceOf<MappingException.TypeConversionFailed>()
+        val exception =
+            assertFailsWith<MappingException.TypeConversionFailed> {
+                valid().copy(joined = "not-a-date").toUserD()
+            }
         exception.path shouldBe "joined"
     }
 
@@ -66,11 +70,11 @@ class EndToEndMappingTest {
 
     @Test
     fun `Option wrap — Some and None`() {
-        val some = OptionSource("abc", TagR("tag1")).toOptionTargetResult().getOrThrow()
+        val some = OptionSource("abc", TagR("tag1")).toOptionTarget()
         some.maybeId shouldBe Some("abc")
         some.maybeTag shouldBe Some(TagD("tag1"))
 
-        val none = OptionSource(null, null).toOptionTargetResult().getOrThrow()
+        val none = OptionSource(null, null).toOptionTarget()
         none.maybeId shouldBe None
         none.maybeTag shouldBe None
     }

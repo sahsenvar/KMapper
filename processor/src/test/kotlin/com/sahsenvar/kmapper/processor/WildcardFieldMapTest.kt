@@ -43,9 +43,9 @@ class WildcardFieldMapTest :
                     result.exitCode shouldBe KotlinCompilation.ExitCode.OK
                     val generated = compilation.generatedFile("ArticleDataModelMappers.kt")
                     generated shouldContain "headline = title"
-                    // the degenerate form renders `toArticleDomainModelResult(headline: String)` —
+                    // the degenerate form renders `toArticleDomainModel(headline: String)` —
                     // pin the parameterless signature instead
-                    generated shouldContain "toArticleDomainModelResult(): Result<ArticleDomainModel>"
+                    generated shouldContain "toArticleDomainModel(): ArticleDomainModel"
                 }
             }
 
@@ -53,9 +53,9 @@ class WildcardFieldMapTest :
                 then("the value lands in the renamed target field") {
                     val mapped =
                         result
-                            .invokeResultMapper(
+                            .invokeMapperCatching(
                                 "ArticleDataModelMappersKt",
-                                "toArticleDomainModelResult",
+                                "toArticleDomainModel",
                                 result.newInstance("ArticleDataModel", "Breaking", 42),
                             ).getOrThrow()
                             .shouldNotBeNull()
@@ -204,9 +204,9 @@ class WildcardFieldMapTest :
                 then("the wire value lands in the renamed domain field") {
                     val mapped =
                         result
-                            .invokeResultMapper(
+                            .invokeMapperCatching(
                                 "ArticleWireModelMappersKt",
-                                "toArticleModelResult",
+                                "toArticleModel",
                                 result.newInstance("ArticleWireModel", "Sabah haberi"),
                             ).getOrThrow()
                             .shouldNotBeNull()

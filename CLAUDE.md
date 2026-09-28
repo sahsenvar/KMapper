@@ -34,13 +34,15 @@ else generic); a pair with no converter at all → compile-time `MissingConverte
 Runtime behavior = the **fallback ladder**: `converted value > declared default > type's absence form
 (null | not-a-member) > error`. Absence is always type-driven; `OnFail { Auto, Throw, Skip }` governs
 brokenness only. Broken absorption is **reported** to the degradation sink (`MappingListener.onDegradation`),
-declared-absence flows are silent. The boundary is a value: generated `toXResult(): Result<X>`
-(arrow add-on: `toXAccumulated(): IorNel`). Defaults come from target constructor defaults via
+declared-absence flows are silent. Generated boundary (3.0.0): the plain core `toX(): X` (throws `MappingException`) is
+always generated; return wrappers (`@MapTo/@MapFrom(wrapper = KMapperWrapper.KtResult|Flow|<user
+@WrapperSuffix object>)`, module-wide via Gradle `KMapper { wrapper = … }` / KSP option
+`kmapper.wrapper`, default `None`) add `toXResult()`/`toXFlow()`/… on top. Nested calls always use the core. Defaults come from target constructor defaults via
 **omit/copy** — `@MapDefaultValue` no longer exists (`@IgnoreDefaultValue` masks a default from mapping;
 `@IgnoreMap` removes a field from auto-matching; field-anchored `@Validate` replaced ValidateFrom/To).
 `@UnsupportedDirection(reason)` is **function-level** (on the `= unsupported()` stub). Artifacts:
 `kmapper-core` (standalone, hand-written world) / `kmapper-annotations` (depends on core) /
-`kmapper-compiler` (KSP). Full decisions: `docs/converter-redesign.md` (ledger).
+`kmapper-compiler` (KSP) / `kmapper-gradle-plugin` (`KMapper { }` extension). Full decisions: `docs/converter-redesign.md` (ledger).
 
 ## Code & testing conventions
 

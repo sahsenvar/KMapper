@@ -7,7 +7,7 @@ garantisi* olarak boş olamayan koleksiyonlar ve açık-eksiklik tipi olarak `Op
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-arrow:2.2.2")
+    implementation("io.github.sahsenvar:kmapper-converters-arrow:3.0.0")
 }
 ```
 
@@ -27,7 +27,8 @@ data class RoleResponse(val permissions: List<PermissionResponse>)
 
 **Boş wire listesi mapping'i düşürür**: `MappingException.EmptyCollection`. Mesele de bu —
 domain tipi boş-olamazlığı vadediyor, mapping de bu vaadi imkânsız değeri içeri almak yerine
-sınırda uygular. Hata, diğer her mapping hatası gibi `Result` olarak gelir.
+sınırda uygular. Hata, diğer her mapping hatası gibi `toX()`'ten fırlar — bir
+[dönüş sarmalayıcısı](../temel-kullanim/donus-sarmalayicilari.md) eklemediyseniz.
 
 ## Option
 

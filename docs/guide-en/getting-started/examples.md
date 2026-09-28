@@ -17,9 +17,9 @@ Run everything:
 
 | # | Category | You will learn |
 |---|----------|----------------|
-| 1 | **Basics** | `@MapTo`, the `toXResult(): Result<X>` boundary, `@MapFrom`, one source → many targets |
+| 1 | **Basics** | `@MapTo`, the plain `toX(): X` mapper and `MappingException`, `@MapFrom`, one source → many targets |
 | 2 | **Fields** | `@FieldMap` renaming, `@IgnoreMap`, `@IgnoreDefaultValue`, caller-supplied parameters |
-| 3 | **Nullability & defaults** | the fallback ladder, production `Result` handling patterns |
+| 3 | **Nullability & defaults** | the fallback ladder, [return wrappers](../basic-usage/return-wrappers.md) for production error-as-value patterns |
 | 4 | **Converters** | auto-discovery, custom converters, `@ConvertWith(use, onFail)`, sanctioned null, parameterized converters, `@UnsupportedDirection` |
 | 5 | **Collections** | element ladder, Set/Map semantics, `OnFail.Throw`/`Skip` on elements, `@CollectionWrapper` |
 | 6 | **Nested objects** | sub-mappers, deep error paths, bounding the blast radius |

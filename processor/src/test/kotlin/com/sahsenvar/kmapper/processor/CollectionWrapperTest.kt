@@ -101,7 +101,7 @@ class CollectionWrapperTest {
         val item2 = r.newInstance("ItemRemote", 20)
         val container = r.newInstance("ContainerRemote", listOf(item1, item2))
 
-        val result = r.invokeResultMapper("ContainerRemoteMappersKt", "toContainerDomainResult", container).getOrThrow()
+        val result = r.invokeMapperCatching("ContainerRemoteMappersKt", "toContainerDomain", container).getOrThrow()
         assertNotNull(result)
         val items = result.prop("items")
         assertNotNull(items)

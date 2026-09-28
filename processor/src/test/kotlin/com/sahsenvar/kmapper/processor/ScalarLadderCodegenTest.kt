@@ -18,7 +18,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
- * Golden tests for the scalar fallback-ladder codegen (plan Task 14): `Result` boundary,
+ * Golden tests for the scalar fallback-ladder codegen (plan Task 14): the plain `toX()` core,
  * seam selection per (landing shape × onFail policy), omit/copy defaults, validation
  * emission, and the runtime behavior of the generated seams (report rule included).
  */
@@ -42,9 +42,10 @@ class ScalarLadderCodegenTest :
             `when`("the processor runs") {
                 val generated = okAndReadGenerated(source, "UserDataModelMappers.kt")
 
-                then("the function returns Result and is named toXResult") {
-                    generated shouldContain "fun UserDataModel.toUserDomainModelResult(): Result<UserDomainModel>"
-                    generated shouldContain "runCatching"
+                then("the function is a plain toX() returning X directly, no Result boundary") {
+                    generated shouldContain "fun UserDataModel.toUserDomainModel(): UserDomainModel"
+                    generated shouldNotContain "runCatching"
+                    generated shouldNotContain "import kotlin.Result"
                 }
 
                 then("the hard cell uses convertOrFail with path/type literals and the total method") {
@@ -64,9 +65,9 @@ class ScalarLadderCodegenTest :
                     generated shouldContain "plan ?: base.plan"
                 }
 
-                then("both listener dispatches stay inside runCatching") {
-                    generated shouldContain "onMapStart(this@toUserDomainModelResult"
-                    generated shouldContain "onMapComplete(this@toUserDomainModelResult, result)"
+                then("both listener dispatches use the this@toX label") {
+                    generated shouldContain "onMapStart(this@toUserDomainModel"
+                    generated shouldContain "onMapComplete(this@toUserDomainModel, result)"
                 }
             }
         }
@@ -100,9 +101,9 @@ class ScalarLadderCodegenTest :
                 then("the default applies and exactly one AbsorbedConversionError is reported") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "RetryDataModelMappersKt",
-                                "toRetryDomainModelResult",
+                                "toRetryDomainModel",
                                 result.newInstance("RetryDataModel", "not-a-number"),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -135,9 +136,9 @@ class ScalarLadderCodegenTest :
                 then("the default applies SILENTLY — no degradation event") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "PlanDataModelMappersKt",
-                                "toPlanDomainModelResult",
+                                "toPlanDomainModel",
                                 result.newInstance("PlanDataModel", null as String?),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -151,9 +152,9 @@ class ScalarLadderCodegenTest :
                 then("the default applies AND an AbsorbedConversionError is reported") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "PlanDataModelMappersKt",
-                                "toPlanDomainModelResult",
+                                "toPlanDomainModel",
                                 result.newInstance("PlanDataModel", "broken"),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -190,9 +191,9 @@ class ScalarLadderCodegenTest :
             `when`("the source value is absent (null)") {
                 then("the mapping fails hard with RequiredFieldMissing at path 'id'") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "IdDataModelMappersKt",
-                            "toIdDomainModelResult",
+                            "toIdDomainModel",
                             result.newInstance("IdDataModel", null as String?),
                         )
                     outcome.isFailure.shouldBeTrue()
@@ -204,9 +205,9 @@ class ScalarLadderCodegenTest :
             `when`("the source value is broken") {
                 then("the mapping fails hard with TypeConversionFailed at path 'id'") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "IdDataModelMappersKt",
-                            "toIdDomainModelResult",
+                            "toIdDomainModel",
                             result.newInstance("IdDataModel", "abc"),
                         )
                     outcome.isFailure.shouldBeTrue()
@@ -218,9 +219,9 @@ class ScalarLadderCodegenTest :
             `when`("the source value converts cleanly") {
                 then("the mapping succeeds with the converted value") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "IdDataModelMappersKt",
-                            "toIdDomainModelResult",
+                            "toIdDomainModel",
                             result.newInstance("IdDataModel", "42"),
                         )
                     outcome.isSuccess.shouldBeTrue()
@@ -256,9 +257,9 @@ class ScalarLadderCodegenTest :
             `when`("the source value is broken") {
                 then("the mapping fails hard despite the nullable escape") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "StrictDataModelMappersKt",
-                            "toStrictDomainModelResult",
+                            "toStrictDomainModel",
                             result.newInstance("StrictDataModel", "abc"),
                         )
                     outcome.isFailure.shouldBeTrue()
@@ -269,9 +270,9 @@ class ScalarLadderCodegenTest :
             `when`("the source value is absent (null)") {
                 then("absence stays type-driven — null lands silently even under Throw") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "StrictDataModelMappersKt",
-                            "toStrictDomainModelResult",
+                            "toStrictDomainModel",
                             result.newInstance("StrictDataModel", null as String?),
                         )
                     outcome.isSuccess.shouldBeTrue()
@@ -402,9 +403,9 @@ class ScalarLadderCodegenTest :
                 then("the enum lands as null and an AbsorbedConversionError carries the UnknownEnumValue cause") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "MemberDataModelMappersKt",
-                                "toMemberDomainModelResult",
+                                "toMemberDomainModel",
                                 result.newInstance("MemberDataModel", "silver"),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -421,9 +422,9 @@ class ScalarLadderCodegenTest :
                 then("the enum lands silently — no degradation event") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "MemberDataModelMappersKt",
-                                "toMemberDomainModelResult",
+                                "toMemberDomainModel",
                                 result.newInstance("MemberDataModel", "gold"),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -487,9 +488,9 @@ class ScalarLadderCodegenTest :
 
             `when`("the source converts cleanly") {
                 then("the converted value lands") {
-                    result.invokeResultMapper(
+                    result.invokeMapperCatching(
                         "AgeDataModelMappersKt",
-                        "toAgeDomainModelResult",
+                        "toAgeDomainModel",
                         result.newInstance("AgeDataModel", "42"),
                     ).getOrNull()!!.prop("age") shouldBe 42
                 }
@@ -499,9 +500,9 @@ class ScalarLadderCodegenTest :
                 then("the nullable target lands as null (declared default = null), silently") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "AgeDataModelMappersKt",
-                                "toAgeDomainModelResult",
+                                "toAgeDomainModel",
                                 result.newInstance("AgeDataModel", null as String?),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -515,9 +516,9 @@ class ScalarLadderCodegenTest :
                 then("the null default applies AND an AbsorbedConversionError is reported") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "AgeDataModelMappersKt",
-                                "toAgeDomainModelResult",
+                                "toAgeDomainModel",
                                 result.newInstance("AgeDataModel", "not-a-number"),
                             )
                         outcome.isSuccess.shouldBeTrue()
@@ -557,9 +558,9 @@ class ScalarLadderCodegenTest :
             `when`("the source is broken") {
                 then("the mapping fails hard despite the nullable+default escape") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "AgeDataModelMappersKt",
-                            "toAgeDomainModelResult",
+                            "toAgeDomainModel",
                             result.newInstance("AgeDataModel", "abc"),
                         )
                     outcome.isFailure.shouldBeTrue()
@@ -570,9 +571,9 @@ class ScalarLadderCodegenTest :
             `when`("the source is absent (null)") {
                 then("absence stays type-driven — null lands silently even under Throw") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "AgeDataModelMappersKt",
-                            "toAgeDomainModelResult",
+                            "toAgeDomainModel",
                             result.newInstance("AgeDataModel", null as String?),
                         )
                     outcome.isSuccess.shouldBeTrue()

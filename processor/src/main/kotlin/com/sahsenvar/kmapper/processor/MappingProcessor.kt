@@ -13,17 +13,21 @@ import com.google.devtools.ksp.validate
 import com.sahsenvar.kmapper.processor.analyzer.ConverterIntrospector
 import com.sahsenvar.kmapper.processor.analyzer.CycleDetector
 import com.sahsenvar.kmapper.processor.analyzer.FieldAnalyzer
+import com.sahsenvar.kmapper.processor.analyzer.ReturnWrapper
+import com.sahsenvar.kmapper.processor.analyzer.ReturnWrapperResolver
 import com.sahsenvar.kmapper.processor.analyzer.TypeMatcher
 import com.sahsenvar.kmapper.processor.analyzer.discoverWrappersFromConfig
+import com.sahsenvar.kmapper.processor.analyzer.substituteTypeParameters
 import com.sahsenvar.kmapper.processor.generator.FunctionNameGenerator
 import com.sahsenvar.kmapper.processor.generator.MappingCodeGenerator
 import com.sahsenvar.kmapper.processor.model.FieldInfo
 import com.sahsenvar.kmapper.processor.validator.BuiltInConverterValidator
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.buildCodeBlock
+import com.squareup.kotlinpoet.joinToCode
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 
@@ -33,6 +37,7 @@ import com.squareup.kotlinpoet.ksp.toTypeName
 class MappingProcessor(
     private val codeGenerator: CodeGenerator,
     private val logger: KSPLogger,
+    private val options: Map<String, String> = emptyMap(),
 ) : SymbolProcessor {
     companion object {
         private const val MAP_TO_ANNOTATION = "com.sahsenvar.kmapper.annotations.MapTo"
@@ -45,6 +50,9 @@ class MappingProcessor(
 
     // TypeMatcher is created fresh each round with the current custom converters and wrappers.
     private var typeMatcher: TypeMatcher = TypeMatcher(logger)
+
+    // Created fresh each round (it holds the round's Resolver).
+    private lateinit var returnWrapperResolver: ReturnWrapperResolver
 
     // Collect all mapping functions grouped by receiver class
     private val mappingFunctions = mutableMapOf<ReceiverKey, MutableList<FunSpec>>()
@@ -73,6 +81,7 @@ class MappingProcessor(
         val introspector = ConverterIntrospector(resolver, logger)
         val (customConverters, globalConverterEntries) = discoverCustomConverters(resolver, introspector)
         typeMatcher = TypeMatcher(logger, customConverters, collectionWrappers, introspector)
+        returnWrapperResolver = ReturnWrapperResolver(resolver, logger, options[ReturnWrapperResolver.WRAPPER_OPTION])
 
         // STEP 1b: Validate the global @KMapperConfig list for duplicate (S,T) pairs.
         // Per-field @UseMapTypeConverter converters are exempt — they are never checked here.
@@ -275,6 +284,7 @@ class MappingProcessor(
                 sourceFields = sourceFields,
                 targetFields = targetFields,
                 externalFields = externalFields,
+                returnWrapper = returnWrapperResolver.resolve(annotation, sourceClass),
             )
         }
     }
@@ -392,6 +402,7 @@ class MappingProcessor(
         sourceFields: List<FieldInfo>,
         targetFields: List<FieldInfo>,
         externalFields: List<FieldInfo>,
+        returnWrapper: ReturnWrapper?,
     ) {
         val packageName = sourceClass.packageName.asString()
         val functionName = functionNameGenerator.generateMapperFunctionName(targetClass)
@@ -431,7 +442,10 @@ class MappingProcessor(
 
         // Add to mappingFunctions collection
         val receiverKey = ReceiverKey(packageName, sourceClass.simpleName.asString())
-        mappingFunctions.getOrPut(receiverKey) { mutableListOf() }.add(funSpec)
+        mappingFunctions.getOrPut(receiverKey) { mutableListOf() }.apply {
+            add(funSpec)
+            addAll(buildWrapperFunSpecs(returnWrapper, targetClass, sourceClassName, targetClassName, externalFields))
+        }
     }
 
     /** A target constructor parameter paired with its resolved source field (null = external). */
@@ -441,25 +455,24 @@ class MappingProcessor(
     )
 
     /**
-     * Builds the generated mapper function with the `Result` boundary and omit/copy defaults:
+     * Builds the plain core mapper function with omit/copy defaults:
      *
      * ```
-     * public fun Source.toTargetResult(): Result<Target> = runCatching {
-     *   if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toTargetResult, Target::class) }
+     * public fun Source.toTarget(): Target {
+     *   if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toTarget, Target::class) }
      *   val base = Target(<constructor entries — no usable default>)
      *   val result = base.copy(<defaulted entries with a source mapping>)   // or: val result = base
-     *   if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toTargetResult, result) }
-     *   result
+     *   if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toTarget, result) }
+     *   return result
      * }
      * ```
      *
-     * The library never throws at the caller: everything (seam errors, validation, listeners'
-     * surroundings) runs inside `runCatching`, so hard failures surface as `Result.failure`.
+     * Hard failures (seam errors, validation) propagate as a thrown [com.sahsenvar.kmapper.MappingException];
+     * a return wrapper (e.g. `KMapperWrapper.KtResult`) turns them into a value on top of this core.
      * Defaulted target fields are OMITTED from the constructor call (the Kotlin default
      * applies to `base`) and then overridden via `.copy()` where the seam falls back to
      * `base.<field>` — this works for any default expression, not just annotation-encodable
-     * values. KotlinPoet emits the single `return runCatching { … }` statement as an
-     * expression body (`= runCatching { … }`).
+     * values.
      */
     private fun buildMapperFunSpec(
         functionName: String,
@@ -470,7 +483,6 @@ class MappingProcessor(
         isReverse: Boolean,
     ): FunSpec {
         val kMapperClass = ClassName("com.sahsenvar.kmapper", "KMapper")
-        val resultTypeName = ClassName("kotlin", "Result").parameterizedBy(targetClassName)
 
         val constructorEntries = fieldsToEmit.filter { !it.targetField.usesDefaultInMapping }
         val copyEntries = fieldsToEmit.filter { it.targetField.usesDefaultInMapping && it.sourceField != null }
@@ -478,7 +490,7 @@ class MappingProcessor(
         return FunSpec
             .builder(functionName)
             .receiver(sourceClassName)
-            .returns(resultTypeName)
+            .returns(targetClassName)
             .apply {
                 // External parameters — always required (no annotation-supplied defaults;
                 // @MapDefaultValue is removed in the converter redesign).
@@ -487,8 +499,6 @@ class MappingProcessor(
                 }
             }.addCode(
                 buildCodeBlock {
-                    beginControlFlow("return·runCatching")
-
                     // Guarded listener dispatch: onMapStart
                     addStatement(
                         "if·(%T.hasListeners)·%T.dispatch·{·onMapStart(this@%N,·%T::class)·}",
@@ -559,11 +569,55 @@ class MappingProcessor(
                         kMapperClass,
                         functionName,
                     )
-                    // The runCatching block's value — NOT a return (expression value).
-                    addStatement("result")
-                    endControlFlow()
+                    addStatement("return·result")
                 },
             ).build()
+    }
+
+    /**
+     * Builds one extension per `wrap` overload of [returnWrapper], each delegating to the plain
+     * core (`[functionName]`) through the wrapper object — the same call shape for built-in and
+     * user wrappers:
+     *
+     * ```
+     * public fun Source.toTargetResult(<externals>): Result<Target> =
+     *   KMapperWrapper.KtResult.wrap<Source, Target>(this) { it.toTarget(<externals>) }
+     * ```
+     *
+     * Explicit type arguments pin the overload (e.g. `wrap(S)` vs `wrap(Flow<S>)`).
+     */
+    private fun buildWrapperFunSpecs(
+        returnWrapper: ReturnWrapper?,
+        targetClass: KSClassDeclaration,
+        sourceClassName: ClassName,
+        targetClassName: ClassName,
+        externalFields: List<FieldInfo>,
+    ): List<FunSpec> {
+        if (returnWrapper == null) return emptyList()
+        val coreFunctionName = functionNameGenerator.generateMapperFunctionName(targetClass)
+        val wrapperFunctionName = functionNameGenerator.generateWrapperFunctionName(targetClass, returnWrapper.suffix)
+        val forwardedArguments = externalFields.map { CodeBlock.of("%N·=·%N", it.name, it.name) }.joinToCode(",·")
+
+        return returnWrapper.wrapFunctions.map { wrapFunction ->
+            val bindings =
+                mapOf(
+                    wrapFunction.sourceTypeParameter to sourceClassName,
+                    wrapFunction.targetTypeParameter to targetClassName,
+                )
+            val typeArguments = wrapFunction.typeParameterOrder.map { bindings.getValue(it) }
+            FunSpec
+                .builder(wrapperFunctionName)
+                .receiver(wrapFunction.receiverShape.substituteTypeParameters(bindings))
+                .returns(wrapFunction.returnShape.substituteTypeParameters(bindings))
+                .apply { externalFields.forEach { addParameter(it.name, it.type.toTypeName()) } }
+                .addStatement(
+                    "return·%T.wrap<%L>(this)·{·it.%N(%L)·}",
+                    returnWrapper.wrapperClassName,
+                    typeArguments.map { CodeBlock.of("%T", it) }.joinToCode(",·"),
+                    coreFunctionName,
+                    forwardedArguments,
+                ).build()
+        }
     }
 
     private fun processMapFromAnnotation(
@@ -628,6 +682,7 @@ class MappingProcessor(
                     sourceFields = sourceFields,
                     targetFields = targetFields,
                     externalFields = externalFields,
+                    returnWrapper = returnWrapperResolver.resolve(annotation, targetClass),
                 )
             }
         }
@@ -640,6 +695,7 @@ class MappingProcessor(
         sourceFields: List<FieldInfo>,
         targetFields: List<FieldInfo>,
         externalFields: List<FieldInfo>,
+        returnWrapper: ReturnWrapper?,
     ) {
         // For @MapFrom, the function is generated on the SOURCE class
         val packageName = sourceClass.packageName.asString()
@@ -679,6 +735,9 @@ class MappingProcessor(
 
         // Add to mappingFunctions collection
         val receiverKey = ReceiverKey(packageName, sourceClass.simpleName.asString())
-        mappingFunctions.getOrPut(receiverKey) { mutableListOf() }.add(funSpec)
+        mappingFunctions.getOrPut(receiverKey) { mutableListOf() }.apply {
+            add(funSpec)
+            addAll(buildWrapperFunSpecs(returnWrapper, targetClass, sourceClassName, targetClassName, externalFields))
+        }
     }
 }

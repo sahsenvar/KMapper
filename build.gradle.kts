@@ -13,7 +13,7 @@ plugins {
 
 allprojects {
     group = "io.github.sahsenvar"
-    version = "2.2.2"
+    version = "3.0.0"
 }
 
 @OptIn(kotlinx.validation.ExperimentalBCVApi::class)
@@ -54,6 +54,7 @@ dependencies {
     kover(project(":core"))
     kover(project(":annotations"))
     kover(project(":processor"))
+    kover(project(":gradle-plugin"))
     kover(project(":converters-immutable"))
     kover(project(":converters-arrow"))
     kover(project(":converters-datetime"))

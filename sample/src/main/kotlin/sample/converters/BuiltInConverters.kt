@@ -41,7 +41,7 @@ fun runBuiltInConvertersDemo() {
         temperature = 21.5f,
         recordedAt = "2026-06-12T03:00:00Z",
         label = 9001,
-    ).toTelemetryResult().getOrThrow()
+    ).toTelemetry()
     println("all built-in conversions -> $telemetry")
 }
 

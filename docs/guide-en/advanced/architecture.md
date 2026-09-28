@@ -10,7 +10,8 @@ your annotated models
    └─ KSP2 (kmapper-compiler)
         ├─ analyze: match fields, resolve converters/wrappers, check directives
         ├─ refuse:  MissingConverter / UnsupportedConversion / structural errors -> build fails
-        └─ generate: toXResult() extension functions (plain Kotlin, KotlinPoet)
+        └─ generate: toX() extension function (plain Kotlin, KotlinPoet), plus one more
+              extension per wrap() overload of the resolved wrapper (toXResult(), toXFlow(), …)
               └─ compiled like hand-written code; calls kmapper-core seams at runtime
 ```
 
@@ -21,17 +22,20 @@ lookup on the hot path and no reflection anywhere.
 ## What generated code looks like
 
 ```kotlin
-public fun UserResponse.toUserResult(): Result<User> = runCatching {
-    if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toUserResult, User::class) }
+public fun UserResponse.toUser(): User {
+    if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toUser, User::class) }
     val result = User(
         id = id,
         joined = joined.convertOrFail("joined", "kotlin.String", "kotlinx.datetime.LocalDate") {
             LocalDateStringConverter.convertFrom(it)
         },
     )
-    if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toUserResult, result) }
-    result
+    if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toUser, result) }
+    return result
 }
+
+// only generated when a wrapper resolves to KtResult (see @MapTo(wrapper = …) / module setting):
+public fun UserResponse.toUserResult(): Result<User> = KMapperWrapper.KtResult.wrap(this) { it.toUser() }
 ```
 
 Worth noticing:
@@ -44,6 +48,9 @@ Worth noticing:
   mappers](../getting-started/examples.md).
 - **Paths are string literals** — R8/ProGuard-safe error messages.
 - The observability hooks vanish behind a single `hasListeners` check when unused.
+- **`toUser()` itself never catches anything** — it throws straight through. A wrapper
+  extension calls the plain function and applies its own `wrap`, exactly as a hand-written
+  caller would; see [Return Wrappers](../basic-usage/return-wrappers.md).
 
 ## Inspecting generated code
 

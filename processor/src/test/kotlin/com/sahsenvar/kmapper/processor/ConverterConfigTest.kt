@@ -257,7 +257,7 @@ class ConverterConfigTest :
                 then("the registered converter wins inside the convertOrElse lambda") {
                     // Defaulted landing → the OrNull seam, so an unconvertible value falls back to the default.
                     generated shouldContain "MoneyToOrderMoneyRequestConverter.convertToOrNull(it)"
-                    generated shouldNotContain "toOrderMoneyRequestResult"
+                    generated shouldNotContain "toOrderMoneyRequest"
                 }
             }
         }
@@ -383,9 +383,9 @@ class ConverterConfigTest :
 
                 then("the configured base behavior (2-digit rounding) applies end-to-end") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "CostDataModelMappersKt",
-                            "toCostDomainModelResult",
+                            "toCostDomainModel",
                             result.newInstance("CostDataModel", 12.346),
                         )
                     outcome.getOrThrow()!!.prop("cost") shouldBe "12.35"

@@ -17,9 +17,9 @@ Hepsini çalıştırın:
 
 | # | Kategori | Öğrenecekleriniz |
 |---|----------|-------------------|
-| 1 | **Temeller** | `@MapTo`, `toXResult(): Result<X>` sınırı, `@MapFrom`, tek kaynaktan çok hedef |
+| 1 | **Temeller** | `@MapTo`, düz `toX(): X` mapper ve `MappingException`, `@MapFrom`, tek kaynaktan çok hedef |
 | 2 | **Alanlar** | `@FieldMap` ile yeniden adlandırma, `@IgnoreMap`, `@IgnoreDefaultValue`, çağıranın sağladığı parametreler |
-| 3 | **Null ve default'lar** | fallback ladder, production'da `Result` kullanım kalıpları |
+| 3 | **Null ve default'lar** | fallback ladder, production'da hata-değer kalıpları için [dönüş sarmalayıcıları](../temel-kullanim/donus-sarmalayicilari.md) |
 | 4 | **Converter'lar** | otomatik keşif, kendi converter'ınız, `@ConvertWith(use, onFail)`, sanctioned null, parametreli converter'lar, `@UnsupportedDirection` |
 | 5 | **Koleksiyonlar** | eleman ladder'ı, Set/Map semantiği, elemanlarda `OnFail.Throw`/`Skip`, `@CollectionWrapper` |
 | 6 | **İç içe nesneler** | alt mapper'lar, derin hata yolları, hasar yarıçapını sınırlama |

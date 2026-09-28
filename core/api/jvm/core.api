@@ -38,6 +38,28 @@ public final class com/sahsenvar/kmapper/KMapper {
 	public final fun removeListener (Lcom/sahsenvar/kmapper/MappingListener;)V
 }
 
+public abstract interface class com/sahsenvar/kmapper/KMapperWrapper {
+}
+
+public final class com/sahsenvar/kmapper/KMapperWrapper$Default : com/sahsenvar/kmapper/KMapperWrapper {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/KMapperWrapper$Default;
+}
+
+public final class com/sahsenvar/kmapper/KMapperWrapper$Flow : com/sahsenvar/kmapper/KMapperWrapper {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/KMapperWrapper$Flow;
+	public final fun wrap (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/flow/Flow;
+	public final fun wrap (Lkotlinx/coroutines/flow/Flow;Lkotlin/jvm/functions/Function1;)Lkotlinx/coroutines/flow/Flow;
+}
+
+public final class com/sahsenvar/kmapper/KMapperWrapper$KtResult : com/sahsenvar/kmapper/KMapperWrapper {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/KMapperWrapper$KtResult;
+	public final fun wrap-gIAlu-s (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+}
+
+public final class com/sahsenvar/kmapper/KMapperWrapper$None : com/sahsenvar/kmapper/KMapperWrapper {
+	public static final field INSTANCE Lcom/sahsenvar/kmapper/KMapperWrapper$None;
+}
+
 public final class com/sahsenvar/kmapper/LoggingMappingListener : com/sahsenvar/kmapper/MappingListener {
 	public fun <init> (Lkotlin/jvm/functions/Function1;)V
 	public fun onDegradation (Lcom/sahsenvar/kmapper/MappingDegradation;)V
@@ -157,6 +179,10 @@ public final class com/sahsenvar/kmapper/MappingListener$DefaultImpls {
 	public static fun onError (Lcom/sahsenvar/kmapper/MappingListener;Ljava/lang/Object;Lcom/sahsenvar/kmapper/MappingException;)V
 	public static fun onMapComplete (Lcom/sahsenvar/kmapper/MappingListener;Ljava/lang/Object;Ljava/lang/Object;)V
 	public static fun onMapStart (Lcom/sahsenvar/kmapper/MappingListener;Ljava/lang/Object;Lkotlin/reflect/KClass;)V
+}
+
+public abstract interface annotation class com/sahsenvar/kmapper/WrapperSuffix : java/lang/annotation/Annotation {
+	public abstract fun suffix ()Ljava/lang/String;
 }
 
 public abstract class com/sahsenvar/kmapper/converter/MapTypeConverter {

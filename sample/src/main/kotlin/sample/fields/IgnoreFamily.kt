@@ -38,13 +38,15 @@ fun main() = runIgnoreFamilyDemo()
 fun runIgnoreFamilyDemo() {
     val request = SignUpRequest(email = "dev@example.com", passwordHash = "plaintext-from-wire", plan = "PRO")
 
-    // The generated signature is: toAccountResult(passwordHash: String) — the caller decides.
-    val account = request.toAccountResult(passwordHash = hash(request.passwordHash)).getOrThrow()
+    // The generated signature is: toAccount(passwordHash: String) — the caller decides.
+    val account = request.toAccount(passwordHash = hash(request.passwordHash))
     println("account                -> $account")
 
     // @IgnoreDefaultValue at work: plan missing on the wire is now an ERROR, not silently "FREE".
-    val missingPlan = SignUpRequest(email = "dev@example.com", passwordHash = "x", plan = null)
-        .toAccountResult(passwordHash = "irrelevant")
+    val missingPlan = runCatching {
+        SignUpRequest(email = "dev@example.com", passwordHash = "x", plan = null)
+            .toAccount(passwordHash = "irrelevant")
+    }
     println("missing plan outcome   -> ${missingPlan.exceptionOrNull()?.message}")
     // prints: Required field missing: plan
 }

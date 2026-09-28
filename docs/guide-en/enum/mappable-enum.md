@@ -88,4 +88,4 @@ Details:
 - **Distinct values required.** Two entries resolving to the same wire value is a compile
   error (the decode would be ambiguous).
 
-> Next: **[The Result Boundary and MappingException →](../error-handling/mapping-exception.md)**
+> Next: **[Error Handling and MappingException →](../error-handling/mapping-exception.md)**

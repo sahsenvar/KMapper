@@ -12,12 +12,13 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
- * Runtime-execution tests for field-anchored @Validate at the Result boundary.
+ * Runtime-execution tests for field-anchored @Validate against the plain `toX()` core.
  *
  * Each test compiles source strings that embed tiny inline Validator object definitions
  * (so :processor tests have no extra module dependency), classloads the result and invokes
- * the generated mapper via [invokeResultMapper]. Validation failures are hard: they surface
- * as `Result.failure` carrying [MappingException.ValidationFailed].
+ * the generated mapper via [invokeMapperCatching]. Validation failures are hard: the
+ * generated core throws [MappingException.ValidationFailed], which the helper captures
+ * as `Result.failure`.
  */
 class ValidateRuntimeTest :
     BehaviorSpec({
@@ -51,9 +52,9 @@ class ValidateRuntimeTest :
             `when`("the source value is blank") {
                 then("the mapping fails with ValidationFailed") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "TitleDataModelMappersKt",
-                            "toTitleDomainModelResult",
+                            "toTitleDomainModel",
                             result.newInstance("TitleDataModel", "   "),
                         )
                     outcome.isFailure.shouldBeTrue()
@@ -64,9 +65,9 @@ class ValidateRuntimeTest :
             `when`("the source value is valid") {
                 then("the mapping succeeds") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "TitleDataModelMappersKt",
-                            "toTitleDomainModelResult",
+                            "toTitleDomainModel",
                             result.newInstance("TitleDataModel", "hello"),
                         )
                     outcome.isSuccess.shouldBeTrue()
@@ -104,9 +105,9 @@ class ValidateRuntimeTest :
             `when`("the produced result value is invalid") {
                 then("the mapping fails with ValidationFailed") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "CodeDataModelMappersKt",
-                            "toCodeDomainModelResult",
+                            "toCodeDomainModel",
                             result.newInstance("CodeDataModel", "  "),
                         )
                     outcome.isFailure.shouldBeTrue()
@@ -117,9 +118,9 @@ class ValidateRuntimeTest :
             `when`("the produced result value is valid") {
                 then("the mapping succeeds") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "CodeDataModelMappersKt",
-                            "toCodeDomainModelResult",
+                            "toCodeDomainModel",
                             result.newInstance("CodeDataModel", "VALID"),
                         )
                     outcome.isSuccess.shouldBeTrue()
@@ -158,9 +159,9 @@ class ValidateRuntimeTest :
             `when`("the source value is null") {
                 then("validation is SKIPPED and the constructor default applies") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "LabelDataModelMappersKt",
-                            "toLabelDomainModelResult",
+                            "toLabelDomainModel",
                             result.newInstance("LabelDataModel", null as String?),
                         )
                     outcome.isSuccess.shouldBeTrue()
@@ -171,9 +172,9 @@ class ValidateRuntimeTest :
             `when`("the source value is valid") {
                 then("the value passes through") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "LabelDataModelMappersKt",
-                            "toLabelDomainModelResult",
+                            "toLabelDomainModel",
                             result.newInstance("LabelDataModel", "hello"),
                         )
                     outcome.isSuccess.shouldBeTrue()
@@ -184,9 +185,9 @@ class ValidateRuntimeTest :
             `when`("the source value is present but blank") {
                 then("the mapping fails with ValidationFailed") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "LabelDataModelMappersKt",
-                            "toLabelDomainModelResult",
+                            "toLabelDomainModel",
                             result.newInstance("LabelDataModel", "  "),
                         )
                     outcome.isFailure.shouldBeTrue()
@@ -213,9 +214,9 @@ class ValidateRuntimeTest :
             `when`("the mapper runs") {
                 then("behaviour is unchanged — plain success") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "SimpleDataModelMappersKt",
-                            "toSimpleDomainModelResult",
+                            "toSimpleDomainModel",
                             result.newInstance("SimpleDataModel", "hello"),
                         )
                     outcome.isSuccess.shouldBeTrue()

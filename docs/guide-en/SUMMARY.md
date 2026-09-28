@@ -16,6 +16,7 @@
 * [Null-Safety and the Fallback Ladder](basic-usage/null-safety.md)
 * [Nested Models and Error Paths](basic-usage/nested-models.md)
 * [Collections](basic-usage/collections.md)
+* [Return Wrappers](basic-usage/return-wrappers.md)
 
 ## Type Conversion
 
@@ -42,7 +43,7 @@
 
 ## Error Handling
 
-* [The Result Boundary and MappingException](error-handling/mapping-exception.md)
+* [Error Handling and MappingException](error-handling/mapping-exception.md)
 
 ## Observability
 

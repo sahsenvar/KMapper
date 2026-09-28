@@ -1,6 +1,7 @@
 public final class com/sahsenvar/kmapper/processor/MappingProcessor : com/google/devtools/ksp/processing/SymbolProcessor {
 	public static final field Companion Lcom/sahsenvar/kmapper/processor/MappingProcessor$Companion;
-	public fun <init> (Lcom/google/devtools/ksp/processing/CodeGenerator;Lcom/google/devtools/ksp/processing/KSPLogger;)V
+	public fun <init> (Lcom/google/devtools/ksp/processing/CodeGenerator;Lcom/google/devtools/ksp/processing/KSPLogger;Ljava/util/Map;)V
+	public synthetic fun <init> (Lcom/google/devtools/ksp/processing/CodeGenerator;Lcom/google/devtools/ksp/processing/KSPLogger;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun finish ()V
 	public fun onError ()V
 	public fun process (Lcom/google/devtools/ksp/processing/Resolver;)Ljava/util/List;
@@ -107,6 +108,35 @@ public final class com/sahsenvar/kmapper/processor/analyzer/FieldAnalyzer {
 	public final fun analyzeConstructorFields (Lcom/google/devtools/ksp/symbol/KSClassDeclaration;)Ljava/util/List;
 }
 
+public final class com/sahsenvar/kmapper/processor/analyzer/ReturnWrapper {
+	public fun <init> (Lcom/squareup/kotlinpoet/ClassName;Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Lcom/squareup/kotlinpoet/ClassName;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Lcom/squareup/kotlinpoet/ClassName;Ljava/lang/String;Ljava/util/List;)Lcom/sahsenvar/kmapper/processor/analyzer/ReturnWrapper;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/analyzer/ReturnWrapper;Lcom/squareup/kotlinpoet/ClassName;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/analyzer/ReturnWrapper;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getSuffix ()Ljava/lang/String;
+	public final fun getWrapFunctions ()Ljava/util/List;
+	public final fun getWrapperClassName ()Lcom/squareup/kotlinpoet/ClassName;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/processor/analyzer/ReturnWrapperResolver {
+	public static final field Companion Lcom/sahsenvar/kmapper/processor/analyzer/ReturnWrapperResolver$Companion;
+	public static final field WRAPPER_OPTION Ljava/lang/String;
+	public fun <init> (Lcom/google/devtools/ksp/processing/Resolver;Lcom/google/devtools/ksp/processing/KSPLogger;Ljava/lang/String;)V
+	public final fun resolve (Lcom/google/devtools/ksp/symbol/KSAnnotation;Lcom/google/devtools/ksp/symbol/KSNode;)Lcom/sahsenvar/kmapper/processor/analyzer/ReturnWrapper;
+}
+
+public final class com/sahsenvar/kmapper/processor/analyzer/ReturnWrapperResolver$Companion {
+}
+
+public final class com/sahsenvar/kmapper/processor/analyzer/ReturnWrapperResolverKt {
+	public static final fun substituteTypeParameters (Lcom/google/devtools/ksp/symbol/KSType;Ljava/util/Map;)Lcom/squareup/kotlinpoet/TypeName;
+}
+
 public final class com/sahsenvar/kmapper/processor/analyzer/TypeMatcher {
 	public fun <init> (Lcom/google/devtools/ksp/processing/KSPLogger;Ljava/util/Map;Ljava/util/Map;Lcom/sahsenvar/kmapper/processor/analyzer/ConverterIntrospector;)V
 	public synthetic fun <init> (Lcom/google/devtools/ksp/processing/KSPLogger;Ljava/util/Map;Ljava/util/Map;Lcom/sahsenvar/kmapper/processor/analyzer/ConverterIntrospector;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -120,10 +150,30 @@ public final class com/sahsenvar/kmapper/processor/analyzer/TypeMatcher {
 	public final fun isStdlibCollectionType (Lcom/google/devtools/ksp/symbol/KSType;)Z
 }
 
+public final class com/sahsenvar/kmapper/processor/analyzer/WrapFunction {
+	public fun <init> (Lcom/google/devtools/ksp/symbol/KSType;Lcom/google/devtools/ksp/symbol/KSType;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Lcom/google/devtools/ksp/symbol/KSType;
+	public final fun component2 ()Lcom/google/devtools/ksp/symbol/KSType;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/util/List;
+	public final fun copy (Lcom/google/devtools/ksp/symbol/KSType;Lcom/google/devtools/ksp/symbol/KSType;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lcom/sahsenvar/kmapper/processor/analyzer/WrapFunction;
+	public static synthetic fun copy$default (Lcom/sahsenvar/kmapper/processor/analyzer/WrapFunction;Lcom/google/devtools/ksp/symbol/KSType;Lcom/google/devtools/ksp/symbol/KSType;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/sahsenvar/kmapper/processor/analyzer/WrapFunction;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReceiverShape ()Lcom/google/devtools/ksp/symbol/KSType;
+	public final fun getReturnShape ()Lcom/google/devtools/ksp/symbol/KSType;
+	public final fun getSourceTypeParameter ()Ljava/lang/String;
+	public final fun getTargetTypeParameter ()Ljava/lang/String;
+	public final fun getTypeParameterOrder ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class com/sahsenvar/kmapper/processor/generator/FunctionNameGenerator {
 	public fun <init> (Lcom/google/devtools/ksp/processing/KSPLogger;)V
 	public final fun generateFileName (Lcom/google/devtools/ksp/symbol/KSClassDeclaration;)Ljava/lang/String;
 	public final fun generateMapperFunctionName (Lcom/google/devtools/ksp/symbol/KSClassDeclaration;)Ljava/lang/String;
+	public final fun generateWrapperFunctionName (Lcom/google/devtools/ksp/symbol/KSClassDeclaration;Ljava/lang/String;)Ljava/lang/String;
 }
 
 public final class com/sahsenvar/kmapper/processor/generator/MappingCodeGenerator {

@@ -12,7 +12,7 @@ import kotlinx.datetime.Instant
  * know: who fetched it, when, with which request id.
  *
  * Generated:
- *     fun PaymentResponse.toPaymentResult(fetchedAt: Instant, traceId: String): Result<Payment>
+ *     fun PaymentResponse.toPayment(fetchedAt: Instant, traceId: String): Payment
  */
 data class Payment(
     val id: Long,
@@ -32,7 +32,6 @@ fun main() = runExternalParametersDemo()
 /** Callable from [sample.GalleryRunner] and the file's own `main`. */
 fun runExternalParametersDemo() {
     val payment = PaymentResponse(id = 7001, amountCents = 4_500)
-        .toPaymentResult(fetchedAt = Clock.System.now(), traceId = "req-8c1f")
-        .getOrThrow()
+        .toPayment(fetchedAt = Clock.System.now(), traceId = "req-8c1f")
     println("payment with injected context -> $payment")
 }

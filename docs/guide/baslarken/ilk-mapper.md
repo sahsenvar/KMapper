@@ -37,7 +37,7 @@ tarafa nasıl dönüşeceğini bildiren taraftır.
 KSP bir extension fonksiyonu üretir:
 
 ```kotlin
-fun UserResponse.toUserResult(): Result<User>
+fun UserResponse.toUser(): User
 ```
 
 İki alan doğrudan kopyalanır; `joined` ise built-in `LocalDateStringConverter`'dan geçer
@@ -46,25 +46,25 @@ fun UserResponse.toUserResult(): Result<User>
 ## 3. Kullanın
 
 ```kotlin
-val user: User = UserResponse(7, "grace@navy.mil", "2026-06-12")
-    .toUserResult()
-    .getOrThrow()
+val user: User = UserResponse(7, "grace@navy.mil", "2026-06-12").toUser()
 ```
 
-Üretilen fonksiyon `Result<User>` döner: hata durumunda fırlatmak (`getOrThrow`), geriye
-düşmek (`getOrElse`) ya da dallanmak (`fold`) — karar çağıran tarafta, yani *sizde*.
+Üretilen fonksiyon düz `User` döner ve sert bir hatada tipli bir `MappingException` fırlatır.
+Hatayı yine de bir değer olarak mı istiyorsunuz — `Result<User>`, bir `Flow<User>` ya da kendi
+sarmalayıcınız? Bkz. [Dönüş Sarmalayıcıları](../temel-kullanim/donus-sarmalayicilari.md); bu,
+`toUser()`'ın yerine geçen değil, üzerine eklenen isteğe bağlı bir katman — mapping bazında ya
+da modül genelinde.
 
 ## 4. Bilerek bozun
 
 ```kotlin
-val broken = UserResponse(7, "grace@navy.mil", "not-a-date").toUserResult()
-
-println(broken.exceptionOrNull()?.message)
+val broken = UserResponse(7, "grace@navy.mil", "not-a-date").toUser()
+// fırlatır: MappingException.TypeConversionFailed:
 // Cannot convert joined: String -> LocalDate failed for value "not-a-date" …
 ```
 
-Crash yok — hata, tam olarak hangi alanın bozulduğunu söyleyen bir değer olarak geldi. İç içe
-modellerde yol da onunla birlikte büyür (`customer.address.zipCode`); bkz.
+Exception, tam olarak hangi alanın bozulduğunu söyler. İç içe modellerde yol da onunla
+birlikte büyür (`customer.address.zipCode`); bkz.
 [İç İçe Modeller](../temel-kullanim/nested.md).
 
 ## 5. Peki wire'daki değer hiç gelmezse?

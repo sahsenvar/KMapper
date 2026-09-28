@@ -8,7 +8,7 @@ import io.kotest.matchers.string.shouldContain
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
- * Basic generated-source shapes in the Result-boundary world: nested mapping with the
+ * Basic generated-source shapes for the plain `toX()` core: nested mapping with the
  * required-field absence guard, reverse generation via @MapFrom, and built-in converter
  * resolution (richer-first naming — String→Int rides IntStringConverter's convertFrom).
  */
@@ -36,8 +36,8 @@ class BasicMappingTest :
             `when`("the processor runs") {
                 val generated = okAndReadGenerated(source, "UserDataModelMappers.kt")
 
-                then("the function rides the Result boundary") {
-                    generated shouldContain "fun UserDataModel.toUserDomainModelResult(): Result<UserDomainModel>"
+                then("the function rides the plain toX() core") {
+                    generated shouldContain "fun UserDataModel.toUserDomainModel(): UserDomainModel"
                 }
 
                 then("the nullable same-type field gets the absence guard") {
@@ -46,7 +46,7 @@ class BasicMappingTest :
 
                 then("the nullable nested field rides the hard seam with the sub-mapper") {
                     generated shouldContain "convertOrFail(\"address\", \"AddressDataModel\", \"AddressDomainModel\")"
-                    generated shouldContain "toAddressDomainModelResult().getOrThrow()"
+                    generated shouldContain "toAddressDomainModel()"
                 }
             }
         }
@@ -69,7 +69,7 @@ class BasicMappingTest :
                 val generated = okAndReadGenerated(source, "TagDomainModelMappers.kt")
 
                 then("the reverse function is generated on the @MapFrom argument class") {
-                    generated shouldContain "fun TagDomainModel.toTagDataModelResult(): Result<TagDataModel>"
+                    generated shouldContain "fun TagDomainModel.toTagDataModel(): TagDataModel"
                 }
             }
         }

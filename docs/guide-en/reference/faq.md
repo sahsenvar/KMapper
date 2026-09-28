@@ -1,11 +1,22 @@
 # FAQ
 
-## Why does the generated function return `Result` instead of throwing?
+## Why does the generated function throw instead of returning `Result`?
 
-Because wire data *will* be malformed eventually, and a mapper that throws turns someone
-else's bad deploy into your crash. With `Result`, failure is part of the signature: the call
-site decides (`getOrThrow` / `getOrElse` / `fold`), and the decision is visible in code
-review. [Details](../error-handling/mapping-exception.md).
+Because a plain, throwing function is the shape every Kotlin caller already knows, and nested
+mappings compose more simply when they don't have to unwrap a `Result` at every level — a
+nested mapper just calls the inner `toX()` and lets a failure propagate. If you want failure
+as part of the signature — `Result`, `Flow`, or your own wrapper type — that's one annotation
+away and never a replacement for the plain function: see
+[Return Wrappers](../basic-usage/return-wrappers.md) and
+[Error Handling](../error-handling/mapping-exception.md).
+
+## I upgraded to 3.0.0 and `toXResult()` is gone. What do I do?
+
+Pick one: switch call sites to `dto.toUser()` (+ `runCatching { }` where you still want a
+`Result` locally), or keep the old shape everywhere with one module-wide setting —
+`KMapper { wrapper = KMapperWrapper.KtResult }` (Gradle plugin) or
+`ksp { arg("kmapper.wrapper", "KtResult") }`. See
+[Return Wrappers → Migrating from 2.x](../basic-usage/return-wrappers.md#migrating-from-2x).
 
 ## Why didn't my broken value become an error?
 

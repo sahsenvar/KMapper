@@ -74,17 +74,21 @@ open annotation class com.sahsenvar.kmapper.annotations/MapDefaultValue : kotlin
 }
 
 open annotation class com.sahsenvar.kmapper.annotations/MapFrom : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/MapFrom|null[0]
-    constructor <init>(kotlin.reflect/KClass<*>) // com.sahsenvar.kmapper.annotations/MapFrom.<init>|<init>(kotlin.reflect.KClass<*>){}[0]
+    constructor <init>(kotlin.reflect/KClass<*>, kotlin.reflect/KClass<out com.sahsenvar.kmapper/KMapperWrapper> = ...) // com.sahsenvar.kmapper.annotations/MapFrom.<init>|<init>(kotlin.reflect.KClass<*>;kotlin.reflect.KClass<out|com.sahsenvar.kmapper.KMapperWrapper>){}[0]
 
     final val source // com.sahsenvar.kmapper.annotations/MapFrom.source|{}source[0]
         final fun <get-source>(): kotlin.reflect/KClass<*> // com.sahsenvar.kmapper.annotations/MapFrom.source.<get-source>|<get-source>(){}[0]
+    final val wrapper // com.sahsenvar.kmapper.annotations/MapFrom.wrapper|{}wrapper[0]
+        final fun <get-wrapper>(): kotlin.reflect/KClass<out com.sahsenvar.kmapper/KMapperWrapper> // com.sahsenvar.kmapper.annotations/MapFrom.wrapper.<get-wrapper>|<get-wrapper>(){}[0]
 }
 
 open annotation class com.sahsenvar.kmapper.annotations/MapTo : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/MapTo|null[0]
-    constructor <init>(kotlin.reflect/KClass<*>) // com.sahsenvar.kmapper.annotations/MapTo.<init>|<init>(kotlin.reflect.KClass<*>){}[0]
+    constructor <init>(kotlin.reflect/KClass<*>, kotlin.reflect/KClass<out com.sahsenvar.kmapper/KMapperWrapper> = ...) // com.sahsenvar.kmapper.annotations/MapTo.<init>|<init>(kotlin.reflect.KClass<*>;kotlin.reflect.KClass<out|com.sahsenvar.kmapper.KMapperWrapper>){}[0]
 
     final val target // com.sahsenvar.kmapper.annotations/MapTo.target|{}target[0]
         final fun <get-target>(): kotlin.reflect/KClass<*> // com.sahsenvar.kmapper.annotations/MapTo.target.<get-target>|<get-target>(){}[0]
+    final val wrapper // com.sahsenvar.kmapper.annotations/MapTo.wrapper|{}wrapper[0]
+        final fun <get-wrapper>(): kotlin.reflect/KClass<out com.sahsenvar.kmapper/KMapperWrapper> // com.sahsenvar.kmapper.annotations/MapTo.wrapper.<get-wrapper>|<get-wrapper>(){}[0]
 }
 
 open annotation class com.sahsenvar.kmapper.annotations/Validate : kotlin/Annotation { // com.sahsenvar.kmapper.annotations/Validate|null[0]

@@ -9,7 +9,7 @@
 @MapTo(User::class)
 data class UserResponse(val id: Long, val name: String)
 
-// üretir: fun UserResponse.toUserResult(): Result<User>
+// üretir: fun UserResponse.toUser(): User
 ```
 
 ## @MapFrom — hedef üzerinde
@@ -21,7 +21,7 @@ Bazen kaynak sınıf sizin değildir (başka bir modül, üretilmiş kod). Tanı
 @MapFrom(UserResponse::class)
 data class User(val id: Long, val name: String)
 
-// aynısını üretir: fun UserResponse.toUserResult(): Result<User>
+// aynısını üretir: fun UserResponse.toUser(): User
 ```
 
 ## Hangi tarafı işaretlemeli?
@@ -39,12 +39,28 @@ Bir kaynak birden çok hedefe, bir hedef birden çok kaynaktan eşlenebilir:
 @MapTo(UserListItem::class)
 data class UserResponse(val id: Long, val name: String, val avatarUrl: String?)
 
-// fun UserResponse.toUserResult(): Result<User>
-// fun UserResponse.toUserListItemResult(): Result<UserListItem>
+// fun UserResponse.toUser(): User
+// fun UserResponse.toUserListItem(): UserListItem
 ```
 
 Gerektiğinde alan direktifleri tek bir hedefe daraltılabilir — bkz.
 [`@FieldMap(targetClass = …)`](alan-eslestirme.md).
+
+## Mapping başına dönüş sarmalayıcısı seçmek
+
+`@MapTo`/`@MapFrom`, ikinci ve isteğe bağlı bir parametre alır: `wrapper`. Bu, yukarıdaki düz
+`toX()`'in yerine geçmez — üzerine extension ekler:
+
+```kotlin
+@MapTo(User::class, wrapper = KMapperWrapper.KtResult::class)
+data class UserResponse(val id: Long, val name: String)
+
+// hem şunu üretir: fun UserResponse.toUser(): User
+//   hem de şunu: fun UserResponse.toUserResult(): Result<User>
+```
+
+Built-in sarmalayıcıların tam listesi, modül geneli ayar ve kendi sarmalayıcınızı yazmak için
+bkz. [Dönüş Sarmalayıcıları](donus-sarmalayicilari.md).
 
 ## Neler eşlenir?
 

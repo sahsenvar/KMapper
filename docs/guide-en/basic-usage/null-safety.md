@@ -60,14 +60,15 @@ the same escapes apply, with two differences:
 
 ## The hard floor: RequiredFieldMissing
 
-With no escape, mapping stops with a path-carrying exception — delivered as a `Result`
-failure, not a crash:
+With no escape, mapping stops — `toX()` throws the path-carrying exception directly:
 
 ```kotlin
-val result = UserResponse(email = null, …).toUserResult()
-result.exceptionOrNull()?.message
-// Required field missing: email
+val user = UserResponse(email = null, …).toUser()
+// throws MappingException.RequiredFieldMissing: Required field missing: email
 ```
+
+Want the failure delivered as a value instead of thrown? Add a
+[return wrapper](return-wrappers.md), e.g. `toUserResult(): Result<User>`.
 
 ## Hand-written code: the same rails
 

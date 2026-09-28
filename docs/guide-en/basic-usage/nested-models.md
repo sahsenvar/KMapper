@@ -24,7 +24,7 @@ Each level needs its own `@MapTo` (every pair is an explicit declaration — no 
 guessing), and the top-level call maps the whole tree:
 
 ```kotlin
-val order = orderResponse.toOrderResult().getOrThrow()
+val order = orderResponse.toOrder()
 ```
 
 ## Errors carry the full path
@@ -40,9 +40,9 @@ R8/ProGuard obfuscation untouched. Collections add an index segment: `items[3].p
 
 ## Bounding the blast radius
 
-By default a hard failure anywhere fails the whole `toOrderResult()` — one `Result`, one
-boundary. If a *section* of the payload is optional, declare it so, and the failure stops
-there:
+By default a hard failure anywhere fails the whole `toOrder()` call — it throws, once, at the
+outermost level. If a *section* of the payload is optional, declare it so, and the failure
+stops there:
 
 ```kotlin
 data class Order(

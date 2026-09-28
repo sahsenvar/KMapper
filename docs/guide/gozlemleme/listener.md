@@ -2,8 +2,9 @@
 
 Mapping'lerin production'da yaptığı her şeyi iki kanal söyler:
 
-- **`Result` hataları** — sert hatalar, çağrı noktasında.
-  ([Hata yönetimi](../hata-yonetimi/mapping-exception.md).)
+- **Sert hatalar** — `toX()`, çağrı noktasında tipli bir `MappingException` fırlatır (ya da bir
+  [dönüş sarmalayıcısı](../temel-kullanim/donus-sarmalayicilari.md) eklediyseniz değer olarak
+  teslim eder). ([Hata yönetimi](../hata-yonetimi/mapping-exception.md).)
 - **Degradation sink** — *emilen* her esneklik: null'a dönen bozuk tarih, atılan liste
   elemanı, çakışan map anahtarı. Bu sayfa o kanal.
 

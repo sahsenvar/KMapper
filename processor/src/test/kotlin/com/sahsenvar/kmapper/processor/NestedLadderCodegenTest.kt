@@ -17,7 +17,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
  * Golden + runtime tests for nested mapping through the ladder seams (plan Task 15):
- * sub-mapper rides the seams as `{ it.toXResult().getOrThrow() }`, hard failures accumulate
+ * sub-mapper rides the seams as `{ it.toX() }`, hard failures accumulate
  * deep paths via withPathPrefix, nullable/defaulted outer fields absorb inner hard failures.
  */
 class NestedLadderCodegenTest :
@@ -43,9 +43,9 @@ class NestedLadderCodegenTest :
             val (result, compilation) = compile(source)
 
             `when`("the processor runs") {
-                then("the sub-mapper rides the hard seam with getOrThrow and simple-name type literals") {
+                then("the sub-mapper rides the hard seam with a direct call and simple-name type literals") {
                     val generated = compilation.generatedFile("OrderDataModelMappers.kt")
-                    generated shouldContain "toAddressDomainModelResult().getOrThrow()"
+                    generated shouldContain "toAddressDomainModel()"
                     generated shouldContain "convertOrFail(\"address\", \"AddressDataModel\", \"AddressDomainModel\")"
                 }
 
@@ -59,9 +59,9 @@ class NestedLadderCodegenTest :
             `when`("the mapping runs with a broken deep field") {
                 then("the failure path accumulates to address.zipCode") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "OrderDataModelMappersKt",
-                            "toOrderDomainModelResult",
+                            "toOrderDomainModel",
                             result.newInstance(
                                 "OrderDataModel",
                                 result.newInstance("AddressDataModel", "not-a-zip"),
@@ -77,9 +77,9 @@ class NestedLadderCodegenTest :
             `when`("the mapping runs with a clean deep field") {
                 then("the nested object converts and the default fills the absent note") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "OrderDataModelMappersKt",
-                            "toOrderDomainModelResult",
+                            "toOrderDomainModel",
                             result.newInstance(
                                 "OrderDataModel",
                                 result.newInstance("AddressDataModel", "34000"),
@@ -118,7 +118,7 @@ class NestedLadderCodegenTest :
                 then("the nested call rides convertOrElse with the base default as fallback") {
                     generated shouldContain
                         "convertOrElse(\"address\", \"AddressDataModel\", \"AddressDomainModel\", base.address)"
-                    generated shouldContain "toAddressDomainModelResult().getOrThrow()"
+                    generated shouldContain "toAddressDomainModel()"
                 }
             }
         }
@@ -146,9 +146,9 @@ class NestedLadderCodegenTest :
                 then("the outer field absorbs to null and reports with the prefixed cause path") {
                     withRecordingListener { listener ->
                         val outcome =
-                            result.invokeResultMapper(
+                            result.invokeMapperCatching(
                                 "ContactDataModelMappersKt",
-                                "toContactDomainModelResult",
+                                "toContactDomainModel",
                                 result.newInstance(
                                     "ContactDataModel",
                                     result.newInstance("AddressDataModel", "oops"),
@@ -204,9 +204,9 @@ class NestedLadderCodegenTest :
             `when`("a present nested value is mapped") {
                 then("it maps through to the domain nested model") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "FooDataModelMappersKt",
-                            "toFooDomainModelResult",
+                            "toFooDomainModel",
                             result.newInstance("FooDataModel", result.newInstance("BarDataModel", 7)),
                         )
                     outcome.isSuccess.shouldBeTrue()
@@ -217,9 +217,9 @@ class NestedLadderCodegenTest :
             `when`("the nested source is null") {
                 then("the nullable target lands as null (declared default = null)") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "FooDataModelMappersKt",
-                            "toFooDomainModelResult",
+                            "toFooDomainModel",
                             result.newInstance("FooDataModel", null as Any?),
                         )
                     outcome.isSuccess.shouldBeTrue()
