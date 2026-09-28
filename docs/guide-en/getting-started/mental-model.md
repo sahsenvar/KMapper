@@ -27,8 +27,10 @@ converted value  >  constructor default  >  null  >  error
 
 A broken value may be absorbed by a declared escape (default or nullable) — but unlike
 absence, **every absorption is reported** to the
-[degradation sink](../observability/listener.md). The whole mapping returns
-`Result<T>`, so even a hard error never crashes your app unless you call `.getOrThrow()`.
+[degradation sink](../observability/listener.md). An unabsorbed hard error makes `toX()`
+throw a typed `MappingException` — if you'd rather have it delivered as a value, add a
+[return wrapper](../basic-usage/return-wrappers.md) (`toXResult(): Result<T>`, `toXFlow()`, or
+your own).
 
 The distinction matters: *absence is data, brokenness is a signal.* You keep serving users
 from the 99 good fields while your telemetry tells you about the 1 bad one.

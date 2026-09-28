@@ -68,4 +68,4 @@ uzaklıkta — aynı eleman semantiği, farklı kap. Bkz.
 [Arrow](../tip-donusumu/arrow.md); kendi kap tipiniz için
 [kendi wrapper'ınızı yazın](../tip-donusumu/ozel-converter.md).
 
-> Sıradaki: **[Built-in Converter'lar →](../tip-donusumu/builtin.md)**
+> Sıradaki: **[Dönüş Sarmalayıcıları →](donus-sarmalayicilari.md)**

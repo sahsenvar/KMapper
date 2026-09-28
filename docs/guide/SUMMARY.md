@@ -16,6 +16,7 @@
 * [Null Güvenliği ve Fallback Ladder](temel-kullanim/null-safety.md)
 * [İç İçe Modeller ve Hata Yolları](temel-kullanim/nested.md)
 * [Koleksiyonlar](temel-kullanim/koleksiyonlar.md)
+* [Dönüş Sarmalayıcıları](temel-kullanim/donus-sarmalayicilari.md)
 
 ## Tip Dönüşümü
 
@@ -42,7 +43,7 @@
 
 ## Hata Yönetimi
 
-* [Result Sınırı ve MappingException](hata-yonetimi/mapping-exception.md)
+* [Hata Yönetimi ve MappingException](hata-yonetimi/mapping-exception.md)
 
 ## Gözlemlenebilirlik
 

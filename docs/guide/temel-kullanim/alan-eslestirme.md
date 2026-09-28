@@ -43,8 +43,8 @@ data class SignUpRequest(
     val passwordHash: String, // isim aynı ama bunun ham haliyle kopyalanmasını İSTEMİYORSUNUZ
 )
 
-// üretilen: fun SignUpRequest.toAccountResult(passwordHash: String): Result<Account>
-val account = request.toAccountResult(passwordHash = hash(request.passwordHash))
+// üretilen: fun SignUpRequest.toAccount(passwordHash: String): Account
+val account = request.toAccount(passwordHash = hash(request.passwordHash))
 ```
 
 ## @IgnoreDefaultValue — "default, wire fallback'i değildir"
@@ -77,7 +77,7 @@ data class Payment(
 data class PaymentResponse(val id: Long)
 
 // üretilen:
-fun PaymentResponse.toPaymentResult(fetchedAt: Instant): Result<Payment>
+fun PaymentResponse.toPayment(fetchedAt: Instant): Payment
 ```
 
 ## Fallback mekanizması constructor default'larıdır

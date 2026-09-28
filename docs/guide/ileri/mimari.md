@@ -10,7 +10,8 @@ annotation'lı modelleriniz
    └─ KSP2 (kmapper-compiler)
         ├─ analiz: alanları eşle, converter/wrapper çözümle, direktifleri denetle
         ├─ ret:    MissingConverter / UnsupportedConversion / yapısal hatalar -> build düşer
-        └─ üretim: toXResult() extension fonksiyonları (düz Kotlin, KotlinPoet)
+        └─ üretim: toX() extension fonksiyonu (düz Kotlin, KotlinPoet), artı çözümlenen
+              sarmalayıcının her wrap() overload'u için bir extension daha (toXResult(), toXFlow(), …)
               └─ elle yazılmış kod gibi derlenir; çalışma zamanında kmapper-core seam'lerini çağırır
 ```
 
@@ -21,17 +22,20 @@ işler, her kaçış ladder'ın hangi basamağını sağlar, hangi validator'lar
 ## Üretilen kod neye benziyor?
 
 ```kotlin
-public fun UserResponse.toUserResult(): Result<User> = runCatching {
-    if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toUserResult, User::class) }
+public fun UserResponse.toUser(): User {
+    if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toUser, User::class) }
     val result = User(
         id = id,
         joined = joined.convertOrFail("joined", "kotlin.String", "kotlinx.datetime.LocalDate") {
             LocalDateStringConverter.convertFrom(it)
         },
     )
-    if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toUserResult, result) }
-    result
+    if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toUser, result) }
+    return result
 }
+
+// yalnızca bir sarmalayıcı KtResult'a çözümlendiğinde üretilir (bkz. @MapTo(wrapper = …) / modül ayarı):
+public fun UserResponse.toUserResult(): Result<User> = KMapperWrapper.KtResult.wrap(this) { it.toUser() }
 ```
 
 Dikkate değer noktalar:
@@ -45,6 +49,9 @@ Dikkate değer noktalar:
 - **Yollar string literal'dir** — R8/ProGuard'a dayanıklı hata mesajları.
 - Gözlemlenebilirlik kancaları kullanılmadığında tek bir `hasListeners` kontrolünün arkasında
   kaybolur.
+- **`toUser()`'ın kendisi hiçbir şeyi yakalamaz** — doğrudan fırlatır. Bir sarmalayıcı
+  extension'ı düz fonksiyonu çağırır ve kendi `wrap`'ini uygular — tıpkı elle yazan bir çağıran
+  gibi; bkz. [Dönüş Sarmalayıcıları](../temel-kullanim/donus-sarmalayicilari.md).
 
 ## Üretilen kodu incelemek
 

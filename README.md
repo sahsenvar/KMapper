@@ -12,15 +12,18 @@ data class User(val id: Long, val joined: LocalDate)
 data class UserResponse(val id: Long, val joined: String)
 
 // generated at compile time:
-val user: Result<User> = UserResponse(7, "2026-06-12").toUserResult()
+val user: User = UserResponse(7, "2026-06-12").toUser()
 ```
 
 What makes that different from every mapper you've hand-written:
 
-- **Failures are values.** Generated mappers return `Result<T>` — malformed wire data is a
-  typed `MappingException`, never a surprise crash. The *fallback ladder*
+- **Failures are typed, not silent.** `toX()` throws a typed `MappingException` on a hard
+  failure — never a surprise crash from an unrelated bug. The *fallback ladder*
   (`value > constructor default > null > error`) keeps one bad field from destroying a
-  payload, and every absorbed error is reported to an observability sink.
+  payload, every absorbed error is reported to an observability sink, and if you'd rather
+  have failures as values, opt in per-mapping or module-wide with a
+  [return wrapper](docs/guide-en/basic-usage/return-wrappers.md) (`toXResult(): Result<X>`,
+  `toXFlow(): Flow<X>`, or your own).
 - **Errors carry a path.** `Cannot convert customer.address.zipCode: …` — R8-safe, three
   objects deep.
 - **Lossy conversions don't compile.** `Long → Int` fails the build with a guiding message
@@ -34,8 +37,8 @@ Full guide on **GitBook**: **https://kmapper.gitbook.io/docs**
 
 Source Markdown in the repo: **[English](docs/guide-en/README.md)** ·
 **[Türkçe](docs/guide/README.md)** — installation, the mental model, field mapping,
-null-safety, converters, validation, collections, enums, error handling, observability,
-multi-module setup, full annotation reference.
+null-safety, converters, validation, collections, enums, return wrappers, error handling,
+observability, multi-module setup, full annotation reference.
 
 **Prefer reading code?** The [sample gallery](sample/README.md) has 26 runnable examples
 covering every feature, ordered basic → advanced (`./gradlew sample:runSample`).
@@ -62,10 +65,24 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:2.2.2")
-    implementation("io.github.sahsenvar:kmapper-annotations:2.2.2")
-    ksp("io.github.sahsenvar:kmapper-compiler:2.2.2")
+    implementation("io.github.sahsenvar:kmapper-core:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")
+    ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")
 }
+```
+
+Want a module-wide [return wrapper](docs/guide-en/basic-usage/return-wrappers.md) (e.g. every
+mapping also gets `toXResult()`) without repeating `wrapper = …` on each `@MapTo`? Add the
+optional Gradle plugin:
+
+```kotlin
+plugins {
+    id("io.github.sahsenvar.kmapper") version "3.0.0"
+}
+
+import com.sahsenvar.kmapper.gradle.KMapperWrapper
+
+KMapper { wrapper = KMapperWrapper.KtResult }
 ```
 
 KMP setup and add-ons: [installation guide](docs/guide-en/getting-started/installation.md).
@@ -78,7 +95,8 @@ Group `io.github.sahsenvar`:
 |----------|----------|---------|
 | `kmapper-core` | KMP | Standalone runtime: `MappingException`, converter base + 35 built-in pairs, validators, conversion seams, `KMapper`/`MappingListener` — usable without code generation |
 | `kmapper-annotations` | KMP | Mapping declaration annotations (`@MapTo`/`@MapFrom`/`@FieldMap`/`@ConvertWith`/`@Validate`/…) |
-| `kmapper-compiler` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toXResult()` extensions) |
+| `kmapper-compiler` | JVM | KSP code generator (`@MapTo`/`@MapFrom` → `toX()`, plus wrapper extensions like `toXResult()`) |
+| `kmapper-gradle-plugin` | Gradle | Optional `KMapper { wrapper = … }` extension — sets the module-wide return wrapper without repeating `wrapper = …` on every annotation |
 | `kmapper-converters-immutable` | KMP | `PersistentList`/`ImmutableList`/`PersistentSet`/`ImmutableSet` wrappers |
 | `kmapper-converters-arrow` | KMP | `NonEmptyList`/`NonEmptySet` wrappers, `Option<T>` mapping |
 | `kmapper-converters-datetime` | JVM/Android | `java.time` converters (`Instant`, `LocalDate`, `Duration`, …) + kotlinx ↔ java bridges |
@@ -91,9 +109,13 @@ Group `io.github.sahsenvar`:
 kotlinx-datetime (`LocalDate`, `Instant`, …) and `kotlin.time.Duration` converters are
 **core built-ins** — no add-on needed.
 
-**Latest release:** `2.2.2` (11 artifacts) — on
+**Latest release:** `3.0.0` (12 artifacts) — on
 [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core).
-2.x is the converter-subsystem redesign; upgrading from 1.x?
+3.0.0 is a breaking change: generated mappers now return the plain `toX()` by default
+(it throws on a hard failure) instead of `toXResult(): Result<X>` — see
+[return wrappers](docs/guide-en/basic-usage/return-wrappers.md) to opt back into `Result`,
+`Flow`, or your own wrapper. Upgrading from 2.x, see the *Migrating from 2.x* section of that
+same page; upgrading from 1.x?
 [Migration guide](docs/guide-en/reference/migration-1x.md) ·
 [CHANGELOG](CHANGELOG.md).
 

@@ -1,35 +1,57 @@
-# The Result Boundary and MappingException
+# Error Handling and MappingException
 
-KMapper's error contract in one sentence: **everything that can fail at runtime arrives as a
-`Result` failure holding a path-carrying `MappingException`; everything that can be known
-earlier fails the build instead.**
+KMapper's error contract in one sentence: **everything that can fail at runtime throws a
+path-carrying, typed `MappingException` from the plain `toX()`; everything that can be known
+earlier fails the build instead.** Want the failure delivered as a value instead of thrown?
+That's an opt-in on top — see [Return Wrappers](../basic-usage/return-wrappers.md).
 
-## The Result boundary
+## The plain mapper throws
 
-Every generated mapper returns `Result<T>`:
+Every generated mapper is, first and always, `fun Source.toX(): X`:
 
 ```kotlin
-val result: Result<User> = response.toUserResult()
+val user: User = response.toUser() // throws MappingException on a hard failure
 ```
 
-You choose the failure policy *at the call site*, with stdlib tools:
+There is no `Result`, no `getOrThrow()` hop — a hard failure is an exception, exactly like any
+other function in Kotlin that can fail. Catch it where it makes sense, or let it propagate:
 
 ```kotlin
-// crash-on-bad-data (tests, debug builds, truly-required data):
-val user = result.getOrThrow()
+val user = try {
+    response.toUser()
+} catch (exception: MappingException) {
+    log(exception)
+    User.GUEST
+}
+```
 
-// fallback:
-val user = result.getOrElse { User.GUEST }
+## Prefer failures as values? Add a wrapper
 
-// branch:
+If you want the old `Result<X>`-returning shape — or a `Flow<X>`, or something else entirely —
+declare it per mapping or module-wide, and the extension is generated **next to** `toX()`, never
+instead of it:
+
+```kotlin
+@MapTo(User::class, wrapper = KMapperWrapper.KtResult::class)
+data class UserResponse(/* … */)
+
+// both are generated:
+// fun UserResponse.toUser(): User
+// fun UserResponse.toUserResult(): Result<User>
+
+val result: Result<User> = response.toUserResult()
 result.fold(
     onSuccess = { render(it) },
     onFailure = { e -> showError(); log(e) },
 )
 ```
 
-A practical pattern: `getOrThrow()` in debug, `getOrElse` + telemetry in release — bad wire
-data crashes the nightly build, not the user.
+Full coverage of the built-in wrappers (`None`, `KtResult`, `Flow`), the module-wide Gradle/KSP
+setting, and writing your own: [Return Wrappers](../basic-usage/return-wrappers.md).
+
+A practical pattern that needs no wrapper at all: let `toX()` throw in debug builds and tests
+(bad wire data crashes the nightly build, loudly), and wrap the one call site that talks to
+production telemetry with `runCatching { … }` or a `KtResult`-wrapped mapping.
 
 ## The exception taxonomy
 

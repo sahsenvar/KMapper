@@ -18,29 +18,25 @@ Annotation **import'ları değişmedi** (`com.sahsenvar.kmapper.annotations.*`) 
 bağımlılığı eklersiniz:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-core:2.2.2")
-implementation("io.github.sahsenvar:kmapper-annotations:2.2.2")  // yeni
-ksp("io.github.sahsenvar:kmapper-compiler:2.2.2")                // yeniden adlandı
+implementation("io.github.sahsenvar:kmapper-core:3.0.0")
+implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")  // yeni
+ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")                // yeniden adlandı
 ```
 
-## 2. Üretilen API: `toX()` → `toXResult()`
+## 2. Üretilen API: `toX()` → `toXResult()` (2.0), yeniden `toX()` (3.0.0)
 
-| 1.x | 2.0 |
-|-----|-----|
-| `fun Source.toUser(): User` (fırlatır) | `fun Source.toUserResult(): Result<User>` |
+| 1.x | 2.0 | 3.0.0 |
+|-----|-----|-------|
+| `fun Source.toUser(): User` (fırlatır) | `fun Source.toUserResult(): Result<User>` | yeniden `fun Source.toUser(): User` (fırlatır) — `toUserResult()` artık isteğe bağlı |
 
-Mekanik geçiş — eski fırlatan davranış bir çağrı uzakta:
-
-```kotlin
-// 1.x
-val user = response.toUser()
-
-// 2.0, aynı semantik:
-val user = response.toUserResult().getOrThrow()
-```
-
-…ama [Result sınırı](../hata-yonetimi/mapping-exception.md) özelliğin kendisidir: gerçek
-çağrı noktalarında `getOrElse`/`fold` tercih edin.
+1.x'ten doğrudan güncel 3.0.0'a geçiyorsanız iyi haber şu: üretilen imza eskisi gibi —
+`response.toUser()` yine sert hatada fırlatır, tıpkı 1.x'teki gibi. 2.0'ın getirdiği
+`Result` dönen şekli mi tercih ediyorsunuz? Mapping bazında ya da modül genelinde bir
+[dönüş sarmalayıcısı](../temel-kullanim/donus-sarmalayicilari.md) ile katılın
+(`@MapTo(X::class, wrapper = KMapperWrapper.KtResult::class)`, ya da tüm modül için
+`KMapper { wrapper = KMapperWrapper.KtResult }`) — güncel hata yönetimi hikayesi için bkz.
+[Dönüş Sarmalayıcıları](../temel-kullanim/donus-sarmalayicilari.md) ve
+[Hata Yönetimi ve MappingException](../hata-yonetimi/mapping-exception.md).
 
 ## 3. Annotation'lar
 

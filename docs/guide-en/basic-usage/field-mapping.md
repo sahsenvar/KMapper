@@ -43,8 +43,8 @@ data class SignUpRequest(
     val passwordHash: String, // same name, but you do NOT want this copied raw
 )
 
-// generated: fun SignUpRequest.toAccountResult(passwordHash: String): Result<Account>
-val account = request.toAccountResult(passwordHash = hash(request.passwordHash))
+// generated: fun SignUpRequest.toAccount(passwordHash: String): Account
+val account = request.toAccount(passwordHash = hash(request.passwordHash))
 ```
 
 ## @IgnoreDefaultValue — "the default is not a wire fallback"
@@ -77,7 +77,7 @@ data class Payment(
 data class PaymentResponse(val id: Long)
 
 // generated:
-fun PaymentResponse.toPaymentResult(fetchedAt: Instant): Result<Payment>
+fun PaymentResponse.toPayment(fetchedAt: Instant): Payment
 ```
 
 ## Constructor defaults are the fallback mechanism

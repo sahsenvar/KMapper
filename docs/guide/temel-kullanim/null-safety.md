@@ -61,14 +61,15 @@ kaçışlar geçerlidir; iki farkla:
 
 ## Sert taban: RequiredFieldMissing
 
-Kaçış yoksa mapping, yol taşıyan bir exception ile durur — crash olarak değil, `Result`
-hatası olarak teslim edilir:
+Kaçış yoksa mapping durur — `toX()`, yol taşıyan exception'ı doğrudan fırlatır:
 
 ```kotlin
-val result = UserResponse(email = null, …).toUserResult()
-result.exceptionOrNull()?.message
-// Required field missing: email
+val user = UserResponse(email = null, …).toUser()
+// fırlatır: MappingException.RequiredFieldMissing: Required field missing: email
 ```
+
+Hatanın fırlamak yerine bir değer olarak teslim edilmesini mi istiyorsunuz? Bir
+[dönüş sarmalayıcısı](donus-sarmalayicilari.md) ekleyin, ör. `toUserResult(): Result<User>`.
 
 ## Elle yazılan kod: aynı raylar
 

@@ -6,10 +6,19 @@ All annotations live in `com.sahsenvar.kmapper.annotations` (`kmapper-annotation
 
 | Annotation | Target | Purpose |
 |------------|--------|---------|
-| `@MapTo(target)` | class (repeatable) | generate `Source.toTargetResult()` — declared on the source |
-| `@MapFrom(source)` | class (repeatable) | same generation, declared on the target |
+| `@MapTo(target, wrapper)` | class (repeatable) | generate `Source.toTarget(): Target` (+ whatever `wrapper` adds, e.g. `toTargetResult()`) — declared on the source |
+| `@MapFrom(source, wrapper)` | class (repeatable) | same generation, declared on the target |
 
 → [@MapTo and @MapFrom](../basic-usage/mapto-mapfrom.md)
+
+## Return wrappers
+
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `KMapperWrapper` (interface, not annotation) | — | `Default` \| `None` \| `KtResult` \| `Flow`, or your own `object` implementing it |
+| `@WrapperSuffix(suffix)` | class (a `KMapperWrapper` object) | names the generated function suffix, e.g. `"Result"` → `toXResult()` |
+
+→ [Return Wrappers](../basic-usage/return-wrappers.md)
 
 ## Field directives
 

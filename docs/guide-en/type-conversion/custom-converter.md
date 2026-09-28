@@ -22,8 +22,10 @@ Conventions:
 - **Richer type first** (`<Money, String>`): `convertTo` goes *toward* the second type,
   `convertFrom` comes back from it.
 - **Throw on bad input.** `convertFrom("garbage")` should throw (an
-  `IllegalArgumentException` is fine) — the [ladder](../basic-usage/null-safety.md) and
-  `Result` boundary turn it into a typed, path-carrying failure. Never return a guessed value.
+  `IllegalArgumentException` is fine) — the [ladder](../basic-usage/null-safety.md) turns it
+  into a typed, path-carrying `MappingException` (thrown by `toX()`, or delivered as a value
+  if you added a [return wrapper](../basic-usage/return-wrappers.md)). Never return a guessed
+  value.
 
 Register it once in [@KMapperConfig](kmapperconfig.md) — after that, every
 `Money`/`String` field pair in the module resolves to it automatically.

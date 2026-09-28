@@ -41,15 +41,15 @@ Validator'ları **kuralın sahibi olan modele** koyun — genellikle domain mode
 ## Hata her zaman serttir
 
 ```kotlin
-val result = RegistrationForm("Grace", "not-an-email").toMemberResult()
-println(result.exceptionOrNull()?.message)
-// Validation failed for 'email': must be a valid email
+val member = RegistrationForm("Grace", "not-an-email").toMember()
+// fırlatır: MappingException.ValidationFailed: Validation failed for 'email': must be a valid email
 ```
 
-Başarısız validator `MappingException.ValidationFailed`'dır — yol taşır, `Result` sınırından
-teslim edilir ve **[fallback ladder](../temel-kullanim/null-safety.md) tarafından asla
-emilmez**. Doğrulama kuralı beyan edilmiş bir değişmezdir; onu ihlal eden değerin modelinizde
-işi yoktur — `null` olarak bile.
+Başarısız validator `MappingException.ValidationFailed`'dır — yol taşır, `toX()` tarafından
+fırlatılır (ya da bir [dönüş sarmalayıcısı](../temel-kullanim/donus-sarmalayicilari.md)
+eklediyseniz değer olarak teslim edilir) ve **[fallback ladder](../temel-kullanim/null-safety.md)
+tarafından asla emilmez**. Doğrulama kuralı beyan edilmiş bir değişmezdir; onu ihlal eden
+değerin modelinizde işi yoktur — `null` olarak bile.
 
 Bilinmeye değer iki semantik daha:
 

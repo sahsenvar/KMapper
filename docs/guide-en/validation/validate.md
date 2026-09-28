@@ -41,15 +41,15 @@ declaration then guards both `data → domain` and `domain → presentation`.
 ## Failure is always hard
 
 ```kotlin
-val result = RegistrationForm("Grace", "not-an-email").toMemberResult()
-println(result.exceptionOrNull()?.message)
-// Validation failed for 'email': must be a valid email
+val member = RegistrationForm("Grace", "not-an-email").toMember()
+// throws MappingException.ValidationFailed: Validation failed for 'email': must be a valid email
 ```
 
-A failed validator is `MappingException.ValidationFailed` — path-carrying, delivered through
-the `Result` boundary, and **never absorbed by the
-[fallback ladder](../basic-usage/null-safety.md)**. A validation rule is a declared
-invariant; a value that violates it has no business in your model, not even as `null`.
+A failed validator is `MappingException.ValidationFailed` — path-carrying, thrown by `toX()`
+(or delivered as a value if you added a [return wrapper](../basic-usage/return-wrappers.md)),
+and **never absorbed by the [fallback ladder](../basic-usage/null-safety.md)**. A validation
+rule is a declared invariant; a value that violates it has no business in your model, not
+even as `null`.
 
 Two more semantics worth knowing:
 

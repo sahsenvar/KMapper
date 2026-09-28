@@ -2,7 +2,8 @@
 
 Two channels tell you everything mappings do in production:
 
-- **`Result` failures** — hard errors, at the call site. ([Error
+- **Hard errors** — `toX()` throws a typed `MappingException` at the call site (or delivers it
+  as a value if you added a [return wrapper](../basic-usage/return-wrappers.md)). ([Error
   handling](../error-handling/mapping-exception.md).)
 - **The degradation sink** — every *absorbed* leniency: the broken date that became `null`,
   the dropped list element, the converged duplicate key. This page is that channel.

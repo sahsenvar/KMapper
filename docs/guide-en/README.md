@@ -11,13 +11,16 @@ data class User(val id: Long, val joined: LocalDate)
 data class UserResponse(val id: Long, val joined: String)
 
 // Generated for you at compile time:
-val user: Result<User> = UserResponse(7, "2026-06-12").toUserResult()
+val user: User = UserResponse(7, "2026-06-12").toUser()
 ```
 
 Three things make that snippet different from every mapper you have hand-written:
 
-1. **Failures are values.** The generated function returns `Result<User>` — malformed wire data
-   surfaces as a typed `MappingException`, never as a surprise crash deep in a parsing stack.
+1. **Failures are typed, not silent.** `toX()` throws a typed `MappingException` on a hard
+   failure — malformed wire data never surfaces as a surprise crash deep in a parsing stack,
+   and unrelated bugs never masquerade as mapping failures. Prefer failures as values? Opt in
+   with a [return wrapper](basic-usage/return-wrappers.md) — `toXResult(): Result<User>`,
+   `toXFlow(): Flow<User>`, or one you write yourself.
 2. **Errors carry a path.** A bad date three objects deep reports
    `Cannot convert order.customer.joined: …` — you know *which field of which record* broke.
 3. **The conversion is visible and replaceable.** `String → LocalDate` resolved to a built-in
@@ -55,6 +58,7 @@ Group `io.github.sahsenvar`:
 | `kmapper-core` | KMP | Standalone runtime: exceptions, converter base + built-ins, validators, seams, observability. Usable without code generation. |
 | `kmapper-annotations` | KMP | Declaration annotations (`@MapTo`, `@FieldMap`, `@ConvertWith`, …) |
 | `kmapper-compiler` | JVM (KSP) | The code generator |
+| `kmapper-gradle-plugin` | Gradle | Optional `KMapper { wrapper = … }` extension — sets the module-wide [return wrapper](basic-usage/return-wrappers.md) |
 | `kmapper-converters-immutable` | KMP | kotlinx-collections-immutable wrappers |
 | `kmapper-converters-arrow` | KMP | Arrow `NonEmptyList`/`NonEmptySet` wrappers, `Option` |
 | `kmapper-converters-datetime` | JVM/Android | `java.time` converters and kotlinx ↔ java bridges |

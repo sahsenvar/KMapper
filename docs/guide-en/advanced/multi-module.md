@@ -8,7 +8,7 @@ generated code is called.**
 | Module | Needs |
 |--------|-------|
 | declares `@MapTo`/`@MapFrom` models | `kmapper-annotations` + `ksp(kmapper-compiler)` |
-| only *calls* `toXResult()` | `kmapper-core` (usually transitively) |
+| only *calls* `toX()` (and any wrapper extensions) | `kmapper-core` (usually transitively) |
 | only uses seams/validators by hand | `kmapper-core` |
 
 A typical layered app:

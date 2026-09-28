@@ -1,6 +1,6 @@
 # KMapper — complete documentation (single file for LLM ingestion)
 
-> KMapper is a compile-time object mapping library for Kotlin Multiplatform (KSP, no reflection). Generated mappers return Result<T> with path-carrying typed errors; a fallback ladder (value > constructor default > null > error) contains bad wire data while reporting every absorbed error to an observability sink; lossy conversions are refused at compile time. Maven coordinates: io.github.sahsenvar:kmapper-core / kmapper-annotations / kmapper-compiler (+ converter/validator add-ons).
+> KMapper is a compile-time object mapping library for Kotlin Multiplatform (KSP, no reflection). Generated mappers are plain `fun Source.toX(): X`, throwing a path-carrying typed `MappingException` on a hard failure; `@MapTo`/`@MapFrom(wrapper = …)` (per mapping) or the optional Gradle plugin / KSP option (module-wide) add opt-in return wrappers on top — `toXResult(): Result<X>`, `toXFlow(): Flow<X>`, or a user-written one. A fallback ladder (value > constructor default > null > error) contains bad wire data while reporting every absorbed error to an observability sink; lossy conversions are refused at compile time. Maven coordinates: io.github.sahsenvar:kmapper-core / kmapper-annotations / kmapper-compiler / kmapper-gradle-plugin (+ converter/validator add-ons).
 
 Generated from docs/guide-en in reading order by scripts/generate-llms-txt.py.
 
@@ -22,13 +22,16 @@ data class User(val id: Long, val joined: LocalDate)
 data class UserResponse(val id: Long, val joined: String)
 
 // Generated for you at compile time:
-val user: Result<User> = UserResponse(7, "2026-06-12").toUserResult()
+val user: User = UserResponse(7, "2026-06-12").toUser()
 ```
 
 Three things make that snippet different from every mapper you have hand-written:
 
-1. **Failures are values.** The generated function returns `Result<User>` — malformed wire data
-   surfaces as a typed `MappingException`, never as a surprise crash deep in a parsing stack.
+1. **Failures are typed, not silent.** `toX()` throws a typed `MappingException` on a hard
+   failure — malformed wire data never surfaces as a surprise crash deep in a parsing stack,
+   and unrelated bugs never masquerade as mapping failures. Prefer failures as values? Opt in
+   with a [return wrapper](basic-usage/return-wrappers.md) — `toXResult(): Result<User>`,
+   `toXFlow(): Flow<User>`, or one you write yourself.
 2. **Errors carry a path.** A bad date three objects deep reports
    `Cannot convert order.customer.joined: …` — you know *which field of which record* broke.
 3. **The conversion is visible and replaceable.** `String → LocalDate` resolved to a built-in
@@ -66,6 +69,7 @@ Group `io.github.sahsenvar`:
 | `kmapper-core` | KMP | Standalone runtime: exceptions, converter base + built-ins, validators, seams, observability. Usable without code generation. |
 | `kmapper-annotations` | KMP | Declaration annotations (`@MapTo`, `@FieldMap`, `@ConvertWith`, …) |
 | `kmapper-compiler` | JVM (KSP) | The code generator |
+| `kmapper-gradle-plugin` | Gradle | Optional `KMapper { wrapper = … }` extension — sets the module-wide [return wrapper](basic-usage/return-wrappers.md) |
 | `kmapper-converters-immutable` | KMP | kotlinx-collections-immutable wrappers |
 | `kmapper-converters-arrow` | KMP | Arrow `NonEmptyList`/`NonEmptySet` wrappers, `Option` |
 | `kmapper-converters-datetime` | JVM/Android | `java.time` converters and kotlinx ↔ java bridges |
@@ -113,9 +117,9 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:2.1.0")
-    implementation("io.github.sahsenvar:kmapper-annotations:2.1.0")
-    ksp("io.github.sahsenvar:kmapper-compiler:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-core:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")
+    ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")
 }
 ```
 
@@ -137,17 +141,17 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:2.1.0")
-            implementation("io.github.sahsenvar:kmapper-annotations:2.1.0")
+            implementation("io.github.sahsenvar:kmapper-core:3.0.0")
+            implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")
         }
     }
 }
 
 dependencies {
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:2.1.0")
-    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:2.1.0")
-    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:2.1.0")
-    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:2.1.0")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:3.0.0")
+    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:3.0.0")
+    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:3.0.0")
+    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:3.0.0")
 }
 
 // Make every compilation see the commonMain-generated sources:
@@ -163,25 +167,50 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 Each add-on is an independent KMP artifact; add only what your models use:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-converters-immutable:2.1.0") // PersistentList & co.
-implementation("io.github.sahsenvar:kmapper-converters-arrow:2.1.0")     // NonEmptyList, Option
-implementation("io.github.sahsenvar:kmapper-converters-datetime:2.1.0")  // java.time + bridges
-implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.1.0") // BigDecimal/BigInteger
-implementation("io.github.sahsenvar:kmapper-converters-uuid:2.1.0")      // Uuid / java.util.UUID
-implementation("io.github.sahsenvar:kmapper-converters-okio:2.1.0")      // ByteString, Path
-implementation("io.github.sahsenvar:kmapper-converters-uri:2.1.0")       // URI / Uri / NSURL
-implementation("io.github.sahsenvar:kmapper-validators:2.1.0")           // Email, E.164, IP, …
+implementation("io.github.sahsenvar:kmapper-converters-immutable:3.0.0") // PersistentList & co.
+implementation("io.github.sahsenvar:kmapper-converters-arrow:3.0.0")     // NonEmptyList, Option
+implementation("io.github.sahsenvar:kmapper-converters-datetime:3.0.0")  // java.time + bridges
+implementation("io.github.sahsenvar:kmapper-converters-bignumber:3.0.0") // BigDecimal/BigInteger
+implementation("io.github.sahsenvar:kmapper-converters-uuid:3.0.0")      // Uuid / java.util.UUID
+implementation("io.github.sahsenvar:kmapper-converters-okio:3.0.0")      // ByteString, Path
+implementation("io.github.sahsenvar:kmapper-converters-uri:3.0.0")       // URI / Uri / NSURL
+implementation("io.github.sahsenvar:kmapper-validators:3.0.0")           // Email, E.164, IP, …
 ```
 
 kotlinx-datetime types (`LocalDate`, `Instant`, …) need no add-on — their `String`/`Long`
 converters are core built-ins, and `kmapper-core` brings kotlinx-datetime in as an API
-dependency.
+dependency. `kmapper-core` also brings in kotlinx-coroutines-core (`api`, for
+`KMapperWrapper.Flow` — see [Return Wrappers](../basic-usage/return-wrappers.md)).
+
+## Optional: the Gradle plugin
+
+If you want a module-wide [return wrapper](../basic-usage/return-wrappers.md) — e.g. every
+mapping in the module also gets `toXResult()` — without repeating `wrapper = …` on each
+`@MapTo`/`@MapFrom`, apply the plugin instead of (or alongside) the `ksp { arg(...) }` form:
+
+```kotlin
+// build.gradle.kts
+plugins {
+    id("io.github.sahsenvar.kmapper") version "3.0.0"
+}
+
+import com.sahsenvar.kmapper.gradle.KMapperWrapper
+
+KMapper {
+    wrapper = KMapperWrapper.KtResult // None (default) | KtResult | Flow | Custom("fqn")
+}
+```
+
+The plugin is `io.github.sahsenvar:kmapper-gradle-plugin`, resolved from Maven Central. It must
+be applied to a module that also applies the KSP plugin — it forwards its setting to the
+processor as the `kmapper.wrapper` option. Without the plugin, set that option directly:
+`ksp { arg("kmapper.wrapper", "KtResult") }`.
 
 ## Version compatibility
 
 | KMapper | Kotlin | KSP |
 |---------|--------|-----|
-| 2.x | 2.3+ | KSP2 (`2.3.x-2.x`) |
+| 3.x | 2.3+ | KSP2 (`2.3.x-2.x`) |
 
 In multi-module projects only modules that *declare* mappings need the compiler; modules that
 merely call generated functions need just the runtime. Details:
@@ -232,7 +261,7 @@ how it becomes the side you do control.
 KSP generates an extension function:
 
 ```kotlin
-fun UserResponse.toUserResult(): Result<User>
+fun UserResponse.toUser(): User
 ```
 
 Two fields copied straight across; `joined` routed through the built-in
@@ -242,26 +271,24 @@ registration needed).
 ## 3. Use it
 
 ```kotlin
-val user: User = UserResponse(7, "grace@navy.mil", "2026-06-12")
-    .toUserResult()
-    .getOrThrow()
+val user: User = UserResponse(7, "grace@navy.mil", "2026-06-12").toUser()
 ```
 
-The generated function returns `Result<User>`: *you* decide at the call site whether a failure
-throws (`getOrThrow`), falls back (`getOrElse`), or branches (`fold`).
+The generated function returns the plain `User` and throws a typed `MappingException` on a
+hard failure. Want the failure as a value instead — `Result<User>`, a `Flow<User>`, or your
+own wrapper type? See [Return Wrappers](../basic-usage/return-wrappers.md); it's an opt-in
+added on top of `toUser()`, per mapping or module-wide, never a replacement for it.
 
 ## 4. Break it — on purpose
 
 ```kotlin
-val broken = UserResponse(7, "grace@navy.mil", "not-a-date").toUserResult()
-
-println(broken.exceptionOrNull()?.message)
+val broken = UserResponse(7, "grace@navy.mil", "not-a-date").toUser()
+// throws MappingException.TypeConversionFailed:
 // Cannot convert joined: String -> LocalDate failed for value "not-a-date" …
 ```
 
-No crash — the failure arrived as a value, naming the exact field. In nested models the path
-grows with it (`customer.address.zipCode`); see
-[Nested Models](../basic-usage/nested-models.md).
+The exception names the exact field. In nested models the path grows with it
+(`customer.address.zipCode`); see [Nested Models](../basic-usage/nested-models.md).
 
 ## 5. What if the wire value is missing?
 
@@ -316,8 +343,10 @@ converted value  >  constructor default  >  null  >  error
 
 A broken value may be absorbed by a declared escape (default or nullable) — but unlike
 absence, **every absorption is reported** to the
-[degradation sink](../observability/listener.md). The whole mapping returns
-`Result<T>`, so even a hard error never crashes your app unless you call `.getOrThrow()`.
+[degradation sink](../observability/listener.md). An unabsorbed hard error makes `toX()`
+throw a typed `MappingException` — if you'd rather have it delivered as a value, add a
+[return wrapper](../basic-usage/return-wrappers.md) (`toXResult(): Result<T>`, `toXFlow()`, or
+your own).
 
 The distinction matters: *absence is data, brokenness is a signal.* You keep serving users
 from the 99 good fields while your telemetry tells you about the 1 bad one.
@@ -379,9 +408,9 @@ Run everything:
 
 | # | Category | You will learn |
 |---|----------|----------------|
-| 1 | **Basics** | `@MapTo`, the `toXResult(): Result<X>` boundary, `@MapFrom`, one source → many targets |
+| 1 | **Basics** | `@MapTo`, the plain `toX(): X` mapper and `MappingException`, `@MapFrom`, one source → many targets |
 | 2 | **Fields** | `@FieldMap` renaming, `@IgnoreMap`, `@IgnoreDefaultValue`, caller-supplied parameters |
-| 3 | **Nullability & defaults** | the fallback ladder, production `Result` handling patterns |
+| 3 | **Nullability & defaults** | the fallback ladder, [return wrappers](../basic-usage/return-wrappers.md) for production error-as-value patterns |
 | 4 | **Converters** | auto-discovery, custom converters, `@ConvertWith(use, onFail)`, sanctioned null, parameterized converters, `@UnsupportedDirection` |
 | 5 | **Collections** | element ladder, Set/Map semantics, `OnFail.Throw`/`Skip` on elements, `@CollectionWrapper` |
 | 6 | **Nested objects** | sub-mappers, deep error paths, bounding the blast radius |
@@ -410,7 +439,7 @@ they only differ in **which class carries the declaration**.
 @MapTo(User::class)
 data class UserResponse(val id: Long, val name: String)
 
-// generates: fun UserResponse.toUserResult(): Result<User>
+// generates: fun UserResponse.toUser(): User
 ```
 
 ## @MapFrom — declared on the target
@@ -422,7 +451,7 @@ on the target instead; the generated function is identical:
 @MapFrom(UserResponse::class)
 data class User(val id: Long, val name: String)
 
-// generates the same: fun UserResponse.toUserResult(): Result<User>
+// generates the same: fun UserResponse.toUser(): User
 ```
 
 ## Which side should you annotate?
@@ -440,12 +469,28 @@ One source can map to several targets, and one target can accept several sources
 @MapTo(UserListItem::class)
 data class UserResponse(val id: Long, val name: String, val avatarUrl: String?)
 
-// fun UserResponse.toUserResult(): Result<User>
-// fun UserResponse.toUserListItemResult(): Result<UserListItem>
+// fun UserResponse.toUser(): User
+// fun UserResponse.toUserListItem(): UserListItem
 ```
 
 Field-level directives can be scoped to one of the targets where it matters — see
 [`@FieldMap(targetClass = …)`](field-mapping.md).
+
+## Choosing a return wrapper per mapping
+
+`@MapTo`/`@MapFrom` take a second, optional parameter: `wrapper`. It never replaces the plain
+`toX()` above — it adds extensions on top of it:
+
+```kotlin
+@MapTo(User::class, wrapper = KMapperWrapper.KtResult::class)
+data class UserResponse(val id: Long, val name: String)
+
+// generates both: fun UserResponse.toUser(): User
+//            and: fun UserResponse.toUserResult(): Result<User>
+```
+
+Full list of built-in wrappers, the module-wide setting, and writing your own: see
+[Return Wrappers](return-wrappers.md).
 
 ## What gets matched
 
@@ -511,8 +556,8 @@ data class SignUpRequest(
     val passwordHash: String, // same name, but you do NOT want this copied raw
 )
 
-// generated: fun SignUpRequest.toAccountResult(passwordHash: String): Result<Account>
-val account = request.toAccountResult(passwordHash = hash(request.passwordHash))
+// generated: fun SignUpRequest.toAccount(passwordHash: String): Account
+val account = request.toAccount(passwordHash = hash(request.passwordHash))
 ```
 
 ## @IgnoreDefaultValue — "the default is not a wire fallback"
@@ -545,7 +590,7 @@ data class Payment(
 data class PaymentResponse(val id: Long)
 
 // generated:
-fun PaymentResponse.toPaymentResult(fetchedAt: Instant): Result<Payment>
+fun PaymentResponse.toPayment(fetchedAt: Instant): Payment
 ```
 
 ## Constructor defaults are the fallback mechanism
@@ -628,14 +673,15 @@ the same escapes apply, with two differences:
 
 ## The hard floor: RequiredFieldMissing
 
-With no escape, mapping stops with a path-carrying exception — delivered as a `Result`
-failure, not a crash:
+With no escape, mapping stops — `toX()` throws the path-carrying exception directly:
 
 ```kotlin
-val result = UserResponse(email = null, …).toUserResult()
-result.exceptionOrNull()?.message
-// Required field missing: email
+val user = UserResponse(email = null, …).toUser()
+// throws MappingException.RequiredFieldMissing: Required field missing: email
 ```
+
+Want the failure delivered as a value instead of thrown? Add a
+[return wrapper](return-wrappers.md), e.g. `toUserResult(): Result<User>`.
 
 ## Hand-written code: the same rails
 
@@ -684,7 +730,7 @@ Each level needs its own `@MapTo` (every pair is an explicit declaration — no 
 guessing), and the top-level call maps the whole tree:
 
 ```kotlin
-val order = orderResponse.toOrderResult().getOrThrow()
+val order = orderResponse.toOrder()
 ```
 
 ## Errors carry the full path
@@ -700,9 +746,9 @@ R8/ProGuard obfuscation untouched. Collections add an index segment: `items[3].p
 
 ## Bounding the blast radius
 
-By default a hard failure anywhere fails the whole `toOrderResult()` — one `Result`, one
-boundary. If a *section* of the payload is optional, declare it so, and the failure stops
-there:
+By default a hard failure anywhere fails the whole `toOrder()` call — it throws, once, at the
+outermost level. If a *section* of the payload is optional, declare it so, and the failure
+stops there:
 
 ```kotlin
 data class Order(
@@ -792,6 +838,147 @@ the same element semantics, a different container. See
 [Immutable Collections](../type-conversion/immutable.md) and
 [Arrow](../type-conversion/arrow.md), or write your own wrapper for your own container type
 ([custom converter guide](../type-conversion/custom-converter.md#collection-wrappers)).
+
+> Next: **[Return Wrappers →](return-wrappers.md)**
+
+==============================================================================
+SECTION: Basic Usage — Return Wrappers  (basic-usage/return-wrappers.md)
+==============================================================================
+
+# Return Wrappers
+
+Every `@MapTo`/`@MapFrom` mapping always generates the plain core: `fun Source.toX(): X`,
+which throws a [`MappingException`](../error-handling/mapping-exception.md) on a hard failure.
+A **return wrapper** adds one or more extra extension functions *on top of* that plain core —
+it never replaces it, and nested mappings always call the plain core, never a wrapper, so
+wrappers never change how mappers compose.
+
+```kotlin
+@MapTo(User::class, wrapper = KMapperWrapper.KtResult::class)
+data class UserResponse(val id: Long, val name: String)
+
+// both generated:
+// fun UserResponse.toUser(): User
+// fun UserResponse.toUserResult(): Result<User>
+```
+
+## The built-ins
+
+`KMapperWrapper` is a small closed set of choices, passed as `wrapper = KMapperWrapper.<W>::class`
+to `@MapTo`/`@MapFrom`:
+
+| Wrapper | Adds | Notes |
+|---------|------|-------|
+| `Default` (the default) | nothing by itself | resolves to the **module-wide setting**, or [`None`](#none) if nothing is configured |
+| `None` | nothing | only the plain `toX(): X` |
+| `KtResult` | `fun Source.toXResult(): Result<X>` | hard failures become `Result.failure` |
+| `Flow` | `fun Source.toXFlow(): Flow<X>` and `fun Flow<Source>.toXFlow(): Flow<X>` | a cold single-value flow (the mapping runs, and may throw, on collection) and a flow that maps every emitted source |
+
+```kotlin
+@MapTo(User::class, wrapper = KMapperWrapper.Flow::class)
+data class UserResponse(val id: Long, val name: String)
+
+val single: Flow<User> = response.toUserFlow()
+val many: Flow<User> = responses.toUserFlow() // responses: Flow<UserResponse>
+```
+
+`KMapperWrapper.Flow` is why `kmapper-core` depends on `kotlinx-coroutines-core` (`api`,
+`1.10.2`) — it's a plain dependency, not a special case; see [Writing your own wrapper](#writing-your-own-wrapper).
+
+## Per-mapping vs. module-wide
+
+Leaving `wrapper` unset is the same as `wrapper = KMapperWrapper.Default::class` — it defers to
+whatever the *module* has configured, or `None` if nothing has. Two ways to set that module-wide
+default, in order of preference:
+
+**1. The Gradle plugin.** Apply it alongside the KSP plugin, in the same module:
+
+```kotlin
+// build.gradle.kts
+plugins {
+    id("com.google.devtools.ksp") version "2.3.10-2.0.5"
+    id("io.github.sahsenvar.kmapper") version "3.0.0"
+}
+
+import com.sahsenvar.kmapper.gradle.KMapperWrapper
+
+KMapper {
+    wrapper = KMapperWrapper.KtResult // None (default) | KtResult | Flow | Custom("fqn")
+}
+```
+
+The plugin (`io.github.sahsenvar:kmapper-gradle-plugin`, on Maven Central) forwards this to the
+processor as the `kmapper.wrapper` KSP option. It warns at configuration time if applied without
+the KSP plugin — there would be no processor to reach.
+
+**2. The KSP option directly**, without the plugin:
+
+```kotlin
+ksp {
+    arg("kmapper.wrapper", "KtResult") // or the fully qualified name of a user wrapper
+}
+```
+
+Either way, every `@MapTo`/`@MapFrom` left at `wrapper = KMapperWrapper.Default::class` (i.e.
+every one that doesn't say otherwise) picks this up. A mapping that explicitly names a wrapper —
+including explicitly `KMapperWrapper.None::class` — always overrides the module setting.
+
+## Writing your own wrapper
+
+The built-ins use **no privileged mechanism** — this is the same user–author parity principle
+that applies to converters and validators throughout KMapper: anything the library does
+internally, you can do the same way in your own code. A wrapper is an `object` implementing
+`KMapperWrapper`, annotated with `@WrapperSuffix("...")`,
+exposing one or more public `wrap` functions of the shape:
+
+```kotlin
+fun <S, T> wrap(source: <R in terms of S>, map: (S) -> T): <W in terms of T>
+```
+
+For each `wrap` overload the compiler generates one receiver extension:
+`fun R<Source>.to{Target}{suffix}(…externals): W<Target> = YourWrapper.wrap(this) { it.to{Target}(…externals) }`.
+
+```kotlin
+@WrapperSuffix("Either")
+object EitherWrapper : KMapperWrapper {
+    fun <S, T> wrap(source: S, map: (S) -> T): Either<Throwable, T> = Either.catch { map(source) }
+}
+
+@MapTo(UserDomain::class, wrapper = EitherWrapper::class)   // → toUserDomainEither()
+data class UserDto(/* … */)
+```
+
+`KtResult` and `Flow` are written exactly this way — open
+`core/src/commonMain/kotlin/com/sahsenvar/kmapper/KMapperWrapper.kt` in the repo and you're
+reading the same shape a user wrapper follows. A wrapper with several `wrap` overloads (e.g. one
+for `S` and one for `Flow<S>`, like the built-in `Flow` wrapper) generates one receiver extension
+*per overload* — that's how a single wrapper adds both `Source.toXFlow()` and
+`Flow<Source>.toXFlow()`.
+
+`@WrapperSuffix` has **binary retention**: wrappers usually live in a different module than the
+mapping that uses them (the built-ins always do), so the consuming module's KSP round reads the
+suffix from the compiled classpath, not from source.
+
+To use a custom wrapper as the module-wide default instead of per-mapping, pass its fully
+qualified name: `KMapper { wrapper = KMapperWrapper.Custom("com.example.mapping.EitherWrapper") }`
+(Gradle plugin) or `ksp { arg("kmapper.wrapper", "com.example.mapping.EitherWrapper") }` (KSP
+option directly).
+
+## Migrating from 2.x
+
+In 2.x, every mapping generated `toXResult(): Result<X>` and nothing else. In 3.0.0, the
+default generated function is the plain `toX()`, which throws. Pick one:
+
+- **Adopt the new default.** `dto.toUserResult().getOrThrow()` → `dto.toUser()`, and
+  `dto.toUserResult()` → `runCatching { dto.toUser() }` wherever you still want a `Result`
+  locally.
+- **Keep the old API, module-wide, with no per-call-site changes.** Apply the Gradle plugin and
+  set `KMapper { wrapper = KMapperWrapper.KtResult }`, or without the plugin,
+  `ksp { arg("kmapper.wrapper", "KtResult") }`. `toXResult()` is generated again, next to the
+  now-also-generated `toX()`.
+
+Either migration is mechanical and safe to do incrementally, module by module, since the setting
+is per-module.
 
 > Next: **[Built-in Converters →](../type-conversion/built-in.md)**
 
@@ -898,8 +1085,10 @@ Conventions:
 - **Richer type first** (`<Money, String>`): `convertTo` goes *toward* the second type,
   `convertFrom` comes back from it.
 - **Throw on bad input.** `convertFrom("garbage")` should throw (an
-  `IllegalArgumentException` is fine) — the [ladder](../basic-usage/null-safety.md) and
-  `Result` boundary turn it into a typed, path-carrying failure. Never return a guessed value.
+  `IllegalArgumentException` is fine) — the [ladder](../basic-usage/null-safety.md) turns it
+  into a typed, path-carrying `MappingException` (thrown by `toX()`, or delivered as a value
+  if you added a [return wrapper](../basic-usage/return-wrappers.md)). Never return a guessed
+  value.
 
 Register it once in [@KMapperConfig](kmapperconfig.md) — after that, every
 `Money`/`String` field pair in the module resolves to it automatically.
@@ -1145,7 +1334,7 @@ map wire `List`s straight into immutable domain collections.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-immutable:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-converters-immutable:3.0.0")
 }
 ```
 
@@ -1194,7 +1383,7 @@ as a *mapping-time guarantee*, and `Option` as an explicit-absence type.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-arrow:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-converters-arrow:3.0.0")
 }
 ```
 
@@ -1214,8 +1403,8 @@ data class RoleResponse(val permissions: List<PermissionResponse>)
 
 An **empty wire list fails the mapping** with `MappingException.EmptyCollection` — that is
 the point: the domain type promises non-emptiness, so mapping enforces it at the boundary
-instead of letting an impossible value in. The failure arrives as a `Result` like every other
-mapping error.
+instead of letting an impossible value in. The failure throws from `toX()` like every other
+mapping error, unless you added a [return wrapper](../basic-usage/return-wrappers.md).
 
 ## Option
 
@@ -1258,7 +1447,7 @@ SECTION: Type Conversion — Date and Time (converters-datetime)  (type-conversi
 
 ```kotlin
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-datetime:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-converters-datetime:3.0.0")
 }
 ```
 
@@ -1321,7 +1510,7 @@ Converters for arbitrary-precision numbers:
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-converters-bignumber:3.0.0")
 }
 ```
 
@@ -1383,7 +1572,7 @@ Converters for `kotlin.uuid.Uuid` (KMP) and `java.util.UUID` (JVM/Android).
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-uuid:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-converters-uuid:3.0.0")
 }
 ```
 
@@ -1426,7 +1615,7 @@ three **same-pair encoding alternates** for `String ↔ ByteString`.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-okio:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-converters-okio:3.0.0")
 }
 ```
 
@@ -1482,7 +1671,7 @@ models carry real URI types instead of raw strings.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-uri:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-converters-uri:3.0.0")
 }
 ```
 
@@ -1551,15 +1740,15 @@ declaration then guards both `data → domain` and `domain → presentation`.
 ## Failure is always hard
 
 ```kotlin
-val result = RegistrationForm("Grace", "not-an-email").toMemberResult()
-println(result.exceptionOrNull()?.message)
-// Validation failed for 'email': must be a valid email
+val member = RegistrationForm("Grace", "not-an-email").toMember()
+// throws MappingException.ValidationFailed: Validation failed for 'email': must be a valid email
 ```
 
-A failed validator is `MappingException.ValidationFailed` — path-carrying, delivered through
-the `Result` boundary, and **never absorbed by the
-[fallback ladder](../basic-usage/null-safety.md)**. A validation rule is a declared
-invariant; a value that violates it has no business in your model, not even as `null`.
+A failed validator is `MappingException.ValidationFailed` — path-carrying, thrown by `toX()`
+(or delivered as a value if you added a [return wrapper](../basic-usage/return-wrappers.md)),
+and **never absorbed by the [fallback ladder](../basic-usage/null-safety.md)**. A validation
+rule is a declared invariant; a value that violates it has no business in your model, not
+even as `null`.
 
 Two more semantics worth knowing:
 
@@ -1637,7 +1826,7 @@ validator can't sit silently in a model.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-validators:2.1.0")
+    implementation("io.github.sahsenvar:kmapper-validators:3.0.0")
 }
 ```
 
@@ -1761,44 +1950,66 @@ Details:
 - **Distinct values required.** Two entries resolving to the same wire value is a compile
   error (the decode would be ambiguous).
 
-> Next: **[The Result Boundary and MappingException →](../error-handling/mapping-exception.md)**
+> Next: **[Error Handling and MappingException →](../error-handling/mapping-exception.md)**
 
 ==============================================================================
-SECTION: Error Handling — The Result Boundary and MappingException  (error-handling/mapping-exception.md)
+SECTION: Error Handling — Error Handling and MappingException  (error-handling/mapping-exception.md)
 ==============================================================================
 
-# The Result Boundary and MappingException
+# Error Handling and MappingException
 
-KMapper's error contract in one sentence: **everything that can fail at runtime arrives as a
-`Result` failure holding a path-carrying `MappingException`; everything that can be known
-earlier fails the build instead.**
+KMapper's error contract in one sentence: **everything that can fail at runtime throws a
+path-carrying, typed `MappingException` from the plain `toX()`; everything that can be known
+earlier fails the build instead.** Want the failure delivered as a value instead of thrown?
+That's an opt-in on top — see [Return Wrappers](../basic-usage/return-wrappers.md).
 
-## The Result boundary
+## The plain mapper throws
 
-Every generated mapper returns `Result<T>`:
+Every generated mapper is, first and always, `fun Source.toX(): X`:
 
 ```kotlin
-val result: Result<User> = response.toUserResult()
+val user: User = response.toUser() // throws MappingException on a hard failure
 ```
 
-You choose the failure policy *at the call site*, with stdlib tools:
+There is no `Result`, no `getOrThrow()` hop — a hard failure is an exception, exactly like any
+other function in Kotlin that can fail. Catch it where it makes sense, or let it propagate:
 
 ```kotlin
-// crash-on-bad-data (tests, debug builds, truly-required data):
-val user = result.getOrThrow()
+val user = try {
+    response.toUser()
+} catch (exception: MappingException) {
+    log(exception)
+    User.GUEST
+}
+```
 
-// fallback:
-val user = result.getOrElse { User.GUEST }
+## Prefer failures as values? Add a wrapper
 
-// branch:
+If you want the old `Result<X>`-returning shape — or a `Flow<X>`, or something else entirely —
+declare it per mapping or module-wide, and the extension is generated **next to** `toX()`, never
+instead of it:
+
+```kotlin
+@MapTo(User::class, wrapper = KMapperWrapper.KtResult::class)
+data class UserResponse(/* … */)
+
+// both are generated:
+// fun UserResponse.toUser(): User
+// fun UserResponse.toUserResult(): Result<User>
+
+val result: Result<User> = response.toUserResult()
 result.fold(
     onSuccess = { render(it) },
     onFailure = { e -> showError(); log(e) },
 )
 ```
 
-A practical pattern: `getOrThrow()` in debug, `getOrElse` + telemetry in release — bad wire
-data crashes the nightly build, not the user.
+Full coverage of the built-in wrappers (`None`, `KtResult`, `Flow`), the module-wide Gradle/KSP
+setting, and writing your own: [Return Wrappers](../basic-usage/return-wrappers.md).
+
+A practical pattern that needs no wrapper at all: let `toX()` throw in debug builds and tests
+(bad wire data crashes the nightly build, loudly), and wrap the one call site that talks to
+production telemetry with `runCatching { … }` or a `KtResult`-wrapped mapping.
 
 ## The exception taxonomy
 
@@ -1850,7 +2061,8 @@ SECTION: Observability — MappingListener and the Degradation Sink  (observabil
 
 Two channels tell you everything mappings do in production:
 
-- **`Result` failures** — hard errors, at the call site. ([Error
+- **Hard errors** — `toX()` throws a typed `MappingException` at the call site (or delivers it
+  as a value if you added a [return wrapper](../basic-usage/return-wrappers.md)). ([Error
   handling](../error-handling/mapping-exception.md).)
 - **The degradation sink** — every *absorbed* leniency: the broken date that became `null`,
   the dropped list element, the converged duplicate key. This page is that channel.
@@ -1930,7 +2142,7 @@ generated code is called.**
 | Module | Needs |
 |--------|-------|
 | declares `@MapTo`/`@MapFrom` models | `kmapper-annotations` + `ksp(kmapper-compiler)` |
-| only *calls* `toXResult()` | `kmapper-core` (usually transitively) |
+| only *calls* `toX()` (and any wrapper extensions) | `kmapper-core` (usually transitively) |
 | only uses seams/validators by hand | `kmapper-core` |
 
 A typical layered app:
@@ -1983,7 +2195,8 @@ your annotated models
    └─ KSP2 (kmapper-compiler)
         ├─ analyze: match fields, resolve converters/wrappers, check directives
         ├─ refuse:  MissingConverter / UnsupportedConversion / structural errors -> build fails
-        └─ generate: toXResult() extension functions (plain Kotlin, KotlinPoet)
+        └─ generate: toX() extension function (plain Kotlin, KotlinPoet), plus one more
+              extension per wrap() overload of the resolved wrapper (toXResult(), toXFlow(), …)
               └─ compiled like hand-written code; calls kmapper-core seams at runtime
 ```
 
@@ -1994,17 +2207,20 @@ lookup on the hot path and no reflection anywhere.
 ## What generated code looks like
 
 ```kotlin
-public fun UserResponse.toUserResult(): Result<User> = runCatching {
-    if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toUserResult, User::class) }
+public fun UserResponse.toUser(): User {
+    if (KMapper.hasListeners) KMapper.dispatch { onMapStart(this@toUser, User::class) }
     val result = User(
         id = id,
         joined = joined.convertOrFail("joined", "kotlin.String", "kotlinx.datetime.LocalDate") {
             LocalDateStringConverter.convertFrom(it)
         },
     )
-    if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toUserResult, result) }
-    result
+    if (KMapper.hasListeners) KMapper.dispatch { onMapComplete(this@toUser, result) }
+    return result
 }
+
+// only generated when a wrapper resolves to KtResult (see @MapTo(wrapper = …) / module setting):
+public fun UserResponse.toUserResult(): Result<User> = KMapperWrapper.KtResult.wrap(this) { it.toUser() }
 ```
 
 Worth noticing:
@@ -2017,6 +2233,9 @@ Worth noticing:
   mappers](../getting-started/examples.md).
 - **Paths are string literals** — R8/ProGuard-safe error messages.
 - The observability hooks vanish behind a single `hasListeners` check when unused.
+- **`toUser()` itself never catches anything** — it throws straight through. A wrapper
+  extension calls the plain function and applies its own `wrap`, exactly as a hand-written
+  caller would; see [Return Wrappers](../basic-usage/return-wrappers.md).
 
 ## Inspecting generated code
 
@@ -2050,10 +2269,19 @@ All annotations live in `com.sahsenvar.kmapper.annotations` (`kmapper-annotation
 
 | Annotation | Target | Purpose |
 |------------|--------|---------|
-| `@MapTo(target)` | class (repeatable) | generate `Source.toTargetResult()` — declared on the source |
-| `@MapFrom(source)` | class (repeatable) | same generation, declared on the target |
+| `@MapTo(target, wrapper)` | class (repeatable) | generate `Source.toTarget(): Target` (+ whatever `wrapper` adds, e.g. `toTargetResult()`) — declared on the source |
+| `@MapFrom(source, wrapper)` | class (repeatable) | same generation, declared on the target |
 
 → [@MapTo and @MapFrom](../basic-usage/mapto-mapfrom.md)
+
+## Return wrappers
+
+| Annotation | Target | Purpose |
+|------------|--------|---------|
+| `KMapperWrapper` (interface, not annotation) | — | `Default` \| `None` \| `KtResult` \| `Flow`, or your own `object` implementing it |
+| `@WrapperSuffix(suffix)` | class (a `KMapperWrapper` object) | names the generated function suffix, e.g. `"Result"` → `toXResult()` |
+
+→ [Return Wrappers](../basic-usage/return-wrappers.md)
 
 ## Field directives
 
@@ -2135,29 +2363,26 @@ Annotation **imports are unchanged** (`com.sahsenvar.kmapper.annotations.*`) —
 the new dependency:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-core:2.1.0")
-implementation("io.github.sahsenvar:kmapper-annotations:2.1.0")  // new
-ksp("io.github.sahsenvar:kmapper-compiler:2.1.0")                // renamed
+implementation("io.github.sahsenvar:kmapper-core:3.0.0")
+implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")  // new
+ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")                // renamed
 ```
 
-## 2. The generated API: `toX()` → `toXResult()`
+## 2. The generated API: `toX()` → `toXResult()` (2.0), back to `toX()` (3.0.0)
 
-| 1.x | 2.0 |
-|-----|-----|
-| `fun Source.toUser(): User` (throws) | `fun Source.toUserResult(): Result<User>` |
+| 1.x | 2.0 | 3.0.0 |
+|-----|-----|-------|
+| `fun Source.toUser(): User` (throws) | `fun Source.toUserResult(): Result<User>` | `fun Source.toUser(): User` (throws) again — `toUserResult()` is now opt-in |
 
-Mechanical migration — old throwing behavior is one call away:
-
-```kotlin
-// 1.x
-val user = response.toUser()
-
-// 2.0, same semantics:
-val user = response.toUserResult().getOrThrow()
-```
-
-…but the [Result boundary](../error-handling/mapping-exception.md) is the feature: prefer
-`getOrElse`/`fold` at real call sites.
+If you're moving straight from 1.x to the current 3.0.0, the good news is the generated
+signature is back to what it was: `response.toUser()` still throws on a hard failure, exactly
+like in 1.x. Prefer the `Result`-returning shape 2.0 introduced? Opt into it per mapping or
+module-wide with a [return wrapper](../basic-usage/return-wrappers.md)
+(`@MapTo(X::class, wrapper = KMapperWrapper.KtResult::class)`, or
+`KMapper { wrapper = KMapperWrapper.KtResult }` for the whole module) — see
+[Return Wrappers](../basic-usage/return-wrappers.md) and
+[Error Handling and MappingException](../error-handling/mapping-exception.md) for the current
+error-handling story.
 
 ## 3. Annotations
 
@@ -2284,12 +2509,23 @@ SECTION: Reference — FAQ  (reference/faq.md)
 
 # FAQ
 
-## Why does the generated function return `Result` instead of throwing?
+## Why does the generated function throw instead of returning `Result`?
 
-Because wire data *will* be malformed eventually, and a mapper that throws turns someone
-else's bad deploy into your crash. With `Result`, failure is part of the signature: the call
-site decides (`getOrThrow` / `getOrElse` / `fold`), and the decision is visible in code
-review. [Details](../error-handling/mapping-exception.md).
+Because a plain, throwing function is the shape every Kotlin caller already knows, and nested
+mappings compose more simply when they don't have to unwrap a `Result` at every level — a
+nested mapper just calls the inner `toX()` and lets a failure propagate. If you want failure
+as part of the signature — `Result`, `Flow`, or your own wrapper type — that's one annotation
+away and never a replacement for the plain function: see
+[Return Wrappers](../basic-usage/return-wrappers.md) and
+[Error Handling](../error-handling/mapping-exception.md).
+
+## I upgraded to 3.0.0 and `toXResult()` is gone. What do I do?
+
+Pick one: switch call sites to `dto.toUser()` (+ `runCatching { }` where you still want a
+`Result` locally), or keep the old shape everywhere with one module-wide setting —
+`KMapper { wrapper = KMapperWrapper.KtResult }` (Gradle plugin) or
+`ksp { arg("kmapper.wrapper", "KtResult") }`. See
+[Return Wrappers → Migrating from 2.x](../basic-usage/return-wrappers.md#migrating-from-2x).
 
 ## Why didn't my broken value become an error?
 

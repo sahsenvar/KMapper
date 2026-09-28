@@ -7,7 +7,7 @@ as a *mapping-time guarantee*, and `Option` as an explicit-absence type.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-arrow:2.2.2")
+    implementation("io.github.sahsenvar:kmapper-converters-arrow:3.0.0")
 }
 ```
 
@@ -27,8 +27,8 @@ data class RoleResponse(val permissions: List<PermissionResponse>)
 
 An **empty wire list fails the mapping** with `MappingException.EmptyCollection` — that is
 the point: the domain type promises non-emptiness, so mapping enforces it at the boundary
-instead of letting an impossible value in. The failure arrives as a `Result` like every other
-mapping error.
+instead of letting an impossible value in. The failure throws from `toX()` like every other
+mapping error, unless you added a [return wrapper](../basic-usage/return-wrappers.md).
 
 ## Option
 

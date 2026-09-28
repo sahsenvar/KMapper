@@ -8,7 +8,7 @@ yere gider.**
 | Modül | İhtiyacı |
 |-------|----------|
 | `@MapTo`/`@MapFrom` modelleri tanımlıyor | `kmapper-annotations` + `ksp(kmapper-compiler)` |
-| yalnızca `toXResult()` *çağırıyor* | `kmapper-core` (çoğunlukla transitif gelir) |
+| yalnızca `toX()`'i (ve varsa sarmalayıcı extension'larını) *çağırıyor* | `kmapper-core` (çoğunlukla transitif gelir) |
 | yalnızca seam'leri/validator'ları elle kullanıyor | `kmapper-core` |
 
 Tipik katmanlı bir uygulama:

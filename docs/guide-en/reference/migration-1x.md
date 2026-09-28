@@ -18,29 +18,26 @@ Annotation **imports are unchanged** (`com.sahsenvar.kmapper.annotations.*`) —
 the new dependency:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-core:2.2.2")
-implementation("io.github.sahsenvar:kmapper-annotations:2.2.2")  // new
-ksp("io.github.sahsenvar:kmapper-compiler:2.2.2")                // renamed
+implementation("io.github.sahsenvar:kmapper-core:3.0.0")
+implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")  // new
+ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")                // renamed
 ```
 
-## 2. The generated API: `toX()` → `toXResult()`
+## 2. The generated API: `toX()` → `toXResult()` (2.0), back to `toX()` (3.0.0)
 
-| 1.x | 2.0 |
-|-----|-----|
-| `fun Source.toUser(): User` (throws) | `fun Source.toUserResult(): Result<User>` |
+| 1.x | 2.0 | 3.0.0 |
+|-----|-----|-------|
+| `fun Source.toUser(): User` (throws) | `fun Source.toUserResult(): Result<User>` | `fun Source.toUser(): User` (throws) again — `toUserResult()` is now opt-in |
 
-Mechanical migration — old throwing behavior is one call away:
-
-```kotlin
-// 1.x
-val user = response.toUser()
-
-// 2.0, same semantics:
-val user = response.toUserResult().getOrThrow()
-```
-
-…but the [Result boundary](../error-handling/mapping-exception.md) is the feature: prefer
-`getOrElse`/`fold` at real call sites.
+If you're moving straight from 1.x to the current 3.0.0, the good news is the generated
+signature is back to what it was: `response.toUser()` still throws on a hard failure, exactly
+like in 1.x. Prefer the `Result`-returning shape 2.0 introduced? Opt into it per mapping or
+module-wide with a [return wrapper](../basic-usage/return-wrappers.md)
+(`@MapTo(X::class, wrapper = KMapperWrapper.KtResult::class)`, or
+`KMapper { wrapper = KMapperWrapper.KtResult }` for the whole module) — see
+[Return Wrappers](../basic-usage/return-wrappers.md) and
+[Error Handling and MappingException](../error-handling/mapping-exception.md) for the current
+error-handling story.
 
 ## 3. Annotations
 

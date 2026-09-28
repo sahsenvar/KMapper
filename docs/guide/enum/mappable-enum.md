@@ -86,4 +86,4 @@ Ayrıntılar:
 - **Farklı değerler şart.** İki entry aynı wire değerine çözümlenirse derleme hatasıdır (decode
   belirsiz olurdu).
 
-> Sıradaki: **[Result Sınırı ve MappingException →](../hata-yonetimi/mapping-exception.md)**
+> Sıradaki: **[Hata Yönetimi ve MappingException →](../hata-yonetimi/mapping-exception.md)**

@@ -24,9 +24,9 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:2.2.2")
-    implementation("io.github.sahsenvar:kmapper-annotations:2.2.2")
-    ksp("io.github.sahsenvar:kmapper-compiler:2.2.2")
+    implementation("io.github.sahsenvar:kmapper-core:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")
+    ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")
 }
 ```
 
@@ -48,17 +48,17 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:2.2.2")
-            implementation("io.github.sahsenvar:kmapper-annotations:2.2.2")
+            implementation("io.github.sahsenvar:kmapper-core:3.0.0")
+            implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")
         }
     }
 }
 
 dependencies {
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:2.2.2")
-    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:2.2.2")
-    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:2.2.2")
-    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:2.2.2")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:3.0.0")
+    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:3.0.0")
+    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:3.0.0")
+    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:3.0.0")
 }
 
 // Make every compilation see the commonMain-generated sources:
@@ -74,25 +74,50 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 Each add-on is an independent KMP artifact; add only what your models use:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-converters-immutable:2.2.2") // PersistentList & co.
-implementation("io.github.sahsenvar:kmapper-converters-arrow:2.2.2")     // NonEmptyList, Option
-implementation("io.github.sahsenvar:kmapper-converters-datetime:2.2.2")  // java.time + bridges
-implementation("io.github.sahsenvar:kmapper-converters-bignumber:2.2.2") // BigDecimal/BigInteger
-implementation("io.github.sahsenvar:kmapper-converters-uuid:2.2.2")      // Uuid / java.util.UUID
-implementation("io.github.sahsenvar:kmapper-converters-okio:2.2.2")      // ByteString, Path
-implementation("io.github.sahsenvar:kmapper-converters-uri:2.2.2")       // URI / Uri / NSURL
-implementation("io.github.sahsenvar:kmapper-validators:2.2.2")           // Email, E.164, IP, …
+implementation("io.github.sahsenvar:kmapper-converters-immutable:3.0.0") // PersistentList & co.
+implementation("io.github.sahsenvar:kmapper-converters-arrow:3.0.0")     // NonEmptyList, Option
+implementation("io.github.sahsenvar:kmapper-converters-datetime:3.0.0")  // java.time + bridges
+implementation("io.github.sahsenvar:kmapper-converters-bignumber:3.0.0") // BigDecimal/BigInteger
+implementation("io.github.sahsenvar:kmapper-converters-uuid:3.0.0")      // Uuid / java.util.UUID
+implementation("io.github.sahsenvar:kmapper-converters-okio:3.0.0")      // ByteString, Path
+implementation("io.github.sahsenvar:kmapper-converters-uri:3.0.0")       // URI / Uri / NSURL
+implementation("io.github.sahsenvar:kmapper-validators:3.0.0")           // Email, E.164, IP, …
 ```
 
 kotlinx-datetime types (`LocalDate`, `Instant`, …) need no add-on — their `String`/`Long`
 converters are core built-ins, and `kmapper-core` brings kotlinx-datetime in as an API
-dependency.
+dependency. `kmapper-core` also brings in kotlinx-coroutines-core (`api`, for
+`KMapperWrapper.Flow` — see [Return Wrappers](../basic-usage/return-wrappers.md)).
+
+## Optional: the Gradle plugin
+
+If you want a module-wide [return wrapper](../basic-usage/return-wrappers.md) — e.g. every
+mapping in the module also gets `toXResult()` — without repeating `wrapper = …` on each
+`@MapTo`/`@MapFrom`, apply the plugin instead of (or alongside) the `ksp { arg(...) }` form:
+
+```kotlin
+// build.gradle.kts
+plugins {
+    id("io.github.sahsenvar.kmapper") version "3.0.0"
+}
+
+import com.sahsenvar.kmapper.gradle.KMapperWrapper
+
+KMapper {
+    wrapper = KMapperWrapper.KtResult // None (default) | KtResult | Flow | Custom("fqn")
+}
+```
+
+The plugin is `io.github.sahsenvar:kmapper-gradle-plugin`, resolved from Maven Central. It must
+be applied to a module that also applies the KSP plugin — it forwards its setting to the
+processor as the `kmapper.wrapper` option. Without the plugin, set that option directly:
+`ksp { arg("kmapper.wrapper", "KtResult") }`.
 
 ## Version compatibility
 
 | KMapper | Kotlin | KSP |
 |---------|--------|-----|
-| 2.x | 2.3+ | KSP2 (`2.3.x-2.x`) |
+| 3.x | 2.3+ | KSP2 (`2.3.x-2.x`) |
 
 In multi-module projects only modules that *declare* mappings need the compiler; modules that
 merely call generated functions need just the runtime. Details:

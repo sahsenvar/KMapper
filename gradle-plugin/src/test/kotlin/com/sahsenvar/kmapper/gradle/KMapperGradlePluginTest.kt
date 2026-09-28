@@ -12,8 +12,8 @@ import org.gradle.testfixtures.ProjectBuilder
 class KMapperGradlePluginTest :
     FunSpec({
 
+        // `also`, not `apply`: Project declares its own member `apply(...)` that would win.
         fun kotlinProjectWithKsp(): Project =
-            // `also`, not `apply`: Project declares its own member `apply(...)` that would win.
             ProjectBuilder.builder().build().also { project ->
                 project.pluginManager.apply("org.jetbrains.kotlin.jvm")
                 project.pluginManager.apply("com.google.devtools.ksp")
