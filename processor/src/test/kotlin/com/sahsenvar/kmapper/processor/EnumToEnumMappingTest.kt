@@ -89,9 +89,9 @@ class EnumToEnumMappingTest {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
         val mapped =
-            result.invokeResultMapper(
+            result.invokeMapperCatching(
                 "OrderRemoteMappersKt",
-                "toOrderDomainResult",
+                "toOrderDomain",
                 result.newInstance("OrderRemote", result.enumValue("SourceStatus", "SHIPPED")),
             ).getOrThrow()
         assertEquals("SHIPPED", mapped!!.prop("status").toString())
@@ -118,17 +118,17 @@ class EnumToEnumMappingTest {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
         val nullResult =
-            result.invokeResultMapper(
+            result.invokeMapperCatching(
                 "OrderRemoteMappersKt",
-                "toOrderDomainResult",
+                "toOrderDomain",
                 result.newInstance("OrderRemote", null),
             ).getOrThrow()
         assertEquals(null, nullResult!!.prop("status"))
 
         val valueResult =
-            result.invokeResultMapper(
+            result.invokeMapperCatching(
                 "OrderRemoteMappersKt",
-                "toOrderDomainResult",
+                "toOrderDomain",
                 result.newInstance("OrderRemote", result.enumValue("SourceStatus", "PENDING")),
             ).getOrThrow()
         assertEquals("PENDING", valueResult!!.prop("status").toString())

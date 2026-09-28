@@ -548,7 +548,7 @@ class ConverterResolutionTest :
                 then("the strict nullable seam carries the nested sub-mapper lambda") {
                     val generated = okAndReadGenerated(source, "ContactDataModelMappers.kt")
                     generated shouldContain "convertOrNullStrict(\"address\", \"AddressDataModel\", \"AddressDomainModel\")"
-                    generated shouldContain "toAddressDomainModelResult().getOrThrow()"
+                    generated shouldContain "toAddressDomainModel()"
                 }
             }
         }
@@ -590,9 +590,9 @@ class ConverterResolutionTest :
             `when`("an unknown wire value arrives at runtime") {
                 then("the hard failure carries the target field path") {
                     val outcome =
-                        result.invokeResultMapper(
+                        result.invokeMapperCatching(
                             "AccountDataModelMappersKt",
-                            "toAccountDomainModelResult",
+                            "toAccountDomainModel",
                             result.newInstance("AccountDataModel", "frozen"),
                         )
                     outcome.isFailure.shouldBeTrue()

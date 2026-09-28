@@ -81,9 +81,9 @@ class MapValuesMappingTest {
         assert(gen.contains("convertEntriesOrSkip(\"items\", \"kotlin.String\", \"kotlin.String\", \"ValueR\", \"ValueD\"")) {
             "Expected convertEntriesOrSkip with key/value FQN pairs in generated code:\n$gen"
         }
-        // Must call the value mapper through the Result boundary
-        assert(gen.contains("toValueDResult().getOrThrow()")) {
-            "Expected toValueDResult().getOrThrow() call inside the entry seam:\n$gen"
+        // Must call the plain core value mapper directly (no Result boundary, no getOrThrow)
+        assert(gen.contains("toValueD()")) {
+            "Expected toValueD() call inside the entry seam:\n$gen"
         }
     }
 
@@ -110,7 +110,7 @@ class MapValuesMappingTest {
                 .first { it.parameterCount == 1 }
                 .newInstance(inputMap)
 
-        val domain = result.invokeResultMapper("ContainerRMappersKt", "toContainerDResult", instance).getOrThrow()!!
+        val domain = result.invokeMapperCatching("ContainerRMappersKt", "toContainerD", instance).getOrThrow()!!
 
         @Suppress("UNCHECKED_CAST")
         val resultMap = domain.prop("items") as Map<String, Any>
@@ -143,7 +143,7 @@ class MapValuesMappingTest {
         val inputMap = mapOf("x" to "foo", "y" to "bar")
         val instance = result.newInstance("BagR", inputMap)
 
-        val domain = result.invokeResultMapper("BagRMappersKt", "toBagDResult", instance).getOrThrow()!!
+        val domain = result.invokeMapperCatching("BagRMappersKt", "toBagD", instance).getOrThrow()!!
 
         @Suppress("UNCHECKED_CAST")
         val resultMap = domain.prop("tags") as Map<String, String>
@@ -167,13 +167,13 @@ class MapValuesMappingTest {
     }
 
     @Test
-    fun `nullable map source null fails with RequiredFieldMissing at the Result boundary`() {
+    fun `nullable map source null fails with RequiredFieldMissing`() {
         val (result, _) = compile(nullableValueSrc)
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
         val instance = result.newInstance("BoxR", null as Any?)
 
-        val outcome = result.invokeResultMapper("BoxRMappersKt", "toBoxDResult", instance)
+        val outcome = result.invokeMapperCatching("BoxRMappersKt", "toBoxD", instance)
         assert(outcome.isFailure) { "Expected Result.failure for absent required map" }
         val ex = outcome.exceptionOrNull()!!
         assert(ex.javaClass.name.contains("RequiredFieldMissing")) {
@@ -192,7 +192,7 @@ class MapValuesMappingTest {
 
         val instance = result.newInstance("BoxR", inputMap as Any?)
 
-        val domain = result.invokeResultMapper("BoxRMappersKt", "toBoxDResult", instance).getOrThrow()!!
+        val domain = result.invokeMapperCatching("BoxRMappersKt", "toBoxD", instance).getOrThrow()!!
 
         @Suppress("UNCHECKED_CAST")
         val resultMap = domain.prop("m") as Map<String, Any>
@@ -259,8 +259,8 @@ class MapValuesMappingTest {
         assert(gen.contains("convertEachOrSkip(\"items\"")) {
             "Expected convertEachOrSkip in list mapping:\n$gen"
         }
-        assert(gen.contains("toItemDResult().getOrThrow()")) {
-            "Expected toItemDResult().getOrThrow() in list mapping:\n$gen"
+        assert(gen.contains("toItemD()")) {
+            "Expected toItemD() in list mapping:\n$gen"
         }
     }
 }

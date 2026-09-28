@@ -76,7 +76,7 @@ class EnumCollectionMappingTest :
                     withRecordingListener { listener ->
                         val domainModel =
                             compilationResult
-                                .invokeResultMapper("OrderDataModelMappersKt", "toOrderDomainModelResult", dataModel)
+                                .invokeMapperCatching("OrderDataModelMappersKt", "toOrderDomainModel", dataModel)
                                 .getOrThrow()
                         checkNotNull(domainModel)
                         val statuses = (domainModel.prop("statuses") as Iterable<*>).toList()
