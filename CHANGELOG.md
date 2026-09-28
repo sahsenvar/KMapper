@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-09-28
+
+### Changed — BREAKING
+
+- **Generated mappers now return the plain value by default.** Every `@MapTo`/`@MapFrom` mapping
+  generates `fun Source.toX(): X`, which throws a `MappingException` on a hard failure. The former
+  `fun Source.toXResult(): Result<X>` is no longer generated unless you opt in (see *Added*).
+  Nested mappings call the nested plain core (`it.toInner()`), so the `.getOrThrow()` hops are gone.
+
+  Migration, pick one:
+  - Call the new name: `dto.toUserResult().getOrThrow()` → `dto.toUser()`, and
+    `dto.toUserResult()` → `runCatching { dto.toUser() }`.
+  - Keep the old API module-wide: apply the Gradle plugin and set
+    `KMapper { wrapper = KMapperWrapper.KtResult }`, or without the plugin set
+    `ksp { arg("kmapper.wrapper", "KtResult") }`. `toXResult()` is then generated next to `toX()`.
+- `kmapper-core` now depends on `kotlinx-coroutines-core` (`api`, 1.10.2) for `KMapperWrapper.Flow`.
+
+### Added
+
+- **Return wrappers — `@MapTo(X::class, wrapper = …)` / `@MapFrom(X::class, wrapper = …)`.**
+  A wrapper adds extensions on top of the plain core, which is always generated:
+  - `KMapperWrapper.Default` (default): use the module-wide setting, else `None`.
+  - `KMapperWrapper.None`: only `toX(): X`.
+  - `KMapperWrapper.KtResult`: also `toXResult(): Result<X>`.
+  - `KMapperWrapper.Flow`: also `Source.toXFlow(): Flow<X>` (cold, single value) and
+    `Flow<Source>.toXFlow(): Flow<X>` (maps every element).
+- **User-written wrappers, with the same power as the built-ins.** An `object` implementing
+  `KMapperWrapper`, annotated `@WrapperSuffix("Outcome")`, whose `wrap` overloads have the shape
+  `fun <S, T> wrap(source: R<S>, map: (S) -> T): W<T>`. Each overload generates one
+  `R<Source>.toXOutcome(): W<X>`. `KtResult` and `Flow` are written the same way; there is no
+  privileged mechanism.
+- **Gradle plugin `io.github.sahsenvar.kmapper`** (`io.github.sahsenvar:kmapper-gradle-plugin`),
+  with `KMapper { wrapper = KMapperWrapper.None | KtResult | Flow | Custom("fqn") }`. It sets the
+  module-wide wrapper through the KSP option `kmapper.wrapper`.
+
+### Fixed
+
+- `processor/api/processor.api` was stale after the #44/#37 fixes, which broke `apiCheck` on `main`.
+- Regression coverage for [#59](https://github.com/sahsenvar/KMapper/issues/59). The fixes for
+  [#44](https://github.com/sahsenvar/KMapper/issues/44) and
+  [#37](https://github.com/sahsenvar/KMapper/issues/37) ship in this release for the first time:
+  - a registered `@KMapperConfig` converter now wins over the implicit nested mapper, including for
+    a pair that is also natively `@MapFrom`/`@MapTo`-bound;
+  - a cross-package nested mapper call is imported, including the nullable `convertOrElse` path;
+  - `Enum → Enum` fields map by constant name.
+
 ## [2.2.2] - 2026-06-18
 
 ### Fixed
@@ -243,7 +289,8 @@ Migration guide: [docs/guide-en/reference/migration-1x.md](docs/guide-en/referen
 
 ---
 
-[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v2.2.2...HEAD
+[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/sahsenvar/KMapper/compare/v2.2.2...v3.0.0
 [2.2.2]: https://github.com/sahsenvar/KMapper/compare/v2.2.1...v2.2.2
 [2.2.1]: https://github.com/sahsenvar/KMapper/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/sahsenvar/KMapper/compare/v2.1.0...v2.2.0

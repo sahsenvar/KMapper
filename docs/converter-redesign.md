@@ -19,7 +19,9 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
 2. **Visibility principle.** A behavior deviation must be readable where the behavior is read:
    on the field (type, default, annotation) or at the call-site (`Result` handling). **No global
    behavior switches** (`@KMapperConfig` gets no `onFail` — permanently rejected). The
-   degradation sink is not an exception: it globalizes *observation*, not behavior.
+   degradation sink is not an exception: it globalizes *observation*, not behavior. Nor is the
+   module-wide return wrapper (3.0.0, see F.18): it picks which *extra* function signatures are
+   generated. It never changes mapping behavior, which lives in the always-generated plain core.
 3. **Fallback ladder** (the default behavior):
    `converted value > declared default > the type's absence form (null | not-a-member) > error`.
    Absence and brokenness merge at the outcome level; they differ only in the error type at the
@@ -28,9 +30,11 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
    declared-absence flows are silent. Reported: broken→skip/null/default, null-element→skip,
    duplicate-key overwrite, set convergence dedup. Silent: null→null pass-through,
    absent→default, sanctioned null.
-5. **Loud field / contained boundary.** Field errors are born typed and path-carrying; at the
-   mapper boundary everything is a *value* (`Result` / `IorNel`). The library itself never
-   throws at the caller — `.getOrThrow()` is the caller's explicit choice.
+5. **Loud field / chosen boundary.** Field errors are born typed and path-carrying. **Revised in
+   3.0.0 (owner decision):** the default boundary is the plain core `toX(): X`, which throws the
+   typed `MappingException`. A *value* boundary is opt-in through a return wrapper
+   (`KMapperWrapper.KtResult` → `Result`, `Flow`, or a user wrapper; see F.18). Before 3.0.0, the
+   library never threw at the caller.
 
 ## A2) Artifacts & module boundaries
 
@@ -206,7 +210,17 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
 
 ## F) Boundary API + sink
 
-18. Generated per direction: core **`toXResult(): Result<X>`** (fail-fast on the first hard
+18. Generated per direction: the plain core **`toX(): X`** (fail-fast; throws the first hard
+    error), ALWAYS. Since 3.0.0 **return wrappers** layer extra signatures on top, per mapping via
+    `@MapTo/@MapFrom(wrapper = …)`. `KMapperWrapper.Default` defers to the module-wide
+    KSP option `kmapper.wrapper` (set by the Gradle plugin's `KMapper { wrapper = … }`), else
+    `None`. Built-ins: `KtResult` → `toXResult(): Result<X>` (the pre-3.0 surface), and `Flow` →
+    `Source.toXFlow()` plus `Flow<Source>.toXFlow()`. Parity: a wrapper is any
+    `@WrapperSuffix` object with `fun <S, T> wrap(source: R<S>, map: (S) -> T): W<T>` overloads.
+    The built-ins use exactly that, and each overload generates
+    `R<Source>.to{X}{suffix}(): W<X> = Wrapper.wrap<…>(this) { it.toX() }`. Nested mappings always
+    call the plain core, so wrappers never affect composition or need cross-module metadata.
+    Pre-3.0 text follows. Core **`toXResult(): Result<X>`** (fail-fast on the first hard
     error) — IMPLEMENTED. The arrow add-on **`toXAccumulated(): IorNel<MappingError, X>`**
     (`Right` = clean, `Both` = partial value + all degradations, `Left` = hard failure with all
     collected errors) is **PARKED (§J)** — designed and locked, not yet built; `converters-arrow`

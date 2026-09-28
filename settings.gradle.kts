@@ -18,6 +18,7 @@ include(
     ":core",
     ":annotations",
     ":processor",
+    ":gradle-plugin",
     ":converters-immutable",
     ":converters-arrow",
     ":converters-datetime",
