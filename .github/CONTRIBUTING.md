@@ -37,7 +37,7 @@ All modules share a single `gradle/libs.versions.toml` version catalog.
 
 ### Prerequisites
 
-- JDK 17+
+- JDK 21+
 - Android SDK (set `ANDROID_HOME` or `local.properties`)
 - Gradle wrapper included — no separate install needed
 
