@@ -54,9 +54,22 @@ in.
 
 ## The placement rule (worth memorizing)
 
-Directives are read from the **source field of the direction being generated**. With
-`@MapTo` on the wire model, annotate the *wire* field — an annotation on the domain side is
-invisible to that direction. (Anchored-to-the-field `@Validate` is the deliberate exception:
-it fires whichever side of a mapping its field is on.)
+Directives are read from the **class that declares the mapping** — the class carrying
+`@MapTo` or `@MapFrom`. With `@MapTo` on the wire model, annotate the *wire* field (the
+source); with `@MapFrom` on a UI model, annotate the *UI model's* field (the target), so the
+source — often a domain class from another module — never needs annotating:
+
+```kotlin
+@MapFrom(OptionStatsModel::class)            // OptionStatsModel lives in core:domain
+data class OptionStatsUiModel(
+    @ConvertFrom(use = PriceTextConverter::class) val mark: String,
+    @ConvertFrom(use = PercentTextConverter::class) val iv: String,
+)
+```
+
+In the `@MapFrom` direction a directive on the source field still works as a fallback; if
+both sides carry one, the target's wins and the build warns. In the `@MapTo` direction an
+annotation on the target class is invisible. (Anchored-to-the-field `@Validate` is the
+deliberate exception: it fires whichever side of a mapping its field is on.)
 
 > Next: **[Immutable Collections →](immutable.md)**

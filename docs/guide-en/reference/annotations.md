@@ -30,8 +30,8 @@ All annotations live in `com.sahsenvar.kmapper.annotations` (`kmapper-annotation
 
 → [Field Mapping](../basic-usage/field-mapping.md)
 
-Placement rule: field directives are read from the **source field of the generated
-direction** ([details](../type-conversion/convert-with.md#the-placement-rule-worth-memorizing)).
+Placement rule: field directives are read from the **class that declares the mapping**
+([details](../type-conversion/convert-with.md#the-placement-rule-worth-memorizing)).
 
 ## Conversion control
 

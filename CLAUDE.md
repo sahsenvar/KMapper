@@ -26,7 +26,9 @@ When adding a feature, ask: *can a user achieve the same thing with their own ty
 ## Converter resolution & error behavior (quick reference)
 
 Per-field `@ConvertWith(use, onFail)` is **override-only** (two independent axes; direction-scoped
-`@ConvertTo`/`@ConvertFrom` beat it in their own direction). Auto-discovery (built-in registry +
+`@ConvertTo`/`@ConvertFrom` beat it in their own direction). Directives are **owner-anchored**: read
+from the class declaring the mapping (source for `@MapTo`, target for `@MapFrom`; `@MapFrom` falls back
+to the source field — #82). Auto-discovery (built-in registry +
 `@KMapperConfig`) finds converters by type pair without any annotation. A needed-but-unsupported
 direction → compile-time `UnsupportedConversion` (with the `@UnsupportedDirection` reason if present,
 else generic); a pair with no converter at all → compile-time `MissingConverter`.

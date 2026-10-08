@@ -53,9 +53,22 @@ farklı muamele görmesi gerektiğinde. `@ConvertWith`, alanın katıldığı b�
 
 ## Yerleşim kuralı (ezberlemeye değer)
 
-Direktifler, **üretilen yönün kaynak alanından** okunur. `@MapTo` wire modelindeyse
-*wire* alanını işaretleyin — domain tarafındaki annotation o yön için görünmezdir.
-(Alana çapalanan `@Validate` bilinçli istisnadır: alanı mapping'in hangi tarafındaysa orada
-ateşler.)
+Direktifler, **mapping'i bildiren sınıftan** — `@MapTo` ya da `@MapFrom` taşıyan sınıftan —
+okunur. `@MapTo` wire modelindeyse *wire* alanını (kaynak) işaretleyin; `@MapFrom` bir UI
+modelindeyse *UI modelinin* alanını (hedef) işaretleyin. Böylece çoğu zaman başka bir modüldeki
+domain sınıfı olan kaynağa hiç dokunmanız gerekmez:
+
+```kotlin
+@MapFrom(OptionStatsModel::class)            // OptionStatsModel core:domain'de
+data class OptionStatsUiModel(
+    @ConvertFrom(use = PriceTextConverter::class) val mark: String,
+    @ConvertFrom(use = PercentTextConverter::class) val iv: String,
+)
+```
+
+`@MapFrom` yönünde kaynak alandaki direktif yedek olarak çalışmaya devam eder; iki tarafta da
+varsa hedefinki kazanır ve derleme uyarı verir. `@MapTo` yönünde hedef sınıftaki annotation
+görünmezdir. (Alana çapalanan `@Validate` bilinçli istisnadır: alanı mapping'in hangi
+tarafındaysa orada ateşler.)
 
 > Sıradaki: **[Immutable Koleksiyonlar →](immutable.md)**

@@ -5,6 +5,7 @@ import com.google.devtools.ksp.symbol.KSType
 import com.sahsenvar.kmapper.processor.model.FieldInfo
 import com.sahsenvar.kmapper.processor.model.MappingStrategy
 import com.sahsenvar.kmapper.processor.model.OnFailPolicy
+import com.sahsenvar.kmapper.processor.model.effectiveOnFail
 import com.sahsenvar.kmapper.processor.model.isStdlibSetContainer
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
@@ -55,7 +56,7 @@ class MappingCodeGenerator(
                 targetField.isNullable -> LandingShape.NULLABLE
                 else -> LandingShape.HARD
             }
-        val onFail = sourceField.onFailFor(isReverse)
+        val onFail = effectiveOnFail(sourceField, targetField, isReverse)
 
         val baseMapping =
             when (strategy) {

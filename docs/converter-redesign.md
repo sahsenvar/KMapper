@@ -92,6 +92,10 @@ converter-subsystem redesign. It supersedes every earlier draft of this note.
    optional) and `onFail` (policy). `@ConvertWith(onFail = …)` without `use` is legitimate.
 10. **Direction-scoped annotations** `@ConvertTo(use, onFail)` / `@ConvertFrom(use, onFail)`
     override `@ConvertWith` in their own direction.
+    **Owner-anchored lookup (#82):** a pairing's directive is read from the class that declares
+    the mapping first — the source for `@MapTo`, the target for `@MapFrom` (whose source is often
+    a foreign, non-annotatable class). In the `@MapFrom` direction the source field is a fallback;
+    a directive is taken whole, and directives on both sides warn (target wins).
 
 ## C) Error model
 

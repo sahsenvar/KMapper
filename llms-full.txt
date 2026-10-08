@@ -1313,10 +1313,23 @@ in.
 
 ## The placement rule (worth memorizing)
 
-Directives are read from the **source field of the direction being generated**. With
-`@MapTo` on the wire model, annotate the *wire* field — an annotation on the domain side is
-invisible to that direction. (Anchored-to-the-field `@Validate` is the deliberate exception:
-it fires whichever side of a mapping its field is on.)
+Directives are read from the **class that declares the mapping** — the class carrying
+`@MapTo` or `@MapFrom`. With `@MapTo` on the wire model, annotate the *wire* field (the
+source); with `@MapFrom` on a UI model, annotate the *UI model's* field (the target), so the
+source — often a domain class from another module — never needs annotating:
+
+```kotlin
+@MapFrom(OptionStatsModel::class)            // OptionStatsModel lives in core:domain
+data class OptionStatsUiModel(
+    @ConvertFrom(use = PriceTextConverter::class) val mark: String,
+    @ConvertFrom(use = PercentTextConverter::class) val iv: String,
+)
+```
+
+In the `@MapFrom` direction a directive on the source field still works as a fallback; if
+both sides carry one, the target's wins and the build warns. In the `@MapTo` direction an
+annotation on the target class is invisible. (Anchored-to-the-field `@Validate` is the
+deliberate exception: it fires whichever side of a mapping its field is on.)
 
 > Next: **[Immutable Collections →](immutable.md)**
 
@@ -2293,8 +2306,8 @@ All annotations live in `com.sahsenvar.kmapper.annotations` (`kmapper-annotation
 
 → [Field Mapping](../basic-usage/field-mapping.md)
 
-Placement rule: field directives are read from the **source field of the generated
-direction** ([details](../type-conversion/convert-with.md#the-placement-rule-worth-memorizing)).
+Placement rule: field directives are read from the **class that declares the mapping**
+([details](../type-conversion/convert-with.md#the-placement-rule-worth-memorizing)).
 
 ## Conversion control
 
@@ -2556,8 +2569,9 @@ constant and is rename-proof.
 
 ## My `@ConvertWith` annotation seems ignored. Why?
 
-Field directives are read from the **source side of the generated direction** — with
-`@MapTo` on the wire model, annotate the wire field, not the domain field.
+Field directives are read from the **class that declares the mapping** — with `@MapTo` on
+the wire model, annotate the wire field, not the domain field; with `@MapFrom`, annotate the
+`@MapFrom` class's own field.
 [The placement rule](../type-conversion/convert-with.md#the-placement-rule-worth-memorizing).
 
 ## Can I use KMapper without code generation?

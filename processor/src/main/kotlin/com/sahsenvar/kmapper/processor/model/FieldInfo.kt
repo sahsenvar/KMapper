@@ -55,13 +55,38 @@ data class FieldInfo(
     /** The only default flag mapping decisions may consult (omit/copy, external params). */
     val usesDefaultInMapping: Boolean get() = hasDefault && !ignoreDefaultValue
 
-    /** Effective directive for the requested direction (direction-scoped beats bilateral). */
+    /**
+     * This field's own directive for the requested direction (direction-scoped beats bilateral).
+     * Mapping decisions use [effectiveDirective], which also decides WHICH side's field is asked.
+     */
     fun directiveFor(isReverse: Boolean): ConverterDirective? = if (isReverse) {
         convertFromDirective ?: convertWith
     } else {
         convertToDirective ?: convertWith
     }
-
-    /** Effective onFail policy for the requested direction; [OnFailPolicy.Auto] when no directive applies. */
-    fun onFailFor(isReverse: Boolean): OnFailPolicy = directiveFor(isReverse)?.onFail ?: OnFailPolicy.Auto
 }
+
+/**
+ * The directive governing one (source, target) field pairing — owner-anchored: the class that
+ * declares the mapping is asked first. That is the source in the forward (@MapTo) direction and
+ * the TARGET in the reverse (@MapFrom) direction, whose source is typically a foreign class the
+ * user cannot annotate (issue #82). In the reverse direction the source field stays a fallback,
+ * so directives placed there keep working. A directive is taken whole (use + onFail together),
+ * never merged across the two sides.
+ */
+fun effectiveDirective(
+    sourceField: FieldInfo,
+    targetField: FieldInfo,
+    isReverse: Boolean,
+): ConverterDirective? = if (isReverse) {
+    targetField.directiveFor(isReverse = true) ?: sourceField.directiveFor(isReverse = true)
+} else {
+    sourceField.directiveFor(isReverse = false)
+}
+
+/** Effective onFail policy for the pairing; [OnFailPolicy.Auto] when no directive applies. */
+fun effectiveOnFail(
+    sourceField: FieldInfo,
+    targetField: FieldInfo,
+    isReverse: Boolean,
+): OnFailPolicy = effectiveDirective(sourceField, targetField, isReverse)?.onFail ?: OnFailPolicy.Auto
