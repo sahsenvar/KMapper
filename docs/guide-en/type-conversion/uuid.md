@@ -6,7 +6,7 @@ Converters for `kotlin.uuid.Uuid` (KMP) and `java.util.UUID` (JVM/Android).
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-uuid:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-uuid:3.0.1")
 }
 ```
 

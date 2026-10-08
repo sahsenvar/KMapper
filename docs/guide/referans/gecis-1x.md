@@ -18,9 +18,9 @@ Annotation **import'ları değişmedi** (`com.sahsenvar.kmapper.annotations.*`) 
 bağımlılığı eklersiniz:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-core:3.0.0")
-implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")  // yeni
-ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")                // yeniden adlandı
+implementation("io.github.sahsenvar:kmapper-core:3.0.1")
+implementation("io.github.sahsenvar:kmapper-annotations:3.0.1")  // yeni
+ksp("io.github.sahsenvar:kmapper-compiler:3.0.1")                // yeniden adlandı
 ```
 
 ## 2. Üretilen API: `toX()` → `toXResult()` (2.0), yeniden `toX()` (3.0.0)
@@ -29,7 +29,7 @@ ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")                // yeniden adla
 |-----|-----|-------|
 | `fun Source.toUser(): User` (fırlatır) | `fun Source.toUserResult(): Result<User>` | yeniden `fun Source.toUser(): User` (fırlatır) — `toUserResult()` artık isteğe bağlı |
 
-1.x'ten doğrudan güncel 3.0.0'a geçiyorsanız iyi haber şu: üretilen imza eskisi gibi —
+1.x'ten doğrudan güncel 3.x'e geçiyorsanız iyi haber şu: üretilen imza eskisi gibi —
 `response.toUser()` yine sert hatada fırlatır, tıpkı 1.x'teki gibi. 2.0'ın getirdiği
 `Result` dönen şekli mi tercih ediyorsunuz? Mapping bazında ya da modül genelinde bir
 [dönüş sarmalayıcısı](../temel-kullanim/donus-sarmalayicilari.md) ile katılın

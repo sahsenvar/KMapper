@@ -18,9 +18,9 @@ Annotation **imports are unchanged** (`com.sahsenvar.kmapper.annotations.*`) —
 the new dependency:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-core:3.0.0")
-implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")  // new
-ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")                // renamed
+implementation("io.github.sahsenvar:kmapper-core:3.0.1")
+implementation("io.github.sahsenvar:kmapper-annotations:3.0.1")  // new
+ksp("io.github.sahsenvar:kmapper-compiler:3.0.1")                // renamed
 ```
 
 ## 2. The generated API: `toX()` → `toXResult()` (2.0), back to `toX()` (3.0.0)
@@ -29,7 +29,7 @@ ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")                // renamed
 |-----|-----|-------|
 | `fun Source.toUser(): User` (throws) | `fun Source.toUserResult(): Result<User>` | `fun Source.toUser(): User` (throws) again — `toUserResult()` is now opt-in |
 
-If you're moving straight from 1.x to the current 3.0.0, the good news is the generated
+If you're moving straight from 1.x to the current 3.x, the good news is the generated
 signature is back to what it was: `response.toUser()` still throws on a hard failure, exactly
 like in 1.x. Prefer the `Result`-returning shape 2.0 introduced? Opt into it per mapping or
 module-wide with a [return wrapper](../basic-usage/return-wrappers.md)

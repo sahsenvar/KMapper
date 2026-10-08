@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-10-08
+
 ### Fixed
 
 - **`@MapFrom` now reads per-field converter directives from the target class** (#82).
@@ -20,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Behavior change: a class declaring both `@MapTo` and `@MapFrom` with `@ConvertWith(use = …)` or
   `@ConvertWith(onFail = …)` on its fields now applies it in the `@MapFrom` direction too, as
   documented ("both directions"). Before, that direction used auto-discovery and `OnFail.Auto`.
+- **Docs:** the annotation reference and the `@ConvertWith` page listed `@ConvertTo` /
+  `@ConvertFrom` with a `target` / `source` parameter and as repeatable; they take only `use` and
+  `onFail` (#84). `llms.txt` / `llms-full.txt` are now generated from the guide only, and CI
+  fails when they drift.
 
 ## [3.0.0] - 2026-09-28
 
@@ -305,7 +311,8 @@ Migration guide: [docs/guide-en/reference/migration-1x.md](docs/guide-en/referen
 
 ---
 
-[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v3.0.1...HEAD
+[3.0.1]: https://github.com/sahsenvar/KMapper/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/sahsenvar/KMapper/compare/v2.2.2...v3.0.0
 [2.2.2]: https://github.com/sahsenvar/KMapper/compare/v2.2.1...v2.2.2
 [2.2.1]: https://github.com/sahsenvar/KMapper/compare/v2.2.0...v2.2.1
