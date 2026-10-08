@@ -119,25 +119,25 @@ class ReverseDirectiveAnchoringTest :
                     @MapTo(ScoreDomainModel::class)
                     @MapFrom(ScoreDomainModel::class)
                     data class ScoreDataModel(
-                        @ConvertTo(onFail = OnFail.Throw) @ConvertFrom(onFail = OnFail.Auto) val score: String?,
+                        @ConvertTo(onFail = OnFail.Auto) @ConvertFrom(onFail = OnFail.Throw) val score: String?,
                     )
                     """.trimIndent(),
                 )
             val (result, compilation) = compile(source)
 
             `when`("the forward (@MapTo) function is generated") {
-                then("the outgoing @ConvertTo(onFail = Throw) emits the strict seam") {
+                then("the @ConvertTo(onFail = Auto) governs — the Auto seam is emitted") {
                     result.exitCode shouldBe KotlinCompilation.ExitCode.OK
                     val generated = compilation.generatedFile("ScoreDataModelMappers.kt")
-                    generated shouldContain "convertOrNullStrict(\"score\", \"kotlin.String\", \"kotlin.Int\")"
+                    generated shouldContain "convertOrNull(\"score\", \"kotlin.String\", \"kotlin.Int\")"
+                    generated shouldNotContain "convertOrNullStrict"
                 }
             }
 
             `when`("the reverse (@MapFrom) function is generated") {
-                then("the @ConvertFrom on the same class governs — the Auto seam is emitted") {
+                then("the @ConvertFrom(onFail = Throw) on the same class governs — the strict seam is emitted") {
                     val generated = compilation.generatedFile("ScoreDomainModelMappers.kt")
-                    generated shouldContain "convertOrNull(\"score\", \"kotlin.Int\", \"kotlin.String\")"
-                    generated shouldNotContain "convertOrNullStrict"
+                    generated shouldContain "convertOrNullStrict(\"score\", \"kotlin.Int\", \"kotlin.String\")"
                 }
             }
         }
