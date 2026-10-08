@@ -23,11 +23,14 @@ BLOB_BASE = "https://github.com/sahsenvar/KMapper/blob/main/docs/guide-en"
 
 HEADER_SUMMARY = (
     "KMapper is a compile-time object mapping library for Kotlin Multiplatform (KSP, no "
-    "reflection). Generated mappers return Result<T> with path-carrying typed errors; a "
-    "fallback ladder (value > constructor default > null > error) contains bad wire data "
-    "while reporting every absorbed error to an observability sink; lossy conversions are "
-    "refused at compile time. Maven coordinates: io.github.sahsenvar:kmapper-core / "
-    "kmapper-annotations / kmapper-compiler (+ converter/validator add-ons)."
+    "reflection). Generated mappers are plain `fun Source.toX(): X`, throwing a path-carrying "
+    "typed `MappingException` on a hard failure; `@MapTo`/`@MapFrom(wrapper = …)` (per mapping) "
+    "or the optional Gradle plugin / KSP option (module-wide) add opt-in return wrappers on top "
+    "— `toXResult(): Result<X>`, `toXFlow(): Flow<X>`, or a user-written one. A fallback ladder "
+    "(value > constructor default > null > error) contains bad wire data while reporting every "
+    "absorbed error to an observability sink; lossy conversions are refused at compile time. "
+    "Maven coordinates: io.github.sahsenvar:kmapper-core / kmapper-annotations / "
+    "kmapper-compiler / kmapper-gradle-plugin (+ converter/validator add-ons)."
 )
 
 LINK_RE = re.compile(r"^\*\s+\[([^\]]+)\]\(([^)]+)\)\s*$")

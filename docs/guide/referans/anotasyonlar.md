@@ -39,8 +39,8 @@ Yerleşim kuralı: alan direktifleri **mapping'i bildiren sınıftan** okunur
 | Annotation | Hedef | Amaç |
 |------------|-------|------|
 | `@ConvertWith(use, onFail)` | property | alan bazlı converter override'ı ve/veya hata politikası |
-| `@ConvertTo(target, use, onFail)` | property (tekrarlanabilir) | tek mapping yönüne daraltılmış `@ConvertWith` |
-| `@ConvertFrom(source, use, onFail)` | property (tekrarlanabilir) | ters yönde daraltma |
+| `@ConvertTo(use, onFail)` | property | `@MapTo` (ileri) yönüne daraltılmış `@ConvertWith` |
+| `@ConvertFrom(use, onFail)` | property | `@MapFrom` (ters) yönüne daraltılmış `@ConvertWith` |
 | `OnFail` (enum) | — | `Auto` (ladder), `Throw` (asla emme), `Skip` (koleksiyonları sıkıştır) |
 
 → [@ConvertWith ve OnFail](../tip-donusumu/convert-with.md)
