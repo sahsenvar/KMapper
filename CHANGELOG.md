@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`@MapFrom` now reads per-field converter directives from the target class** (#82).
+  `@ConvertFrom` / `@ConvertWith` on a `@MapFrom` target field were silently ignored; only the
+  source class's fields were consulted, although the source of a `@MapFrom` is usually a class you
+  cannot annotate. Directives are now owner-anchored: the class declaring the mapping is asked
+  first (the source for `@MapTo`, the target for `@MapFrom`), and in the `@MapFrom` direction the
+  source field remains a fallback. Both the converter (`use`) and the policy (`onFail`) follow
+  this rule. Directives on both sides → the target wins, with a compile-time warning.
+
+  Behavior change: a class declaring both `@MapTo` and `@MapFrom` with `@ConvertWith(use = …)` or
+  `@ConvertWith(onFail = …)` on its fields now applies it in the `@MapFrom` direction too, as
+  documented ("both directions"). Before, that direction used auto-discovery and `OnFail.Auto`.
+
 ## [3.0.0] - 2026-09-28
 
 ### Changed — BREAKING

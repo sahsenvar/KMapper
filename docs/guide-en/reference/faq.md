@@ -47,8 +47,9 @@ constant and is rename-proof.
 
 ## My `@ConvertWith` annotation seems ignored. Why?
 
-Field directives are read from the **source side of the generated direction** — with
-`@MapTo` on the wire model, annotate the wire field, not the domain field.
+Field directives are read from the **class that declares the mapping** — with `@MapTo` on
+the wire model, annotate the wire field, not the domain field; with `@MapFrom`, annotate the
+`@MapFrom` class's own field.
 [The placement rule](../type-conversion/convert-with.md#the-placement-rule-worth-memorizing).
 
 ## Can I use KMapper without code generation?

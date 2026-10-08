@@ -48,8 +48,9 @@ yeniden adlandırmaya dayanıklıdır.
 
 ## `@ConvertWith` annotation'ım yok sayılıyor gibi. Neden?
 
-Alan direktifleri **üretilen yönün kaynak tarafından** okunur — `@MapTo` wire modelindeyse
-wire alanını işaretleyin, domain alanını değil.
+Alan direktifleri **mapping'i bildiren sınıftan** okunur — `@MapTo` wire modelindeyse
+wire alanını işaretleyin, domain alanını değil; `@MapFrom` kullanıyorsanız `@MapFrom` taşıyan
+sınıfın kendi alanını işaretleyin.
 [Yerleşim kuralı](../tip-donusumu/convert-with.md).
 
 ## KMapper'ı kod üretimi olmadan kullanabilir miyim?

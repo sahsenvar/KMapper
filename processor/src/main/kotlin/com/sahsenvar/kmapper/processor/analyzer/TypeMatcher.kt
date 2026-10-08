@@ -9,6 +9,8 @@ import com.sahsenvar.kmapper.missingConverterMessage
 import com.sahsenvar.kmapper.processor.model.FieldInfo
 import com.sahsenvar.kmapper.processor.model.MappingStrategy
 import com.sahsenvar.kmapper.processor.model.OnFailPolicy
+import com.sahsenvar.kmapper.processor.model.effectiveDirective
+import com.sahsenvar.kmapper.processor.model.effectiveOnFail
 import com.sahsenvar.kmapper.processor.model.isStdlibListContainer
 import com.sahsenvar.kmapper.processor.model.isStdlibSetContainer
 import com.sahsenvar.kmapper.unsupportedConversionMessage
@@ -48,12 +50,25 @@ class TypeMatcher(
         // Precondition: OnFail.Skip only makes sense for collection-like targets (compaction).
         // A registered @CollectionWrapper target (e.g. Box<T>) is collection-like too — its
         // element conversion (incl. onFail) runs on the normal seam rails inside wrap().
-        val effectiveOnFail = sourceField.onFailFor(isReverse)
+        val onFail = effectiveOnFail(sourceField, targetField, isReverse)
+
+        // Reverse direction: the @MapFrom target (owner) beats the source wholesale. Directives on
+        // BOTH sides are legal but almost certainly unintended — name the one that is dropped.
+        if (isReverse &&
+            targetField.directiveFor(isReverse = true) != null &&
+            sourceField.directiveFor(isReverse = true) != null
+        ) {
+            logger.warn(
+                "${targetField.name}: converter directives on both the @MapFrom target field and the " +
+                    "source field '${sourceField.name}'; the target's directive wins and the source's is ignored.",
+            )
+        }
+
         val targetIsCollectionLike = isCollectionType(targetField.type) ||
             isMapType(targetField.type) ||
             targetField.type.declaration.qualifiedName
                 ?.asString() in collectionWrappers
-        if (effectiveOnFail == OnFailPolicy.Skip && !targetIsCollectionLike) {
+        if (onFail == OnFailPolicy.Skip && !targetIsCollectionLike) {
             logger.error(
                 "${sourceField.name}: OnFail.Skip applies to collection elements only; " +
                     "use OnFail.Throw or a nullable/defaulted target instead.",
@@ -67,7 +82,7 @@ class TypeMatcher(
         // whole-value conversion (field-level converter / nested mapper for the entire
         // container) — OnFail.Skip has no element scope there either. Rejecting here keeps
         // the scalar seam table Skip-free by construction (the generator asserts it).
-        if (effectiveOnFail == OnFailPolicy.Skip &&
+        if (onFail == OnFailPolicy.Skip &&
             (strategy is MappingStrategy.Convert || strategy is MappingStrategy.Nested)
         ) {
             logger.error(
@@ -130,7 +145,7 @@ class TypeMatcher(
         isReverse: Boolean,
     ): MappingStrategy {
         // 1. Per-field directive override (use=…); policy-only directives do NOT short-circuit discovery
-        val directive = sourceField.directiveFor(isReverse)
+        val directive = effectiveDirective(sourceField, targetField, isReverse)
         if (directive?.converterFqn != null) {
             return resolveConverter(directive.converterFqn, sourceField, targetField)
         }

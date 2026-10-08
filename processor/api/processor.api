@@ -229,8 +229,12 @@ public final class com/sahsenvar/kmapper/processor/model/FieldInfo {
 	public final fun isComputed ()Z
 	public final fun isIgnored ()Z
 	public final fun isNullable ()Z
-	public final fun onFailFor (Z)Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/sahsenvar/kmapper/processor/model/FieldInfoKt {
+	public static final fun effectiveDirective (Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Z)Lcom/sahsenvar/kmapper/processor/model/ConverterDirective;
+	public static final fun effectiveOnFail (Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Lcom/sahsenvar/kmapper/processor/model/FieldInfo;Z)Lcom/sahsenvar/kmapper/processor/model/OnFailPolicy;
 }
 
 public abstract class com/sahsenvar/kmapper/processor/model/MappingStrategy {

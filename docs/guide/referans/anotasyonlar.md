@@ -31,7 +31,7 @@ artifact'i).
 
 → [Alan Eşleme](../temel-kullanim/alan-eslestirme.md)
 
-Yerleşim kuralı: alan direktifleri **üretilen yönün kaynak alanından** okunur
+Yerleşim kuralı: alan direktifleri **mapping'i bildiren sınıftan** okunur
 ([ayrıntı](../tip-donusumu/convert-with.md)).
 
 ## Dönüşüm kontrolü
