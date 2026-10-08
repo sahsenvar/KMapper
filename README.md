@@ -65,9 +65,9 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:3.0.0")
-    implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")
-    ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-core:3.0.1")
+    implementation("io.github.sahsenvar:kmapper-annotations:3.0.1")
+    ksp("io.github.sahsenvar:kmapper-compiler:3.0.1")
 }
 ```
 
@@ -77,7 +77,7 @@ optional Gradle plugin:
 
 ```kotlin
 plugins {
-    id("io.github.sahsenvar.kmapper") version "3.0.0"
+    id("io.github.sahsenvar.kmapper") version "3.0.1"
 }
 
 import com.sahsenvar.kmapper.gradle.KMapperWrapper
@@ -109,7 +109,7 @@ Group `io.github.sahsenvar`:
 kotlinx-datetime (`LocalDate`, `Instant`, …) and `kotlin.time.Duration` converters are
 **core built-ins** — no add-on needed.
 
-**Latest release:** `3.0.0` (12 artifacts) — on
+**Latest release:** `3.0.1` (12 artifacts) — on
 [Maven Central](https://central.sonatype.com/artifact/io.github.sahsenvar/kmapper-core).
 3.0.0 is a breaking change: generated mappers now return the plain `toX()` by default
 (it throws on a hard failure) instead of `toXResult(): Result<X>` — see

@@ -117,9 +117,9 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-core:3.0.0")
-    implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")
-    ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-core:3.0.1")
+    implementation("io.github.sahsenvar:kmapper-annotations:3.0.1")
+    ksp("io.github.sahsenvar:kmapper-compiler:3.0.1")
 }
 ```
 
@@ -141,17 +141,17 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.sahsenvar:kmapper-core:3.0.0")
-            implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")
+            implementation("io.github.sahsenvar:kmapper-core:3.0.1")
+            implementation("io.github.sahsenvar:kmapper-annotations:3.0.1")
         }
     }
 }
 
 dependencies {
-    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:3.0.0")
-    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:3.0.0")
-    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:3.0.0")
-    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:3.0.0")
+    add("kspCommonMainMetadata", "io.github.sahsenvar:kmapper-compiler:3.0.1")
+    add("kspJvm", "io.github.sahsenvar:kmapper-compiler:3.0.1")
+    add("kspIosArm64", "io.github.sahsenvar:kmapper-compiler:3.0.1")
+    add("kspIosSimulatorArm64", "io.github.sahsenvar:kmapper-compiler:3.0.1")
 }
 
 // Make every compilation see the commonMain-generated sources:
@@ -167,14 +167,14 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 Each add-on is an independent KMP artifact; add only what your models use:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-converters-immutable:3.0.0") // PersistentList & co.
-implementation("io.github.sahsenvar:kmapper-converters-arrow:3.0.0")     // NonEmptyList, Option
-implementation("io.github.sahsenvar:kmapper-converters-datetime:3.0.0")  // java.time + bridges
-implementation("io.github.sahsenvar:kmapper-converters-bignumber:3.0.0") // BigDecimal/BigInteger
-implementation("io.github.sahsenvar:kmapper-converters-uuid:3.0.0")      // Uuid / java.util.UUID
-implementation("io.github.sahsenvar:kmapper-converters-okio:3.0.0")      // ByteString, Path
-implementation("io.github.sahsenvar:kmapper-converters-uri:3.0.0")       // URI / Uri / NSURL
-implementation("io.github.sahsenvar:kmapper-validators:3.0.0")           // Email, E.164, IP, …
+implementation("io.github.sahsenvar:kmapper-converters-immutable:3.0.1") // PersistentList & co.
+implementation("io.github.sahsenvar:kmapper-converters-arrow:3.0.1")     // NonEmptyList, Option
+implementation("io.github.sahsenvar:kmapper-converters-datetime:3.0.1")  // java.time + bridges
+implementation("io.github.sahsenvar:kmapper-converters-bignumber:3.0.1") // BigDecimal/BigInteger
+implementation("io.github.sahsenvar:kmapper-converters-uuid:3.0.1")      // Uuid / java.util.UUID
+implementation("io.github.sahsenvar:kmapper-converters-okio:3.0.1")      // ByteString, Path
+implementation("io.github.sahsenvar:kmapper-converters-uri:3.0.1")       // URI / Uri / NSURL
+implementation("io.github.sahsenvar:kmapper-validators:3.0.1")           // Email, E.164, IP, …
 ```
 
 kotlinx-datetime types (`LocalDate`, `Instant`, …) need no add-on — their `String`/`Long`
@@ -191,7 +191,7 @@ mapping in the module also gets `toXResult()` — without repeating `wrapper = �
 ```kotlin
 // build.gradle.kts
 plugins {
-    id("io.github.sahsenvar.kmapper") version "3.0.0"
+    id("io.github.sahsenvar.kmapper") version "3.0.1"
 }
 
 import com.sahsenvar.kmapper.gradle.KMapperWrapper
@@ -897,7 +897,7 @@ default, in order of preference:
 // build.gradle.kts
 plugins {
     id("com.google.devtools.ksp") version "2.3.10-2.0.5"
-    id("io.github.sahsenvar.kmapper") version "3.0.0"
+    id("io.github.sahsenvar.kmapper") version "3.0.1"
 }
 
 import com.sahsenvar.kmapper.gradle.KMapperWrapper
@@ -1349,7 +1349,7 @@ map wire `List`s straight into immutable domain collections.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-immutable:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-immutable:3.0.1")
 }
 ```
 
@@ -1398,7 +1398,7 @@ as a *mapping-time guarantee*, and `Option` as an explicit-absence type.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-arrow:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-arrow:3.0.1")
 }
 ```
 
@@ -1462,7 +1462,7 @@ SECTION: Type Conversion — Date and Time (converters-datetime)  (type-conversi
 
 ```kotlin
 dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-datetime:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-datetime:3.0.1")
 }
 ```
 
@@ -1525,7 +1525,7 @@ Converters for arbitrary-precision numbers:
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-bignumber:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-bignumber:3.0.1")
 }
 ```
 
@@ -1587,7 +1587,7 @@ Converters for `kotlin.uuid.Uuid` (KMP) and `java.util.UUID` (JVM/Android).
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-uuid:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-uuid:3.0.1")
 }
 ```
 
@@ -1630,7 +1630,7 @@ three **same-pair encoding alternates** for `String ↔ ByteString`.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-okio:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-okio:3.0.1")
 }
 ```
 
@@ -1686,7 +1686,7 @@ models carry real URI types instead of raw strings.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-uri:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-uri:3.0.1")
 }
 ```
 
@@ -1841,7 +1841,7 @@ validator can't sit silently in a model.
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-validators:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-validators:3.0.1")
 }
 ```
 
@@ -2378,9 +2378,9 @@ Annotation **imports are unchanged** (`com.sahsenvar.kmapper.annotations.*`) —
 the new dependency:
 
 ```kotlin
-implementation("io.github.sahsenvar:kmapper-core:3.0.0")
-implementation("io.github.sahsenvar:kmapper-annotations:3.0.0")  // new
-ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")                // renamed
+implementation("io.github.sahsenvar:kmapper-core:3.0.1")
+implementation("io.github.sahsenvar:kmapper-annotations:3.0.1")  // new
+ksp("io.github.sahsenvar:kmapper-compiler:3.0.1")                // renamed
 ```
 
 ## 2. The generated API: `toX()` → `toXResult()` (2.0), back to `toX()` (3.0.0)
@@ -2389,7 +2389,7 @@ ksp("io.github.sahsenvar:kmapper-compiler:3.0.0")                // renamed
 |-----|-----|-------|
 | `fun Source.toUser(): User` (throws) | `fun Source.toUserResult(): Result<User>` | `fun Source.toUser(): User` (throws) again — `toUserResult()` is now opt-in |
 
-If you're moving straight from 1.x to the current 3.0.0, the good news is the generated
+If you're moving straight from 1.x to the current 3.x, the good news is the generated
 signature is back to what it was: `response.toUser()` still throws on a hard failure, exactly
 like in 1.x. Prefer the `Result`-returning shape 2.0 introduced? Opt into it per mapping or
 module-wide with a [return wrapper](../basic-usage/return-wrappers.md)

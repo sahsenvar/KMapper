@@ -8,7 +8,7 @@ Converters for arbitrary-precision numbers:
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.sahsenvar:kmapper-converters-bignumber:3.0.0")
+    implementation("io.github.sahsenvar:kmapper-converters-bignumber:3.0.1")
 }
 ```
 

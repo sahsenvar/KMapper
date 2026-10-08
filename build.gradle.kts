@@ -13,7 +13,7 @@ plugins {
 
 allprojects {
     group = "io.github.sahsenvar"
-    version = "3.0.0"
+    version = "3.0.1"
 }
 
 @OptIn(kotlinx.validation.ExperimentalBCVApi::class)
