@@ -47,10 +47,12 @@ data class MeasurementsResponse(
 
 ## Direction-scoped variants
 
-`@ConvertTo(target, use, onFail)` and `@ConvertFrom(source, use, onFail)` are `@ConvertWith`
-scoped to one mapping direction/target — for when the same field needs different treatment in
-different generated mappings. `@ConvertWith` applies to all directions the field participates
-in.
+`@ConvertTo(use, onFail)` and `@ConvertFrom(use, onFail)` are `@ConvertWith` scoped to one
+mapping direction: `@ConvertTo` to the `@MapTo` (forward) direction, `@ConvertFrom` to the
+`@MapFrom` (reverse) direction. Use them when the same field needs different treatment in
+each direction, e.g. lenient on the way in, strict on the way out. In its own direction a
+direction-scoped annotation beats `@ConvertWith`, which applies to all directions the field
+participates in.
 
 ## The placement rule (worth memorizing)
 

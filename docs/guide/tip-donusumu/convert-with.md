@@ -47,9 +47,11 @@ data class MeasurementsResponse(
 
 ## Yöne daraltılmış varyantlar
 
-`@ConvertTo(target, use, onFail)` ve `@ConvertFrom(source, use, onFail)`, `@ConvertWith`'in
-tek bir mapping yönüne/hedefe daraltılmış halidir — aynı alanın farklı üretilen mapping'lerde
-farklı muamele görmesi gerektiğinde. `@ConvertWith`, alanın katıldığı bütün yönlere uygulanır.
+`@ConvertTo(use, onFail)` ve `@ConvertFrom(use, onFail)`, `@ConvertWith`'in tek bir mapping
+yönüne daraltılmış halidir: `@ConvertTo` `@MapTo` (ileri) yönüne, `@ConvertFrom` `@MapFrom`
+(ters) yönüne. Aynı alanın her yönde farklı muamele görmesi gerektiğinde kullanın, ör. içeri
+gelirken gevşek, dışarı çıkarken katı. Kendi yönünde yöne daraltılmış annotation
+`@ConvertWith`'i yener; `@ConvertWith` ise alanın katıldığı bütün yönlere uygulanır.
 
 ## Yerleşim kuralı (ezberlemeye değer)
 

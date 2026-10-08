@@ -33,6 +33,21 @@ jobs:
       - name: Spotless check
         run: ./gradlew spotlessCheck --no-configuration-cache
 
+  llms-txt:
+    name: llms-txt
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      # llms.txt / llms-full.txt are generated from docs/guide-en — edit the guide or the
+      # generator, never the outputs. Fails when the committed files drift from a fresh run.
+      - name: Check llms.txt is up to date
+        run: |
+          python3 scripts/generate-llms-txt.py
+          git diff --exit-code -- llms.txt llms-full.txt
+
   coverage:
     name: coverage
     runs-on: ubuntu-latest

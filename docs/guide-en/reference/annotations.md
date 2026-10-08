@@ -38,8 +38,8 @@ Placement rule: field directives are read from the **class that declares the map
 | Annotation | Target | Purpose |
 |------------|--------|---------|
 | `@ConvertWith(use, onFail)` | property | per-field converter override and/or failure policy |
-| `@ConvertTo(target, use, onFail)` | property (repeatable) | `@ConvertWith` scoped to one mapping direction |
-| `@ConvertFrom(source, use, onFail)` | property (repeatable) | the reverse scoping |
+| `@ConvertTo(use, onFail)` | property | `@ConvertWith` scoped to the `@MapTo` (forward) direction |
+| `@ConvertFrom(use, onFail)` | property | `@ConvertWith` scoped to the `@MapFrom` (reverse) direction |
 | `OnFail` (enum) | — | `Auto` (ladder), `Throw` (never absorb), `Skip` (compact collections) |
 
 → [@ConvertWith and OnFail](../type-conversion/convert-with.md)
