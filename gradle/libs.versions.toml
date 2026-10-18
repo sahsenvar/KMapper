@@ -16,7 +16,7 @@ ionspin-bignum = "0.3.10"
 # kctfork 0.12.1 — KSP2-aware maintained fork of kotlin-compile-testing
 compile-testing = "0.14.0"
 vanniktech-publish = "0.37.0"
-kotest = "6.2.5"
+kotest = "6.2.6"
 okio = "3.18.2"
 bcv = "0.18.2"
 dokka = "2.2.0"
