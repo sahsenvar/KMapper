@@ -28,6 +28,7 @@ fun compile(
     sources: List<SourceFile>,
     kspOptions: Map<String, String>,
     additionalProviders: List<SymbolProcessorProvider> = emptyList(),
+    mappingProvider: SymbolProcessorProvider = MappingProcessorProvider(),
 ): Pair<JvmCompilationResult, KotlinCompilation> {
     val compilation =
         KotlinCompilation().apply {
@@ -41,7 +42,7 @@ fun compile(
     // symbolProcessorProviders is a mutable list retrieved from the KspTool.
     compilation.configureKsp {
         @Suppress("UNCHECKED_CAST")
-        (symbolProcessorProviders as MutableList).add(MappingProcessorProvider())
+        (symbolProcessorProviders as MutableList).add(mappingProvider)
         (symbolProcessorProviders as MutableList).addAll(additionalProviders)
         processorOptions.putAll(kspOptions)
     }

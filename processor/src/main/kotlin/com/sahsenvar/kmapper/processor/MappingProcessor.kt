@@ -8,6 +8,7 @@ import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.FileLocation
 import com.google.devtools.ksp.symbol.KSAnnotated
+import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFile
@@ -52,6 +53,7 @@ class MappingProcessor(
         // KMapper annotations whose class arguments KMapper reads beyond the class itself.
         private val READ_CLASS_ANNOTATIONS = setOf("ConvertWith", "ConvertTo", "ConvertFrom", "MapTo", "MapFrom")
         private val READ_CLASS_ARGUMENTS = setOf("use", "wrapper")
+        private const val KMAPPER_ANNOTATIONS_PACKAGE = "com.sahsenvar.kmapper.annotations."
     }
 
     private val fieldAnalyzer by lazy { FieldAnalyzer(logger) }
@@ -68,10 +70,14 @@ class MappingProcessor(
     private val mappingFunctions = mutableMapOf<ReceiverKey, MutableList<FunSpec>>()
 
     // Source files each receiver's mappers are generated from (both sides of every mapping in this
-    // module). Declared as the output's originating files: with none, KSP's incremental processing
-    // ties the output to no input, so after an upstream ABI change it reprocesses only the dirty
-    // files and drops every mapper file it did not regenerate.
+    // module), plus every @KMapperConfig file and the converter/wrapper files it lists. Declared as
+    // the output's originating files: with none, KSP's incremental processing ties the output to
+    // no input, so after an upstream ABI change it reprocesses only the dirty files and drops every
+    // mapper file it did not regenerate. The outputs are aggregating: a receiver's file collects
+    // functions from several classes and depends on the converter registry, so any change (a new
+    // @MapFrom file, an edited config) must reprocess all mapping classes, not only the dirty ones.
     private val mappingSourceFiles = mutableMapOf<ReceiverKey, MutableSet<KSFile>>()
+    private val configSourceFiles = mutableSetOf<KSFile>()
 
     data class ReceiverKey(
         val packageName: String,
@@ -145,6 +151,10 @@ class MappingProcessor(
         val readyMapToClasses = mapToClasses.filterNot { it in waitingMappings }
         val readyMapFromClasses = mapFromClasses.filterNot { it in waitingMappings }
 
+        configClasses.forEach { configClass ->
+            configSourceFiles += listOfNotNull(configClass.containingFile) + listedClasses(configClass).mapNotNull { it.containingFile }
+        }
+
         // STEP 0: Discover collection wrappers from @KMapperConfig.wrappers (in-module).
         //
         // discoverWrappersFromConfig reads the consumer's own @KMapperConfig annotation (in-module,
@@ -204,8 +214,8 @@ class MappingProcessor(
 
     override fun finish() {
         if (waitingClasses.isEmpty()) return
-        // KSP does not report symbols that are still deferred when the rounds end. An error, not a
-        // warning: a successful KSP task would put the incomplete output into the build cache.
+        // KSP itself only warns about symbols still deferred when the rounds end, and a successful
+        // KSP task would put the incomplete output into the build cache, so this is an error.
         logger.error(
             "KMapper generated no mappers for these classes because a type they depend on never " +
                 "became resolvable: ${waitingClasses.joinToString("; ")}",
@@ -232,18 +242,18 @@ class MappingProcessor(
         mappingClass: KSClassDeclaration,
         partnerPartsCache: MutableMap<Pair<KSClassDeclaration, Set<String>>, List<String>>,
     ): List<String> {
-        val ownParameters = mappingClass.getConstructors().flatMap { it.parameters }.toList()
+        val ownParameters = analyzedConstructors(mappingClass).flatMap { it.parameters }
         // Names a @MapFrom source property can be matched by: our field names and their @FieldMap redirects.
         val ownFieldNames =
             ownParameters.mapNotNull { it.name?.asString() }.toSet() +
                 (ownParameters + mappingClass.getAllProperties().toList()).flatMap { fieldMapNames(it) }
         val partners =
             mappingClass.annotations
-                .filter { it.shortName.asString() == "MapTo" || it.shortName.asString() == "MapFrom" }
+                .filter { it.isKMapperAnnotation("MapTo") || it.isKMapperAnnotation("MapFrom") }
                 .mapNotNull { annotation ->
                     val partner = (annotation.arguments.firstOrNull()?.value as? KSType)?.takeUnless { it.isError }?.declaration
                     // A @MapFrom source is read like a @MapTo source: its properties matched to our fields count.
-                    (partner as? KSClassDeclaration)?.let { it to if (annotation.shortName.asString() == "MapFrom") ownFieldNames else emptySet() }
+                    (partner as? KSClassDeclaration)?.let { it to if (annotation.isKMapperAnnotation("MapFrom")) ownFieldNames else emptySet() }
                 }.toList()
         val partnerFieldNames =
             partners
@@ -251,7 +261,7 @@ class MappingProcessor(
                 .mapNotNull { it.name?.asString() }
                 .toSet()
         val ownParts =
-            unresolvedFieldParts(mappingClass, mappingClass.getConstructors().toList(), matchedFieldNames = partnerFieldNames) +
+            unresolvedFieldParts(mappingClass, analyzedConstructors(mappingClass), matchedFieldNames = partnerFieldNames) +
                 unresolvedAnnotationParts(mappingClass) +
                 unresolvedSupertypeParts(mappingClass).map { "supertype $it" }
         val partnerParts =
@@ -273,38 +283,47 @@ class MappingProcessor(
      * `override fun convertTo(value: X) = value.toY()` must not wait for KMapper's own output.
      */
     private fun unresolvedConfigParts(configClass: KSClassDeclaration): List<String> {
-        val listedClasses =
-            configClass.annotations
-                .filter { it.shortName.asString() == "KMapperConfig" }
-                .flatMap { annotation -> annotation.arguments.asSequence() }
-                .flatMap { argument -> (argument.value as? List<*>).orEmpty().filterIsInstance<KSType>() }
-                .mapNotNull { it.declaration as? KSClassDeclaration }
-                .toList()
         val listedParts =
-            listedClasses.flatMap { listed ->
+            listedClasses(configClass).flatMap { listed ->
                 val name = listed.simpleName.asString()
                 unresolvedReadClassParts(listed).map { "$name $it" } + unresolvedAnnotationParts(listed).map { "$name $it" }
             }
         return unresolvedAnnotationParts(configClass) + listedParts
     }
 
+    /** The constructors KMapper reads: all of them for a @MapFrom target, the primary one otherwise. */
+    private fun analyzedConstructors(mappingClass: KSClassDeclaration): List<KSFunctionDeclaration> = if (mappingClass.annotations.any { it.isKMapperAnnotation("MapFrom") }) {
+        mappingClass.getConstructors().toList()
+    } else {
+        listOfNotNull(mappingClass.primaryConstructor)
+    }
+
+    /** The converters and wrappers a @KMapperConfig class lists. */
+    private fun listedClasses(configClass: KSClassDeclaration): List<KSClassDeclaration> = configClass.annotations
+        .filter { it.shortName.asString() == "KMapperConfig" }
+        .flatMap { annotation -> annotation.arguments.asSequence() }
+        .flatMap { argument -> (argument.value as? List<*>).orEmpty().filterIsInstance<KSType>() }
+        .mapNotNull { it.declaration as? KSClassDeclaration }
+        .toList()
+
     // Supertype results of this round, per declaration: every annotation argument re-asks for them.
     private val supertypePartsCache = mutableMapOf<KSClassDeclaration, List<String>>()
 
-    private fun unresolvedSupertypeParts(
+    private fun unresolvedSupertypeParts(declaration: KSClassDeclaration): List<String> = supertypePartsCache.getOrPut(declaration) { walkSupertypes(declaration, mutableSetOf()) }
+
+    private fun walkSupertypes(
         declaration: KSClassDeclaration,
-        visited: MutableSet<KSClassDeclaration> = mutableSetOf(),
+        visited: MutableSet<KSClassDeclaration>,
     ): List<String> {
         if (!declaration.isFromSource() || !visited.add(declaration)) return emptyList()
-        supertypePartsCache[declaration]?.let { return it }
         return declaration.superTypes.toList().flatMap { reference ->
             val supertype = reference.resolve()
             if (supertype.containsError()) {
                 listOf(reference.toString())
             } else {
-                (supertype.declaration as? KSClassDeclaration)?.let { unresolvedSupertypeParts(it, visited) }.orEmpty()
+                (supertype.declaration as? KSClassDeclaration)?.let { walkSupertypes(it, visited) }.orEmpty()
             }
-        }.also { supertypePartsCache[declaration] = it }
+        }
     }
 
     /**
@@ -337,7 +356,7 @@ class MappingProcessor(
                     val name = property.simpleName.asString()
                     val mapped =
                         name !in parameterNames &&
-                            (name in matchedFieldNames || property.annotations.any { it.shortName.asString() == "FieldMap" })
+                            (name in matchedFieldNames || property.annotations.any { it.isKMapperAnnotation("FieldMap") })
                     when {
                         name in parameterNames -> unresolvedAnnotationParts(property).map { "$name $it" }
 
@@ -354,15 +373,23 @@ class MappingProcessor(
     /** True for a declaration in this compilation's sources; library declarations cannot change. */
     private fun KSDeclaration.isFromSource(): Boolean = origin == Origin.KOTLIN || origin == Origin.JAVA
 
+    /** True for a KMapper annotation (with [simpleName], if given), matched by resolved FQN so aliased imports count. */
+    private fun KSAnnotation.isKMapperAnnotation(simpleName: String? = null): Boolean {
+        val fqn = annotationType.resolve().declaration.qualifiedName?.asString() ?: return false
+        return fqn.startsWith(KMAPPER_ANNOTATIONS_PACKAGE) && (simpleName == null || fqn == KMAPPER_ANNOTATIONS_PACKAGE + simpleName)
+    }
+
     /**
-     * Annotation arguments that do not resolve. A converter or return wrapper named by a KMapper
+     * Arguments of KMapper annotations that do not resolve; other libraries' annotations are never
+     * read, so they cannot hold a class back. A converter or return wrapper named by a KMapper
      * annotation (`@ConvertWith(use = …)`, `@MapTo(wrapper = …)`, …) is also checked the way KMapper
      * reads it: its supertype chain and its `wrap` signature. Other referenced classes are only
      * required to resolve themselves; their supertypes are never read.
      */
     private fun unresolvedAnnotationParts(annotated: KSAnnotated): List<String> = annotated.annotations
+        .filter { it.isKMapperAnnotation() }
         .flatMap { annotation ->
-            val readsReferencedClass = annotation.shortName.asString() in READ_CLASS_ANNOTATIONS
+            val readsReferencedClass = READ_CLASS_ANNOTATIONS.any { annotation.isKMapperAnnotation(it) }
             annotation.arguments
                 .filter { argument ->
                     val readsArgument = readsReferencedClass && argument.name?.asString() in READ_CLASS_ARGUMENTS
@@ -389,7 +416,7 @@ class MappingProcessor(
     }
 
     private fun fieldMapNames(annotated: KSAnnotated): List<String> = annotated.annotations
-        .filter { it.shortName.asString() == "FieldMap" }
+        .filter { it.isKMapperAnnotation("FieldMap") }
         .mapNotNull { it.arguments.firstOrNull()?.value as? String }
         .toList()
 
@@ -474,7 +501,7 @@ class MappingProcessor(
 
             val file =
                 codeGenerator.createNewFile(
-                    dependencies = Dependencies(false, *mappingSourceFiles[receiverKey].orEmpty().toTypedArray()),
+                    dependencies = Dependencies(true, *(mappingSourceFiles[receiverKey].orEmpty() + configSourceFiles).toTypedArray()),
                     packageName = receiverKey.packageName,
                     fileName = fileName,
                 )
@@ -709,12 +736,22 @@ class MappingProcessor(
                 isReverse = false,
             )
 
-        // Add to mappingFunctions collection
-        val receiverKey = ReceiverKey(packageName, sourceClass.simpleName.asString())
-        mappingFunctions.getOrPut(receiverKey) { mutableListOf() }.apply {
-            add(funSpec)
-            addAll(buildWrapperFunSpecs(returnWrapper, targetClass, sourceClassName, targetClassName, externalFields))
-        }
+        registerMappers(
+            receiverKey = ReceiverKey(packageName, sourceClass.simpleName.asString()),
+            functions = listOf(funSpec) + buildWrapperFunSpecs(returnWrapper, targetClass, sourceClassName, targetClassName, externalFields),
+            sourceClass = sourceClass,
+            targetClass = targetClass,
+        )
+    }
+
+    /** Adds a receiver's functions together with the source files they are generated from. */
+    private fun registerMappers(
+        receiverKey: ReceiverKey,
+        functions: List<FunSpec>,
+        sourceClass: KSClassDeclaration,
+        targetClass: KSClassDeclaration,
+    ) {
+        mappingFunctions.getOrPut(receiverKey) { mutableListOf() } += functions
         mappingSourceFiles.getOrPut(receiverKey) { mutableSetOf() } += listOfNotNull(sourceClass.containingFile, targetClass.containingFile)
     }
 
@@ -1003,12 +1040,11 @@ class MappingProcessor(
                 isReverse = true,
             )
 
-        // Add to mappingFunctions collection
-        val receiverKey = ReceiverKey(packageName, sourceClass.simpleName.asString())
-        mappingFunctions.getOrPut(receiverKey) { mutableListOf() }.apply {
-            add(funSpec)
-            addAll(buildWrapperFunSpecs(returnWrapper, targetClass, sourceClassName, targetClassName, externalFields))
-        }
-        mappingSourceFiles.getOrPut(receiverKey) { mutableSetOf() } += listOfNotNull(sourceClass.containingFile, targetClass.containingFile)
+        registerMappers(
+            receiverKey = ReceiverKey(packageName, sourceClass.simpleName.asString()),
+            functions = listOf(funSpec) + buildWrapperFunSpecs(returnWrapper, targetClass, sourceClassName, targetClassName, externalFields),
+            sourceClass = sourceClass,
+            targetClass = targetClass,
+        )
     }
 }
