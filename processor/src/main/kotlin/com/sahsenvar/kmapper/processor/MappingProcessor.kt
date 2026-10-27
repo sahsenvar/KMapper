@@ -294,7 +294,10 @@ class MappingProcessor(
                     // A @MapFrom source is read like a @MapTo source: its properties matched to our fields count.
                     val matchedNames = if (mappingPartner.isMapFromSource) ownFieldNames else emptySet()
                     partnerPartsCache.getOrPut(partner to matchedNames) {
-                        unresolvedFieldParts(partner, listOfNotNull(partner.primaryConstructor), matchedFieldNames = matchedNames)
+                        // A @MapTo target is constructed, so all its parameters are read; a @MapFrom
+                        // source is only read where its fields match ours.
+                        val constructors = listOfNotNull(partner.primaryConstructor)
+                        unresolvedFieldParts(partner, constructors, matchedFieldNames = matchedNames, onlyMatchedParameters = mappingPartner.isMapFromSource)
                             .map { "${partner.simpleName.asString()}.$it" }
                     }
                 }
@@ -369,11 +372,12 @@ class MappingProcessor(
         declaration: KSClassDeclaration,
         constructors: List<KSFunctionDeclaration>,
         matchedFieldNames: Set<String>,
+        onlyMatchedParameters: Boolean = false,
     ): List<String> {
         val parameterNames = constructors.flatMap { it.parameters }.mapNotNull { it.name?.asString() }.toSet()
         val parameterParts =
             constructors.flatMap { constructor ->
-                constructor.parameters.flatMap { parameter ->
+                constructor.parameters.filter { !onlyMatchedParameters || it.name?.asString() in matchedFieldNames }.flatMap { parameter ->
                     val name = parameter.name?.asString()
                     val typePart = if (parameter.type.resolve().containsError()) listOf("$name: ${parameter.type}") else emptyList()
                     typePart + unresolvedAnnotationParts(parameter).map { "$name $it" }
@@ -404,14 +408,14 @@ class MappingProcessor(
     private fun KSDeclaration.isFromSource(): Boolean = origin == Origin.KOTLIN || origin == Origin.JAVA
 
     /**
-     * The simple name of this annotation when it is one of KMapper's, else null. Same rule as
-     * FieldAnalyzer (written short name, or resolved FQN so aliased imports count), so deferral
-     * and generation agree on what is a KMapper annotation.
+     * The simple name of this annotation when it is one of KMapper's, else null: by resolved FQN
+     * (aliased imports count, another library's same-named annotation does not), and by written
+     * short name only while the annotation type itself is unresolved.
      */
     private fun KSAnnotation.kmapperAnnotationName(): String? {
-        val writtenName = shortName.asString()
-        if (writtenName in KMAPPER_ANNOTATION_NAMES) return writtenName
-        val fqn = annotationType.resolve().declaration.qualifiedName?.asString() ?: return null
+        val annotationType = annotationType.resolve()
+        if (annotationType.isError) return shortName.asString().takeIf { it in KMAPPER_ANNOTATION_NAMES }
+        val fqn = annotationType.declaration.qualifiedName?.asString() ?: return null
         return fqn.removePrefix(KMAPPER_ANNOTATIONS_PACKAGE).takeIf { fqn.startsWith(KMAPPER_ANNOTATIONS_PACKAGE) }
     }
 

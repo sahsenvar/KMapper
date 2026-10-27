@@ -619,6 +619,28 @@ class DeferredSymbolTest :
             }
         }
 
+        given("a @MapFrom source with an unmapped constructor field of a type that never resolves") {
+            val (result, compilation) =
+                compile(
+                    SourceFile.kotlin(
+                        "Dto.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.MapFrom
+                        data class UserDto(val id: String, val binding: List<String>? = null)
+                        @MapFrom(UserDto::class)
+                        data class User(val id: String)
+                        """.trimIndent(),
+                    ),
+                )
+
+            `when`("the processor runs") {
+                then("only the matched fields of the source are checked") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                    compilation.generatedFile("UserDtoMappers.kt") shouldContain "fun UserDto.toUser()"
+                }
+            }
+        }
+
         given("a @KMapperConfig converter whose supertype never resolves") {
             val (result, _) =
                 compile(
