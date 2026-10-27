@@ -49,6 +49,7 @@ public final class com/sahsenvar/kmapper/processor/analyzer/CollectionWrapperDes
 
 public final class com/sahsenvar/kmapper/processor/analyzer/CollectionWrapperSupportKt {
 	public static final fun discoverWrappersFromConfig (Lcom/google/devtools/ksp/processing/Resolver;Lcom/google/devtools/ksp/processing/KSPLogger;)Ljava/util/Map;
+	public static final fun discoverWrappersFromConfig (Ljava/util/List;Lcom/google/devtools/ksp/processing/KSPLogger;)Ljava/util/Map;
 }
 
 public final class com/sahsenvar/kmapper/processor/analyzer/CollectionWrapperValidator {

@@ -2,6 +2,7 @@
 
 package com.sahsenvar.kmapper.processor
 
+import com.google.devtools.ksp.processing.SymbolProcessorProvider
 import com.tschuchort.compiletesting.JvmCompilationResult
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
@@ -26,6 +27,8 @@ fun compile(vararg sources: SourceFile): Pair<JvmCompilationResult, KotlinCompil
 fun compile(
     sources: List<SourceFile>,
     kspOptions: Map<String, String>,
+    additionalProviders: List<SymbolProcessorProvider> = emptyList(),
+    mappingProvider: SymbolProcessorProvider = MappingProcessorProvider(),
 ): Pair<JvmCompilationResult, KotlinCompilation> {
     val compilation =
         KotlinCompilation().apply {
@@ -39,7 +42,8 @@ fun compile(
     // symbolProcessorProviders is a mutable list retrieved from the KspTool.
     compilation.configureKsp {
         @Suppress("UNCHECKED_CAST")
-        (symbolProcessorProviders as MutableList).add(MappingProcessorProvider())
+        (symbolProcessorProviders as MutableList).add(mappingProvider)
+        (symbolProcessorProviders as MutableList).addAll(additionalProviders)
         processorOptions.putAll(kspOptions)
     }
     return compilation.compile() to compilation
