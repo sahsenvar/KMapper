@@ -185,8 +185,8 @@ class DeferredSymbolTest :
             }
         }
 
-        given("a @MapTo class whose field type never comes into existence") {
-            val (result, _) =
+        given("a @MapTo class whose field type never comes into existence, next to a valid one") {
+            val (result, compilation) =
                 compile(
                     SourceFile.kotlin(
                         "Broken.kt",
@@ -195,15 +195,116 @@ class DeferredSymbolTest :
                         data class BrokenDomainModel(val value: String)
                         @MapTo(BrokenDomainModel::class)
                         data class BrokenDataModel(val value: MissingType)
+                        data class UserDomainModel(val id: String)
+                        @MapTo(UserDomainModel::class)
+                        data class UserDataModel(val id: String)
                         """.trimIndent(),
                     ),
                 )
 
             `when`("no round can resolve it") {
-                then("KMapper reports the unresolvable class instead of finishing silently") {
+                then("only that class loses its mapper, KMapper names it, and the compiler reports the missing type") {
                     result.exitCode shouldBe KotlinCompilation.ExitCode.COMPILATION_ERROR
-                    result.messages shouldContain "KMapper generated no mappers for this module"
+                    result.messages shouldContain "KMapper generated no mappers for these classes"
                     result.messages shouldContain "BrokenDataModel"
+                    result.messages shouldContain "MissingType"
+                    compilation.generatedFile("UserDataModelMappers.kt") shouldContain "fun UserDataModel.toUserDomainModel()"
+                }
+            }
+        }
+
+        given("a partner class with a member whose type is inferred from a generated mapper") {
+            val (result, compilation) =
+                compile(
+                    SourceFile.kotlin(
+                        "Partner.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.MapFrom
+                        data class UserDomainModel(val id: String) {
+                            fun toUi() = toUserUiModel()
+                        }
+                        @MapFrom(UserDomainModel::class)
+                        data class UserUiModel(val id: String)
+                        """.trimIndent(),
+                    ),
+                )
+
+            `when`("the processor runs") {
+                then("the unrelated member does not hold the mapping back") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                    compilation.generatedFile("UserDomainModelMappers.kt") shouldContain "fun UserDomainModel.toUserUiModel()"
+                }
+            }
+        }
+
+        given("a deferred @MapTo class that needs a @KMapperConfig collection wrapper") {
+            val (result, compilation) =
+                compileWithGeneratedMoney(
+                    """
+                    import com.sahsenvar.kmapper.annotations.CollectionWrapper
+                    import com.sahsenvar.kmapper.annotations.KMapperConfig
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    import kotlinx.collections.immutable.PersistentList
+                    import kotlinx.collections.immutable.toPersistentList
+
+                    @CollectionWrapper(forType = PersistentList::class)
+                    object PersistentListWrapper {
+                        fun <T> wrap(items: List<T>): PersistentList<T> = items.toPersistentList()
+                    }
+
+                    @KMapperConfig(wrappers = [PersistentListWrapper::class])
+                    object MappingConfig
+
+                    data class PriceDomainModel(val money: GeneratedMoney, val tags: PersistentList<String>)
+
+                    @MapTo(PriceDomainModel::class)
+                    data class PriceDataModel(val money: GeneratedMoney, val tags: List<String>)
+                    """.trimIndent(),
+                )
+
+            `when`("the mapper is generated in the later round") {
+                then("the wrapper registered in round 1 is used") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                    compilation.generatedFile("PriceDataModelMappers.kt") shouldContain "PersistentListWrapper.wrap(it)"
+                }
+            }
+        }
+
+        given("a receiver that gets mappers in round 1 and, from a generated class, in round 2") {
+            val (result, compilation) =
+                compile(
+                    sources =
+                    listOf(
+                        SourceFile.kotlin(
+                            "Account.kt",
+                            """
+                                import com.sahsenvar.kmapper.annotations.MapTo
+                                data class AccountDomainModel(val id: String)
+                                @MapTo(AccountDomainModel::class)
+                                data class AccountDataModel(val id: String)
+                            """.trimIndent(),
+                        ),
+                    ),
+                    kspOptions = emptyMap(),
+                    additionalProviders =
+                    listOf(
+                        SourceGeneratingProcessorProvider(
+                            fileName = "GeneratedAccountUi",
+                            content =
+                            """
+                                    import com.sahsenvar.kmapper.annotations.MapFrom
+                                    @MapFrom(AccountDataModel::class)
+                                    data class AccountUiModel(val id: String)
+                            """.trimIndent(),
+                        ),
+                    ),
+                )
+
+            `when`("both rounds write mappers for AccountDataModel") {
+                then("the second file gets its own name instead of colliding") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                    compilation.generatedFile("AccountDataModelMappers.kt") shouldContain "fun AccountDataModel.toAccountDomainModel()"
+                    compilation.generatedFile("AccountDataModelMappers2.kt") shouldContain "fun AccountDataModel.toAccountUiModel()"
                 }
             }
         }

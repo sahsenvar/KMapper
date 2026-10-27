@@ -1,12 +1,10 @@
 package com.sahsenvar.kmapper.processor.analyzer
 
 import com.google.devtools.ksp.processing.KSPLogger
-import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 
 private const val COLLECTION_WRAPPER_ANNOTATION = "com.sahsenvar.kmapper.annotations.CollectionWrapper"
-private const val KMAPPER_CONFIG_ANNOTATION = "com.sahsenvar.kmapper.annotations.KMapperConfig"
 
 /**
  * Reads all @KMapperConfig.wrappers listings (in-module, works on KMP/iOS), resolves each
@@ -28,7 +26,7 @@ private const val KMAPPER_CONFIG_ANNOTATION = "com.sahsenvar.kmapper.annotations
  * failed in KSP2's per-module kspCommonMainMetadata invocations.
  */
 fun discoverWrappersFromConfig(
-    resolver: Resolver,
+    configClasses: List<KSClassDeclaration>,
     logger: KSPLogger,
 ): Map<String, CollectionWrapperDescriptor> {
     val validator = CollectionWrapperValidator(logger)
@@ -37,9 +35,7 @@ fun discoverWrappersFromConfig(
     // node-anchored duplicate errors), then check duplicates
     val entries = mutableListOf<Pair<CollectionWrapperDescriptor, KSClassDeclaration>>()
 
-    resolver
-        .getSymbolsWithAnnotation(KMAPPER_CONFIG_ANNOTATION)
-        .filterIsInstance<KSClassDeclaration>()
+    configClasses
         .forEach { cfg ->
             val annotation =
                 cfg.annotations.firstOrNull {
