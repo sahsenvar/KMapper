@@ -24,9 +24,6 @@ class CycleDetector(
     // that waited for a generated type) can close a cycle with one mapped earlier.
     private val knownEdges = mutableMapOf<String, List<String>>()
 
-    // Node sets of the cycles already reported, so a later round does not report them again.
-    private val reportedCycles = mutableSetOf<Set<String>>()
-
     fun check(mappedSources: List<KSClassDeclaration>) {
         // Record the unconditional (non-null, non-collection) field types of the new sources
         mappedSources.forEach { decl ->
@@ -53,7 +50,6 @@ class CycleDetector(
             if (node in done) return
             if (node in visiting) {
                 val cycle = stack.toList().dropWhile { it != node } + node
-                if (!reportedCycles.add(cycle.toSet())) return
                 logger.error(
                     "Mapping cycle detected: ${cycle.joinToString(" -> ")}. " +
                         "This would cause infinite construction at runtime. " +
