@@ -15,6 +15,7 @@ import com.tschuchort.compiletesting.SourceFile
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
@@ -577,6 +578,43 @@ class DeferredSymbolTest :
                 then("the config does not wait for KMapper's own output") {
                     result.exitCode shouldBe KotlinCompilation.ExitCode.OK
                     compilation.generatedFile("MoneyDataModelMappers.kt") shouldContain "fun MoneyDataModel.toMoneyDomainModel()"
+                }
+            }
+        }
+
+        given("a @KMapperConfig converter that also implements an interface that never resolves") {
+            val (result, compilation) =
+                compile(
+                    SourceFile.kotlin(
+                        "Converter.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.KMapperConfig
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        import com.sahsenvar.kmapper.converter.MapTypeConverter
+
+                        data class Money(val cents: Long)
+
+                        object MoneyConverter : MapTypeConverter<Long, Money>(Long::class, Money::class), GeneratedMarker {
+                            override fun convertTo(source: Long): Money = Money(source)
+
+                            override fun convertFrom(target: Money): Long = target.cents
+                        }
+
+                        @KMapperConfig(converters = [MoneyConverter::class])
+                        object MappingConfig
+
+                        data class PriceDomainModel(val money: Money)
+
+                        @MapTo(PriceDomainModel::class)
+                        data class PriceDataModel(val money: Long)
+                        """.trimIndent(),
+                    ),
+                )
+
+            `when`("the processor runs") {
+                then("the interface KMapper never reads does not hold the config back") {
+                    result.messages shouldNotContain "KMapper generated no mappers"
+                    compilation.generatedFile("PriceDataModelMappers.kt") shouldContain "MoneyConverter.convertTo(it)"
                 }
             }
         }

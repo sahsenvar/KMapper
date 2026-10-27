@@ -6,6 +6,7 @@ import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
+import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.FileLocation
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSAnnotation
@@ -271,15 +272,14 @@ class MappingProcessor(
                 .filter { it.isKMapperAnnotation("MapTo") || it.isKMapperAnnotation("MapFrom") }
                 .mapNotNull { annotation ->
                     val partner = (annotation.arguments.firstOrNull()?.value as? KSType)?.takeUnless { it.isError }?.declaration
-                    // A @MapFrom source is read like a @MapTo source: its properties matched to our fields count.
-                    (partner as? KSClassDeclaration)?.let { it to if (annotation.isKMapperAnnotation("MapFrom")) ownFieldNames else emptySet() }
+                    (partner as? KSClassDeclaration)?.let { MappingPartner(it, isMapFromSource = annotation.isKMapperAnnotation("MapFrom")) }
                 }.toList()
         // Our own properties are read as source fields only toward @MapTo targets (a @MapFrom target's
         // computed properties are never read), so only those targets' field names make them mapped.
         val mapToTargetFieldNames =
             partners
-                .filter { (_, matchedNames) -> matchedNames.isEmpty() }
-                .flatMap { (partner, _) -> partner.primaryConstructor?.parameters.orEmpty() }
+                .filterNot { it.isMapFromSource }
+                .flatMap { it.declaration.primaryConstructor?.parameters.orEmpty() }
                 .mapNotNull { it.name?.asString() }
                 .toSet()
         val ownParts =
@@ -288,8 +288,11 @@ class MappingProcessor(
                 unresolvedSupertypeParts(mappingClass).map { "supertype $it" }
         val partnerParts =
             partners
-                .filter { (partner, _) -> partner.isFromSource() }
-                .flatMap { (partner, matchedNames) ->
+                .filter { it.declaration.isFromSource() }
+                .flatMap { mappingPartner ->
+                    val partner = mappingPartner.declaration
+                    // A @MapFrom source is read like a @MapTo source: its properties matched to our fields count.
+                    val matchedNames = if (mappingPartner.isMapFromSource) ownFieldNames else emptySet()
                     partnerPartsCache.getOrPut(partner to matchedNames) {
                         unresolvedFieldParts(partner, listOfNotNull(partner.primaryConstructor), matchedFieldNames = matchedNames)
                             .map { "${partner.simpleName.asString()}.$it" }
@@ -338,14 +341,21 @@ class MappingProcessor(
         visited: MutableSet<KSClassDeclaration>,
     ): List<String> {
         if (!declaration.isFromSource() || !visited.add(declaration)) return emptyList()
-        return declaration.superTypes.toList().flatMap { reference ->
-            val supertype = reference.resolve()
-            if (supertype.containsError()) {
-                listOf(reference.toString())
-            } else {
-                (supertype.declaration as? KSClassDeclaration)?.let { walkSupertypes(it, visited) }.orEmpty()
+        // Only the superclass chain is read (ConverterIntrospector, inherited constructor fields);
+        // an interface KSP cannot see must not hold a converter or a class back. An unresolved
+        // supertype has no known kind, but there is only one superclass: once a resolved one is
+        // found, every unresolved supertype is an interface.
+        val supertypes = declaration.superTypes.map { it to it.resolve() }.toList()
+        val superclass =
+            supertypes.firstOrNull { (_, type) ->
+                !type.isError && (type.declaration as? KSClassDeclaration)?.classKind == ClassKind.CLASS
             }
+        if (superclass != null) {
+            val (reference, type) = superclass
+            // A resolved superclass can still carry unresolved type arguments (MapTypeConverter<Long, Generated>).
+            return if (type.containsError()) listOf(reference.toString()) else walkSupertypes(type.declaration as KSClassDeclaration, visited)
         }
+        return supertypes.filter { (_, type) -> type.containsError() }.map { (reference, _) -> reference.toString() }
     }
 
     /**
@@ -771,6 +781,12 @@ class MappingProcessor(
             targetClass = targetClass,
         )
     }
+
+    /** The class on the other side of a @MapTo (its target) or a @MapFrom (its source). */
+    private data class MappingPartner(
+        val declaration: KSClassDeclaration,
+        val isMapFromSource: Boolean,
+    )
 
     /** Adds a receiver's functions together with the source files they are generated from. */
     private fun registerMappers(
