@@ -33,15 +33,9 @@ class CycleDetector(
             knownEdges[decl.qualifiedName!!.asString()] =
                 decl.primaryConstructor
                     ?.parameters
-                    ?.filter { p ->
-                        val resolvedType = p.type.resolve()
-                        !resolvedType.isMarkedNullable && !resolvedType.isCollection()
-                    }?.mapNotNull { p ->
-                        p.type
-                            .resolve()
-                            .declaration.qualifiedName
-                            ?.asString()
-                    }
+                    ?.map { parameter -> parameter.type.resolve() }
+                    ?.filter { parameterType -> !parameterType.isMarkedNullable && !parameterType.isCollection() }
+                    ?.mapNotNull { parameterType -> parameterType.declaration.qualifiedName?.asString() }
                     ?: emptyList()
         }
 

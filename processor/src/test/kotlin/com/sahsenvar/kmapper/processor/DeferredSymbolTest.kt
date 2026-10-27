@@ -203,7 +203,7 @@ class DeferredSymbolTest :
                 )
 
             `when`("no round can resolve it") {
-                then("only that class loses its mapper, KMapper names it, and the compiler reports the missing type") {
+                then("only that class loses its mapper and KMapper fails the build naming it and the missing type") {
                     result.exitCode shouldBe KotlinCompilation.ExitCode.COMPILATION_ERROR
                     result.messages shouldContain "KMapper generated no mappers for these classes"
                     result.messages shouldContain "BrokenDataModel"
@@ -333,6 +333,123 @@ class DeferredSymbolTest :
                 then("the batch waits for the wrapper's types and then uses it") {
                     result.exitCode shouldBe KotlinCompilation.ExitCode.OK
                     compilation.generatedFile("TagsDataModelMappers.kt") shouldContain "GeneratedListWrapper.wrap(it)"
+                }
+            }
+        }
+
+        given("a @MapTo class with an explicitly typed computed property of a generated type") {
+            val (result, compilation) =
+                compileWithGeneratedMoney(
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    data class PriceDomainModel(val id: String, val total: GeneratedMoney)
+                    @MapTo(PriceDomainModel::class)
+                    data class PriceDataModel(val id: String) {
+                        val total: GeneratedMoney get() = GeneratedMoney(1)
+                    }
+                    """.trimIndent(),
+                )
+
+            `when`("the mapper is generated") {
+                then("the class waits until the type exists") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                    compilation.generatedFile("PriceDataModelMappers.kt") shouldContain "fun PriceDataModel.toPriceDomainModel()"
+                }
+            }
+        }
+
+        given("a @MapTo class with a computed property whose type is inferred from its own generated mapper") {
+            val (result, compilation) =
+                compile(
+                    SourceFile.kotlin(
+                        "Inferred.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        data class UserDomainModel(val id: String)
+                        @MapTo(UserDomainModel::class)
+                        data class UserDataModel(val id: String) {
+                            val domain get() = toUserDomainModel()
+                        }
+                        """.trimIndent(),
+                    ),
+                )
+
+            `when`("the processor runs") {
+                then("the inferred member does not make the class wait forever") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                    compilation.generatedFile("UserDataModelMappers.kt") shouldContain "fun UserDataModel.toUserDomainModel()"
+                }
+            }
+        }
+
+        given("a @KMapperConfig converter whose convertTo return type is inferred from a generated mapper") {
+            val (result, compilation) =
+                compile(
+                    SourceFile.kotlin(
+                        "Money.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.KMapperConfig
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        import com.sahsenvar.kmapper.converter.MapTypeConverter
+
+                        data class MoneyDomainModel(val amount: Long)
+
+                        @MapTo(MoneyDomainModel::class)
+                        data class MoneyDataModel(val amount: Long)
+
+                        object MoneyConverter : MapTypeConverter<MoneyDataModel, MoneyDomainModel>(MoneyDataModel::class, MoneyDomainModel::class) {
+                            override fun convertTo(source: MoneyDataModel) = source.toMoneyDomainModel()
+
+                            override fun convertFrom(target: MoneyDomainModel): MoneyDataModel = MoneyDataModel(target.amount)
+                        }
+
+                        @KMapperConfig(converters = [MoneyConverter::class])
+                        object MappingConfig
+                        """.trimIndent(),
+                    ),
+                )
+
+            `when`("the processor runs") {
+                then("the config does not wait for KMapper's own output") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                    compilation.generatedFile("MoneyDataModelMappers.kt") shouldContain "fun MoneyDataModel.toMoneyDomainModel()"
+                }
+            }
+        }
+
+        given("a @KMapperConfig converter whose supertype never resolves") {
+            val (result, _) =
+                compile(
+                    SourceFile.kotlin(
+                        "BrokenConfig.kt",
+                        """
+                        import com.sahsenvar.kmapper.annotations.KMapperConfig
+                        import com.sahsenvar.kmapper.annotations.MapTo
+                        import com.sahsenvar.kmapper.converter.MapTypeConverter
+
+                        object BrokenConverter : MapTypeConverter<String, MissingType>(String::class, MissingType::class) {
+                            override fun convertTo(source: String): MissingType = TODO()
+
+                            override fun convertFrom(target: MissingType): String = TODO()
+                        }
+
+                        @KMapperConfig(converters = [BrokenConverter::class])
+                        object MappingConfig
+
+                        data class UserDomainModel(val id: String)
+
+                        @MapTo(UserDomainModel::class)
+                        data class UserDataModel(val id: String)
+                        """.trimIndent(),
+                    ),
+                )
+
+            `when`("no round can resolve it") {
+                then("KMapper fails the build naming the config and the classes it held back") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.COMPILATION_ERROR
+                    result.messages shouldContain "KMapper generated no mappers for these classes"
+                    result.messages shouldContain "MappingConfig"
+                    result.messages shouldContain "1 mapping class(es) that wait for it"
                 }
             }
         }

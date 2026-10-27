@@ -1,6 +1,5 @@
 package com.sahsenvar.kmapper.processor
 
-import com.google.devtools.ksp.getDeclaredProperties
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
@@ -11,6 +10,7 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.Origin
 import com.sahsenvar.kmapper.processor.analyzer.CollectionWrapperDescriptor
 import com.sahsenvar.kmapper.processor.analyzer.ConverterIntrospector
 import com.sahsenvar.kmapper.processor.analyzer.CycleDetector
@@ -68,7 +68,6 @@ class MappingProcessor(
     // @KMapperConfig is discovered in the round its file appears in, and `getSymbolsWithAnnotation`
     // never returns it again. Its converters and wrappers are kept here (as FQN strings, never as
     // round-scoped KS symbols) so mapping classes processed in a later round still see them.
-    private val knownConverters = mutableMapOf<Pair<String, String>, String>()
     private val knownConverterEntries = mutableListOf<Pair<Pair<String, String>, String>>()
     private val knownCollectionWrappers = mutableMapOf<String, CollectionWrapperDescriptor>()
 
@@ -152,9 +151,9 @@ class MappingProcessor(
         // The introspector is shared between discovery and resolution so both walk the same
         // superclass chain (parameterized-converter bases resolve identically everywhere).
         val introspector = ConverterIntrospector(resolver, logger)
-        val (roundConverters, roundConverterEntries) = discoverCustomConverters(configClasses, introspector)
-        roundConverters.forEach { (typePair, converterFqn) -> knownConverters.putIfAbsent(typePair, converterFqn) }
-        knownConverterEntries.addAll(roundConverterEntries)
+        knownConverterEntries.addAll(discoverCustomConverters(configClasses, introspector))
+        // First registration wins; duplicates are reported by BuiltInConverterValidator below.
+        val knownConverters = buildMap { knownConverterEntries.forEach { (typePair, converterFqn) -> putIfAbsent(typePair, converterFqn) } }
         typeMatcher = TypeMatcher(logger, knownConverters, knownCollectionWrappers, introspector)
         returnWrapperResolver = ReturnWrapperResolver(resolver, logger, options[ReturnWrapperResolver.WRAPPER_OPTION])
 
@@ -164,6 +163,7 @@ class MappingProcessor(
         val convertersValid = converterValidator.validate(knownConverterEntries)
         if (!convertersValid) {
             logger.error("Converter validation failed. Fix duplicate converters in @KMapperConfig.")
+            waitingClasses = emptyList()
             return emptyList()
         }
 
@@ -188,9 +188,9 @@ class MappingProcessor(
 
     override fun finish() {
         if (waitingClasses.isEmpty()) return
-        // KSP does not report symbols that are still deferred when the rounds end. A warning, not
-        // an error, so the compiler still runs and reports the missing type at its exact location.
-        logger.warn(
+        // KSP does not report symbols that are still deferred when the rounds end. An error, not a
+        // warning: a successful KSP task would put the incomplete output into the build cache.
+        logger.error(
             "KMapper generated no mappers for these classes because a type they depend on never " +
                 "became resolvable: ${waitingClasses.joinToString("; ")}",
         )
@@ -203,17 +203,20 @@ class MappingProcessor(
     }
 
     /**
-     * What KMapper reads from a mapping class that does not resolve yet: the constructor
-     * parameter types and the field and class annotations of the class and of each mapped
-     * partner. Deliberately narrow: a full `validate()` also walks unrelated members, and a
-     * member whose inferred type depends on a mapper KMapper is about to generate (e.g.
-     * `fun toUi() = toUserUiModel()`) would then hold the class back forever.
+     * What KMapper reads from a mapping class that does not resolve yet: constructor parameter
+     * types, explicitly typed properties, field and class annotations and supertypes, of the class
+     * and of each mapped partner. Deliberately narrow: a full `validate()` also walks unrelated
+     * members, and a member whose inferred type depends on a mapper KMapper is about to generate
+     * (e.g. `fun toUi() = toUserUiModel()`) would then hold the class back forever.
      */
     private fun unresolvedMappingParts(
         mappingClass: KSClassDeclaration,
         partnerPartsCache: MutableMap<KSClassDeclaration, List<String>>,
     ): List<String> {
-        val ownParts = unresolvedFieldParts(mappingClass) + unresolvedAnnotationParts(mappingClass)
+        val ownParts =
+            unresolvedFieldParts(mappingClass, allConstructors = true) +
+                unresolvedAnnotationParts(mappingClass) +
+                unresolvedSupertypeParts(mappingClass).map { "supertype $it" }
         val partnerParts =
             mappingClass.annotations
                 .filter { it.shortName.asString() == "MapTo" || it.shortName.asString() == "MapFrom" }
@@ -221,7 +224,8 @@ class MappingProcessor(
                 .mapNotNull { it.declaration as? KSClassDeclaration }
                 .flatMap { partner ->
                     partnerPartsCache.getOrPut(partner) {
-                        unresolvedFieldParts(partner).map { "${partner.simpleName.asString()}.$it" }
+                        (unresolvedFieldParts(partner, allConstructors = false) + unresolvedSupertypeParts(partner).map { "supertype $it" })
+                            .map { "${partner.simpleName.asString()}.$it" }
                     }
                 }.toList()
         return ownParts + partnerParts
@@ -229,7 +233,9 @@ class MappingProcessor(
 
     /**
      * Unresolved arguments of a @KMapperConfig class and, for every converter or wrapper it lists,
-     * unresolved types along its supertype chain, in its annotations and in its function signatures.
+     * unresolved types along its supertype chain and in its annotations, plus the wrap/unwrap
+     * signatures of wrappers. Other functions are not read: a converter's
+     * `override fun convertTo(value: X) = value.toY()` must not wait for KMapper's own output.
      */
     private fun unresolvedConfigParts(configClass: KSClassDeclaration): List<String> {
         val listedClasses =
@@ -245,6 +251,7 @@ class MappingProcessor(
                 val signatureParts =
                     listed.declarations
                         .filterIsInstance<KSFunctionDeclaration>()
+                        .filter { it.simpleName.asString() == "wrap" || it.simpleName.asString() == "unwrap" }
                         .flatMap { function ->
                             (function.parameters.map { it.type } + listOfNotNull(function.returnType))
                                 .filter { it.resolve().containsError() }
@@ -272,15 +279,26 @@ class MappingProcessor(
         }
     }
 
-    /** Parameter types and annotations of every constructor, plus property-site annotations. */
-    private fun unresolvedFieldParts(declaration: KSClassDeclaration): List<String> {
-        val constructors =
-            listOfNotNull(declaration.primaryConstructor) +
+    /**
+     * Parameter types and annotations of the primary constructor (of every constructor when
+     * [allConstructors], as @MapFrom analyzes them all), annotations of all properties, and the
+     * types of explicitly typed properties. Inferred property types are skipped (see above).
+     */
+    private fun unresolvedFieldParts(
+        declaration: KSClassDeclaration,
+        allConstructors: Boolean,
+    ): List<String> {
+        val secondaryConstructors =
+            if (allConstructors) {
                 declaration.declarations
                     .filterIsInstance<KSFunctionDeclaration>()
                     .filter { it.simpleName.asString() == "<init>" && it != declaration.primaryConstructor }
+                    .toList()
+            } else {
+                emptyList()
+            }
         val parameterParts =
-            constructors.flatMap { constructor ->
+            (listOfNotNull(declaration.primaryConstructor) + secondaryConstructors).flatMap { constructor ->
                 constructor.parameters.flatMap { parameter ->
                     val name = parameter.name?.asString()
                     val typePart = if (parameter.type.resolve().containsError()) listOf("$name: ${parameter.type}") else emptyList()
@@ -288,8 +306,11 @@ class MappingProcessor(
                 }
             }
         val propertyParts =
-            declaration.getDeclaredProperties().toList().flatMap { property ->
-                unresolvedAnnotationParts(property).map { "${property.simpleName.asString()} $it" }
+            declaration.getAllProperties().toList().flatMap { property ->
+                val name = property.simpleName.asString()
+                val explicitType = property.type.takeUnless { it.origin == Origin.SYNTHETIC || it.element == null }
+                val typePart = if (explicitType?.resolve()?.containsError() == true) listOf("$name: $explicitType") else emptyList()
+                typePart + unresolvedAnnotationParts(property).map { "$name $it" }
             }
         return (parameterParts + propertyParts).distinct()
     }
@@ -313,18 +334,15 @@ class MappingProcessor(
     /**
      * Discovers custom converters declared via @KMapperConfig(converters = [...]).
      *
-     * Returns a pair of:
-     *   - Map<Pair<String,String>, String>: (sourceFqn to targetFqn) → converterFqn
-     *     (first-wins when the same pair appears twice; the validator will catch the duplicate)
-     *   - List<Pair<Pair<String,String>, String>>: ordered raw entries for duplicate detection
-     *     (preserves all entries including duplicates so the validator can report them)
+     * Returns the ordered raw ((sourceFqn to targetFqn) to converterFqn) entries, duplicates
+     * included so the validator can report them; the caller builds the first-wins registry.
      *
      * Priority: per-field @UseMapTypeConverter > this custom registry > built-in table.
      */
     private fun discoverCustomConverters(
         configClasses: List<KSClassDeclaration>,
         introspector: ConverterIntrospector,
-    ): Pair<Map<Pair<String, String>, String>, List<Pair<Pair<String, String>, String>>> {
+    ): List<Pair<Pair<String, String>, String>> {
         val entries = mutableListOf<Pair<Pair<String, String>, String>>()
 
         configClasses
@@ -348,13 +366,7 @@ class MappingProcessor(
                 }
             }
 
-        // Build map (first-wins; duplicates are reported by BuiltInConverterValidator)
-        val result = mutableMapOf<Pair<String, String>, String>()
-        for ((typePair, converterFqn) in entries) {
-            result.putIfAbsent(typePair, converterFqn)
-        }
-
-        return result to entries
+        return entries
     }
 
     /**
