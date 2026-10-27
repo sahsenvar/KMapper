@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Mapping classes that cannot be resolved yet are now deferred instead of silently dropped.**
+  A `@MapTo` / `@MapFrom` class that referenced a type another KSP processor generates in the same
+  round failed `validate()` and was skipped without a diagnostic. KSP then finished
+  "successfully" without that class's mappers, so `compileKotlin` failed with
+  `Unresolved reference 'toX'`. Gradle had already stored the incomplete KSP output in the build
+  cache, and later cache-enabled builds, clean ones included, restored it and failed the same way.
+  While any mapping class does not validate, the processor now defers the whole batch, including
+  `@KMapperConfig`, to the next round. A class that never resolves is reported by KSP as a
+  compile error.
+
 ## [3.0.1] - 2026-10-08
 
 ### Fixed

@@ -42,6 +42,7 @@ class MappingProcessor(
     companion object {
         private const val MAP_TO_ANNOTATION = "com.sahsenvar.kmapper.annotations.MapTo"
         private const val MAP_FROM_ANNOTATION = "com.sahsenvar.kmapper.annotations.MapFrom"
+        private const val KMAPPER_CONFIG_ANNOTATION = "com.sahsenvar.kmapper.annotations.KMapperConfig"
     }
 
     private val fieldAnalyzer by lazy { FieldAnalyzer(logger) }
@@ -65,6 +66,16 @@ class MappingProcessor(
     override fun process(resolver: Resolver): List<KSAnnotated> {
         // Clear previous round
         mappingFunctions.clear()
+
+        // STEP -1: Defer the whole batch while any @MapTo/@MapFrom class cannot be resolved yet —
+        // typically because it references a type another processor generates in this round.
+        // Dropping such a class (the old `.filter { it.validate() }`) let KSP finish "successfully"
+        // without its mappers, and that incomplete output then went into the build cache.
+        // The batch is deferred as a whole, together with @KMapperConfig, so cycle detection and
+        // converter discovery still see every declaration and each receiver file is written once.
+        // A class that never becomes valid is reported by KSP itself ("unable to process").
+        val deferred = deferredSymbols(resolver)
+        if (deferred.isNotEmpty()) return deferred
 
         // STEP 0: Discover collection wrappers from @KMapperConfig.wrappers (in-module).
         //
@@ -97,7 +108,6 @@ class MappingProcessor(
             resolver
                 .getSymbolsWithAnnotation(MAP_TO_ANNOTATION)
                 .filterIsInstance<KSClassDeclaration>()
-                .filter { it.validate() }
                 .toList()
 
         // STEP 2: Compile-time cycle detection (unconditional edges only)
@@ -112,7 +122,6 @@ class MappingProcessor(
             resolver
                 .getSymbolsWithAnnotation(MAP_FROM_ANNOTATION)
                 .filterIsInstance<KSClassDeclaration>()
-                .filter { it.validate() }
                 .toList()
 
         mapFromClasses.forEach { targetClass ->
@@ -123,6 +132,26 @@ class MappingProcessor(
         writeMappingFiles()
 
         return emptyList()
+    }
+
+    /**
+     * Returns every @MapTo/@MapFrom/@KMapperConfig symbol of this round if at least one @MapTo or
+     * @MapFrom class does not validate yet, otherwise an empty list.
+     */
+    private fun deferredSymbols(resolver: Resolver): List<KSAnnotated> {
+        val mappingSymbols =
+            (resolver.getSymbolsWithAnnotation(MAP_TO_ANNOTATION) + resolver.getSymbolsWithAnnotation(MAP_FROM_ANNOTATION))
+                .filterIsInstance<KSClassDeclaration>()
+                .toList()
+        val unresolved = mappingSymbols.filterNot { it.validate() }
+        if (unresolved.isEmpty()) return emptyList()
+
+        logger.info(
+            "Deferring ${mappingSymbols.size} mapping class(es) to the next round; not resolvable yet: " +
+                unresolved.joinToString { it.qualifiedName?.asString() ?: it.simpleName.asString() },
+        )
+        val configSymbols = resolver.getSymbolsWithAnnotation(KMAPPER_CONFIG_ANNOTATION).toList()
+        return (mappingSymbols + configSymbols).distinct()
     }
 
     /**
@@ -143,7 +172,7 @@ class MappingProcessor(
         val entries = mutableListOf<Pair<Pair<String, String>, String>>()
 
         resolver
-            .getSymbolsWithAnnotation("com.sahsenvar.kmapper.annotations.KMapperConfig")
+            .getSymbolsWithAnnotation(KMAPPER_CONFIG_ANNOTATION)
             .filterIsInstance<KSClassDeclaration>()
             .forEach { cfg ->
                 val annotation =
