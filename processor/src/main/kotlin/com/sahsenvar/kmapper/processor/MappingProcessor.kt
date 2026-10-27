@@ -10,6 +10,7 @@ import com.google.devtools.ksp.symbol.FileLocation
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
+import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.Origin
@@ -66,6 +67,12 @@ class MappingProcessor(
     // Collect all mapping functions grouped by receiver class
     private val mappingFunctions = mutableMapOf<ReceiverKey, MutableList<FunSpec>>()
 
+    // Source files each receiver's mappers are generated from (both sides of every mapping in this
+    // module). Declared as the output's originating files: with none, KSP's incremental processing
+    // ties the output to no input, so after an upstream ABI change it reprocesses only the dirty
+    // files and drops every mapper file it did not regenerate.
+    private val mappingSourceFiles = mutableMapOf<ReceiverKey, MutableSet<KSFile>>()
+
     data class ReceiverKey(
         val packageName: String,
         val className: String,
@@ -90,6 +97,7 @@ class MappingProcessor(
     override fun process(resolver: Resolver): List<KSAnnotated> {
         // Clear previous round
         mappingFunctions.clear()
+        mappingSourceFiles.clear()
         supertypePartsCache.clear()
 
         val mapToClasses =
@@ -466,7 +474,7 @@ class MappingProcessor(
 
             val file =
                 codeGenerator.createNewFile(
-                    dependencies = Dependencies(aggregating = false),
+                    dependencies = Dependencies(false, *mappingSourceFiles[receiverKey].orEmpty().toTypedArray()),
                     packageName = receiverKey.packageName,
                     fileName = fileName,
                 )
@@ -707,6 +715,7 @@ class MappingProcessor(
             add(funSpec)
             addAll(buildWrapperFunSpecs(returnWrapper, targetClass, sourceClassName, targetClassName, externalFields))
         }
+        mappingSourceFiles.getOrPut(receiverKey) { mutableSetOf() } += listOfNotNull(sourceClass.containingFile, targetClass.containingFile)
     }
 
     /** A target constructor parameter paired with its resolved source field (null = external). */
@@ -1000,5 +1009,6 @@ class MappingProcessor(
             add(funSpec)
             addAll(buildWrapperFunSpecs(returnWrapper, targetClass, sourceClassName, targetClassName, externalFields))
         }
+        mappingSourceFiles.getOrPut(receiverKey) { mutableSetOf() } += listOfNotNull(sourceClass.containingFile, targetClass.containingFile)
     }
 }

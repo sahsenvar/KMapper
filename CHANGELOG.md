@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Mappers no longer disappear after a change in an upstream module.** Mapper files were written
+  with no originating source file (`Dependencies(aggregating = false)` and nothing else). Under
+  KSP's incremental processing such an output is tied to no input. After an ABI change in a
+  module the mappers depend on, KSP reprocessed only the dirty files and dropped every mapper file
+  it did not regenerate. The build then failed with `Unresolved reference 'toX'`, and kept failing
+  even after the change was reverted, until a clean build. Each mapper file now names the source
+  files of both sides of the mappings it contains as its originating files.
 - **Mapping classes that cannot be resolved yet are now deferred instead of silently dropped.**
   A `@MapTo` / `@MapFrom` class that referenced a type another KSP processor generates in the same
   round failed `validate()` and was skipped without a diagnostic. KSP then finished
