@@ -10,6 +10,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration // used in generateReverseMappingFunction
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
+import com.sahsenvar.kmapper.processor.analyzer.CollectionWrapperDescriptor
 import com.sahsenvar.kmapper.processor.analyzer.ConverterIntrospector
 import com.sahsenvar.kmapper.processor.analyzer.CycleDetector
 import com.sahsenvar.kmapper.processor.analyzer.FieldAnalyzer
@@ -63,19 +64,48 @@ class MappingProcessor(
         val className: String,
     )
 
+    // @KMapperConfig is discovered in the round its file appears in, and `getSymbolsWithAnnotation`
+    // never returns it again. Its converters and wrappers are kept here (as FQN strings, never as
+    // round-scoped KS symbols) so mapping classes processed in a later round still see them.
+    private val knownConverters = mutableMapOf<Pair<String, String>, String>()
+    private val knownConverterEntries = mutableListOf<Pair<Pair<String, String>, String>>()
+    private val knownCollectionWrappers = mutableMapOf<String, CollectionWrapperDescriptor>()
+
+    // Names of the declarations that kept the last round's batch deferred; reported by [finish].
+    private var unresolvedDeclarations: List<String> = emptyList()
+
     override fun process(resolver: Resolver): List<KSAnnotated> {
         // Clear previous round
         mappingFunctions.clear()
 
-        // STEP -1: Defer the whole batch while any @MapTo/@MapFrom class cannot be resolved yet —
-        // typically because it references a type another processor generates in this round.
-        // Dropping such a class (the old `.filter { it.validate() }`) let KSP finish "successfully"
-        // without its mappers, and that incomplete output then went into the build cache.
-        // The batch is deferred as a whole, together with @KMapperConfig, so cycle detection and
-        // converter discovery still see every declaration and each receiver file is written once.
-        // A class that never becomes valid is reported by KSP itself ("unable to process").
-        val deferred = deferredSymbols(resolver)
-        if (deferred.isNotEmpty()) return deferred
+        val mapToClasses =
+            resolver
+                .getSymbolsWithAnnotation(MAP_TO_ANNOTATION)
+                .filterIsInstance<KSClassDeclaration>()
+                .toList()
+        val mapFromClasses =
+            resolver
+                .getSymbolsWithAnnotation(MAP_FROM_ANNOTATION)
+                .filterIsInstance<KSClassDeclaration>()
+                .toList()
+        val configClasses =
+            resolver
+                .getSymbolsWithAnnotation(KMAPPER_CONFIG_ANNOTATION)
+                .filterIsInstance<KSClassDeclaration>()
+                .toList()
+
+        // STEP -1: Defer the whole batch while any declaration it depends on cannot be resolved
+        // yet — typically a type another processor generates in this round. Dropping such a class
+        // (the old `.filter { it.validate() }`) let KSP finish "successfully" without its mappers,
+        // and that incomplete output then went into the build cache. The batch is deferred as a
+        // whole so cycle detection sees every class and each receiver file is written once.
+        // A batch that is still deferred when the rounds end is reported by [finish].
+        val unresolved = findUnresolved(mapToClasses + mapFromClasses, configClasses)
+        unresolvedDeclarations = unresolved
+        if (unresolved.isNotEmpty()) {
+            logger.info("Deferring mapping generation to the next round; not resolvable yet: ${unresolved.joinToString()}")
+            return mapToClasses + mapFromClasses + configClasses
+        }
 
         // STEP 0: Discover collection wrappers from @KMapperConfig.wrappers (in-module).
         //
@@ -83,47 +113,37 @@ class MappingProcessor(
         // works on KMP/iOS) and resolves each listed wrapper object's @CollectionWrapper.forType
         // via standard dependency annotation resolution (also works cross-module in KSP2).
         // Returns Map<forTypeFqn, wrapperObjectFqn>.
-        val collectionWrappers = discoverWrappersFromConfig(resolver, logger)
+        knownCollectionWrappers.putAll(discoverWrappersFromConfig(resolver, logger))
 
         // STEP 1: Discover custom converters from @KMapperConfig annotations.
         // Returns (typePair → converterFqn) map plus the raw entries list for duplicate-checking.
         // The introspector is shared between discovery and resolution so both walk the same
         // superclass chain (parameterized-converter bases resolve identically everywhere).
         val introspector = ConverterIntrospector(resolver, logger)
-        val (customConverters, globalConverterEntries) = discoverCustomConverters(resolver, introspector)
-        typeMatcher = TypeMatcher(logger, customConverters, collectionWrappers, introspector)
+        val (roundConverters, roundConverterEntries) = discoverCustomConverters(resolver, introspector)
+        roundConverters.forEach { (typePair, converterFqn) -> knownConverters.putIfAbsent(typePair, converterFqn) }
+        knownConverterEntries.addAll(roundConverterEntries)
+        typeMatcher = TypeMatcher(logger, knownConverters, knownCollectionWrappers, introspector)
         returnWrapperResolver = ReturnWrapperResolver(resolver, logger, options[ReturnWrapperResolver.WRAPPER_OPTION])
 
         // STEP 1b: Validate the global @KMapperConfig list for duplicate (S,T) pairs.
         // Per-field @UseMapTypeConverter converters are exempt — they are never checked here.
         val converterValidator = BuiltInConverterValidator(logger)
-        val convertersValid = converterValidator.validate(globalConverterEntries)
+        val convertersValid = converterValidator.validate(knownConverterEntries)
         if (!convertersValid) {
             logger.error("Converter validation failed. Fix duplicate converters in @KMapperConfig.")
             return emptyList()
         }
 
-        // Process @MapTo annotations (Source → Target)
-        val mapToClasses =
-            resolver
-                .getSymbolsWithAnnotation(MAP_TO_ANNOTATION)
-                .filterIsInstance<KSClassDeclaration>()
-                .toList()
-
         // STEP 2: Compile-time cycle detection (unconditional edges only)
         CycleDetector(logger).check(mapToClasses)
 
+        // Process @MapTo annotations (Source → Target)
         mapToClasses.forEach { sourceClass ->
             processMapToAnnotation(resolver, sourceClass)
         }
 
         // Process @MapFrom annotations (Target ← Source, reverse mapping)
-        val mapFromClasses =
-            resolver
-                .getSymbolsWithAnnotation(MAP_FROM_ANNOTATION)
-                .filterIsInstance<KSClassDeclaration>()
-                .toList()
-
         mapFromClasses.forEach { targetClass ->
             processMapFromAnnotation(resolver, targetClass)
         }
@@ -134,24 +154,48 @@ class MappingProcessor(
         return emptyList()
     }
 
-    /**
-     * Returns every @MapTo/@MapFrom/@KMapperConfig symbol of this round if at least one @MapTo or
-     * @MapFrom class does not validate yet, otherwise an empty list.
-     */
-    private fun deferredSymbols(resolver: Resolver): List<KSAnnotated> {
-        val mappingSymbols =
-            (resolver.getSymbolsWithAnnotation(MAP_TO_ANNOTATION) + resolver.getSymbolsWithAnnotation(MAP_FROM_ANNOTATION))
-                .filterIsInstance<KSClassDeclaration>()
-                .toList()
-        val unresolved = mappingSymbols.filterNot { it.validate() }
-        if (unresolved.isEmpty()) return emptyList()
-
-        logger.info(
-            "Deferring ${mappingSymbols.size} mapping class(es) to the next round; not resolvable yet: " +
-                unresolved.joinToString { it.qualifiedName?.asString() ?: it.simpleName.asString() },
+    override fun finish() {
+        if (unresolvedDeclarations.isEmpty()) return
+        // KSP does not report symbols that are still deferred when the rounds end, so without
+        // this the module would compile with no mappers and only "Unresolved reference" errors.
+        logger.error(
+            "KMapper generated no mappers for this module: these declarations never became resolvable, " +
+                "check that every type they reference exists: ${unresolvedDeclarations.joinToString()}",
         )
-        val configSymbols = resolver.getSymbolsWithAnnotation(KMAPPER_CONFIG_ANNOTATION).toList()
-        return (mappingSymbols + configSymbols).distinct()
+    }
+
+    /**
+     * Names of the declarations this round's batch depends on that do not validate yet: each
+     * mapping class, the class on the other side of each @MapTo/@MapFrom, each @KMapperConfig
+     * class and every converter or wrapper it lists. Empty when the batch can be processed.
+     */
+    private fun findUnresolved(
+        mappingClasses: List<KSClassDeclaration>,
+        configClasses: List<KSClassDeclaration>,
+    ): List<String> {
+        val mappingPartners =
+            mappingClasses.flatMap { mappingClass ->
+                mappingClass.annotations
+                    .filter { it.shortName.asString() == "MapTo" || it.shortName.asString() == "MapFrom" }
+                    .mapNotNull { it.arguments.firstOrNull()?.value as? KSType }
+                    .toList()
+            }
+        val configEntries =
+            configClasses.flatMap { configClass ->
+                configClass.annotations
+                    .filter { it.shortName.asString() == "KMapperConfig" }
+                    .flatMap { annotation -> annotation.arguments.asSequence() }
+                    .flatMap { argument -> (argument.value as? List<*>).orEmpty().filterIsInstance<KSType>() }
+                    .toList()
+            }
+        val referencedTypes = mappingPartners + configEntries
+        val unresolvedTypes = referencedTypes.filter { it.isError }.map { it.toString() }
+        val unresolvedDeclarations =
+            (mappingClasses + configClasses + referencedTypes.mapNotNull { it.declaration as? KSClassDeclaration })
+                .distinct()
+                .filterNot { it.validate() }
+                .map { it.qualifiedName?.asString() ?: it.simpleName.asString() }
+        return (unresolvedDeclarations + unresolvedTypes).distinct()
     }
 
     /**
