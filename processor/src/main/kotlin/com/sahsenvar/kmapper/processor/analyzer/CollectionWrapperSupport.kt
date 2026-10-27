@@ -1,6 +1,7 @@
 package com.sahsenvar.kmapper.processor.analyzer
 
 import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 
@@ -113,3 +114,12 @@ fun discoverWrappersFromConfig(
 
     return result
 }
+
+/** Kept so callers compiled against 3.0.x keep linking; reads this round's @KMapperConfig classes. */
+fun discoverWrappersFromConfig(
+    resolver: Resolver,
+    logger: KSPLogger,
+): Map<String, CollectionWrapperDescriptor> = discoverWrappersFromConfig(
+    resolver.getSymbolsWithAnnotation("com.sahsenvar.kmapper.annotations.KMapperConfig").filterIsInstance<KSClassDeclaration>().toList(),
+    logger,
+)

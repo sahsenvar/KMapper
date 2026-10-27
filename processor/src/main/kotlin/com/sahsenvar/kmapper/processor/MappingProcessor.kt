@@ -54,6 +54,20 @@ class MappingProcessor(
         private val READ_CLASS_ANNOTATIONS = setOf("ConvertWith", "ConvertTo", "ConvertFrom", "MapTo", "MapFrom")
         private val READ_CLASS_ARGUMENTS = setOf("use", "wrapper")
         private const val KMAPPER_ANNOTATIONS_PACKAGE = "com.sahsenvar.kmapper.annotations."
+        private val KMAPPER_ANNOTATION_NAMES =
+            setOf(
+                "MapTo",
+                "MapFrom",
+                "KMapperConfig",
+                "CollectionWrapper",
+                "FieldMap",
+                "ConvertWith",
+                "ConvertTo",
+                "ConvertFrom",
+                "IgnoreMap",
+                "IgnoreDefaultValue",
+                "Validate",
+            )
     }
 
     private val fieldAnalyzer by lazy { FieldAnalyzer(logger) }
@@ -77,7 +91,10 @@ class MappingProcessor(
     // functions from several classes and depends on the converter registry, so any change (a new
     // @MapFrom file, an edited config) must reprocess all mapping classes, not only the dirty ones.
     private val mappingSourceFiles = mutableMapOf<ReceiverKey, MutableSet<KSFile>>()
-    private val configSourceFiles = mutableSetOf<KSFile>()
+
+    // Paths, not KSFiles: a KSFile belongs to the round it came from and is re-resolved each round.
+    private val configSourcePaths = mutableSetOf<String>()
+    private var configSourceFiles: List<KSFile> = emptyList()
 
     data class ReceiverKey(
         val packageName: String,
@@ -152,8 +169,9 @@ class MappingProcessor(
         val readyMapFromClasses = mapFromClasses.filterNot { it in waitingMappings }
 
         configClasses.forEach { configClass ->
-            configSourceFiles += listOfNotNull(configClass.containingFile) + listedClasses(configClass).mapNotNull { it.containingFile }
+            configSourcePaths += (listOfNotNull(configClass.containingFile) + listedClasses(configClass).mapNotNull { it.containingFile }).map { it.filePath }
         }
+        configSourceFiles = resolver.getAllFiles().filter { it.filePath in configSourcePaths }.toList()
 
         // STEP 0: Discover collection wrappers from @KMapperConfig.wrappers (in-module).
         //
@@ -242,7 +260,8 @@ class MappingProcessor(
         mappingClass: KSClassDeclaration,
         partnerPartsCache: MutableMap<Pair<KSClassDeclaration, Set<String>>, List<String>>,
     ): List<String> {
-        val ownParameters = analyzedConstructors(mappingClass).flatMap { it.parameters }
+        val ownConstructors = analyzedConstructors(mappingClass)
+        val ownParameters = ownConstructors.flatMap { it.parameters }
         // Names a @MapFrom source property can be matched by: our field names and their @FieldMap redirects.
         val ownFieldNames =
             ownParameters.mapNotNull { it.name?.asString() }.toSet() +
@@ -255,13 +274,16 @@ class MappingProcessor(
                     // A @MapFrom source is read like a @MapTo source: its properties matched to our fields count.
                     (partner as? KSClassDeclaration)?.let { it to if (annotation.isKMapperAnnotation("MapFrom")) ownFieldNames else emptySet() }
                 }.toList()
-        val partnerFieldNames =
+        // Our own properties are read as source fields only toward @MapTo targets (a @MapFrom target's
+        // computed properties are never read), so only those targets' field names make them mapped.
+        val mapToTargetFieldNames =
             partners
+                .filter { (_, matchedNames) -> matchedNames.isEmpty() }
                 .flatMap { (partner, _) -> partner.primaryConstructor?.parameters.orEmpty() }
                 .mapNotNull { it.name?.asString() }
                 .toSet()
         val ownParts =
-            unresolvedFieldParts(mappingClass, analyzedConstructors(mappingClass), matchedFieldNames = partnerFieldNames) +
+            unresolvedFieldParts(mappingClass, ownConstructors, matchedFieldNames = mapToTargetFieldNames) +
                 unresolvedAnnotationParts(mappingClass) +
                 unresolvedSupertypeParts(mappingClass).map { "supertype $it" }
         val partnerParts =
@@ -354,9 +376,7 @@ class MappingProcessor(
                 .toList()
                 .flatMap { property ->
                     val name = property.simpleName.asString()
-                    val mapped =
-                        name !in parameterNames &&
-                            (name in matchedFieldNames || property.annotations.any { it.isKMapperAnnotation("FieldMap") })
+                    val mapped = name in matchedFieldNames || property.annotations.any { it.isKMapperAnnotation("FieldMap") }
                     when {
                         name in parameterNames -> unresolvedAnnotationParts(property).map { "$name $it" }
 
@@ -373,11 +393,19 @@ class MappingProcessor(
     /** True for a declaration in this compilation's sources; library declarations cannot change. */
     private fun KSDeclaration.isFromSource(): Boolean = origin == Origin.KOTLIN || origin == Origin.JAVA
 
-    /** True for a KMapper annotation (with [simpleName], if given), matched by resolved FQN so aliased imports count. */
-    private fun KSAnnotation.isKMapperAnnotation(simpleName: String? = null): Boolean {
-        val fqn = annotationType.resolve().declaration.qualifiedName?.asString() ?: return false
-        return fqn.startsWith(KMAPPER_ANNOTATIONS_PACKAGE) && (simpleName == null || fqn == KMAPPER_ANNOTATIONS_PACKAGE + simpleName)
+    /**
+     * The simple name of this annotation when it is one of KMapper's, else null. Same rule as
+     * FieldAnalyzer (written short name, or resolved FQN so aliased imports count), so deferral
+     * and generation agree on what is a KMapper annotation.
+     */
+    private fun KSAnnotation.kmapperAnnotationName(): String? {
+        val writtenName = shortName.asString()
+        if (writtenName in KMAPPER_ANNOTATION_NAMES) return writtenName
+        val fqn = annotationType.resolve().declaration.qualifiedName?.asString() ?: return null
+        return fqn.removePrefix(KMAPPER_ANNOTATIONS_PACKAGE).takeIf { fqn.startsWith(KMAPPER_ANNOTATIONS_PACKAGE) }
     }
+
+    private fun KSAnnotation.isKMapperAnnotation(simpleName: String): Boolean = kmapperAnnotationName() == simpleName
 
     /**
      * Arguments of KMapper annotations that do not resolve; other libraries' annotations are never
@@ -387,9 +415,9 @@ class MappingProcessor(
      * required to resolve themselves; their supertypes are never read.
      */
     private fun unresolvedAnnotationParts(annotated: KSAnnotated): List<String> = annotated.annotations
-        .filter { it.isKMapperAnnotation() }
-        .flatMap { annotation ->
-            val readsReferencedClass = READ_CLASS_ANNOTATIONS.any { annotation.isKMapperAnnotation(it) }
+        .mapNotNull { annotation -> annotation.kmapperAnnotationName()?.let { annotation to it } }
+        .flatMap { (annotation, annotationName) ->
+            val readsReferencedClass = annotationName in READ_CLASS_ANNOTATIONS
             annotation.arguments
                 .filter { argument ->
                     val readsArgument = readsReferencedClass && argument.name?.asString() in READ_CLASS_ARGUMENTS
