@@ -19,30 +19,36 @@ import com.google.devtools.ksp.symbol.KSType
 class CycleDetector(
     private val logger: KSPLogger,
 ) {
+    // Unconditional field edges of every @MapTo class checked so far, as FQN strings so they
+    // outlive the KSP round their declarations came from: a class mapped in a later round (one
+    // that waited for a generated type) can close a cycle with one mapped earlier.
+    private val knownEdges = mutableMapOf<String, List<String>>()
+
+    // Node sets of the cycles already reported, so a later round does not report them again.
+    private val reportedCycles = mutableSetOf<Set<String>>()
+
     fun check(mappedSources: List<KSClassDeclaration>) {
-        // Build a set of FQNs that have @MapTo annotations
-        val fqns = mappedSources.mapNotNull { it.qualifiedName?.asString() }.toSet()
+        // Record the unconditional (non-null, non-collection) field types of the new sources
+        mappedSources.forEach { decl ->
+            knownEdges[decl.qualifiedName!!.asString()] =
+                decl.primaryConstructor
+                    ?.parameters
+                    ?.filter { p ->
+                        val resolvedType = p.type.resolve()
+                        !resolvedType.isMarkedNullable && !resolvedType.isCollection()
+                    }?.mapNotNull { p ->
+                        p.type
+                            .resolve()
+                            .declaration.qualifiedName
+                            ?.asString()
+                    }
+                    ?: emptyList()
+        }
 
         // Build the directed edge graph: source FQN -> list of target FQNs reachable via
-        // unconditional (non-null, non-collection) fields that also have @MapTo
+        // unconditional fields that also have @MapTo
         val edges: Map<String, List<String>> =
-            mappedSources.associate { decl ->
-                val fqn = decl.qualifiedName!!.asString()
-                fqn to (
-                    decl.primaryConstructor
-                        ?.parameters
-                        ?.filter { p ->
-                            val resolvedType = p.type.resolve()
-                            !resolvedType.isMarkedNullable && !resolvedType.isCollection()
-                        }?.mapNotNull { p ->
-                            p.type
-                                .resolve()
-                                .declaration.qualifiedName
-                                ?.asString()
-                        }?.filter { it in fqns }
-                        ?: emptyList()
-                    )
-            }
+            knownEdges.mapValues { (_, targets) -> targets.filter { it in knownEdges } }
 
         // DFS cycle detection
         val visiting = mutableSetOf<String>()
@@ -53,6 +59,7 @@ class CycleDetector(
             if (node in done) return
             if (node in visiting) {
                 val cycle = stack.toList().dropWhile { it != node } + node
+                if (!reportedCycles.add(cycle.toSet())) return
                 logger.error(
                     "Mapping cycle detected: ${cycle.joinToString(" -> ")}. " +
                         "This would cause infinite construction at runtime. " +

@@ -270,6 +270,73 @@ class DeferredSymbolTest :
             }
         }
 
+        given("a non-null cycle between a class mapped in round 1 and one that waits for round 2") {
+            val (result, _) =
+                compileWithGeneratedMoney(
+                    """
+                    import com.sahsenvar.kmapper.annotations.MapTo
+                    data class OrderDomainModel(val customer: CustomerDomainModel)
+                    data class CustomerDomainModel(val order: OrderDomainModel, val balance: GeneratedMoney)
+                    @MapTo(OrderDomainModel::class)
+                    data class OrderDataModel(val customer: CustomerDataModel)
+                    @MapTo(CustomerDomainModel::class)
+                    data class CustomerDataModel(val order: OrderDataModel, val balance: GeneratedMoney)
+                    """.trimIndent(),
+                )
+
+            `when`("the second class is mapped in the later round") {
+                then("the cycle is still detected") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.COMPILATION_ERROR
+                    result.messages shouldContain "Mapping cycle detected"
+                }
+            }
+        }
+
+        given("a deferred @MapTo class that needs a wrapper whose wrap() returns a generated type") {
+            val (result, compilation) =
+                compile(
+                    sources =
+                    listOf(
+                        SourceFile.kotlin(
+                            "Wrapped.kt",
+                            """
+                                import com.sahsenvar.kmapper.annotations.CollectionWrapper
+                                import com.sahsenvar.kmapper.annotations.KMapperConfig
+                                import com.sahsenvar.kmapper.annotations.MapTo
+
+                                @CollectionWrapper(forType = GeneratedList::class)
+                                object GeneratedListWrapper {
+                                    fun <T> wrap(items: List<T>): GeneratedList<T> = GeneratedList(items)
+                                }
+
+                                @KMapperConfig(wrappers = [GeneratedListWrapper::class])
+                                object MappingConfig
+
+                                data class TagsDomainModel(val tags: GeneratedList<String>)
+
+                                @MapTo(TagsDomainModel::class)
+                                data class TagsDataModel(val tags: List<String>)
+                            """.trimIndent(),
+                        ),
+                    ),
+                    kspOptions = emptyMap(),
+                    additionalProviders =
+                    listOf(
+                        SourceGeneratingProcessorProvider(
+                            fileName = "GeneratedList",
+                            content = "data class GeneratedList<T>(val items: List<T>)\n",
+                        ),
+                    ),
+                )
+
+            `when`("the mapper is generated") {
+                then("the batch waits for the wrapper's types and then uses it") {
+                    result.exitCode shouldBe KotlinCompilation.ExitCode.OK
+                    compilation.generatedFile("TagsDataModelMappers.kt") shouldContain "GeneratedListWrapper.wrap(it)"
+                }
+            }
+        }
+
         given("a receiver that gets mappers in round 1 and, from a generated class, in round 2") {
             val (result, compilation) =
                 compile(

@@ -1,5 +1,6 @@
 package com.sahsenvar.kmapper.processor
 
+import com.google.devtools.ksp.getDeclaredProperties
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
@@ -8,7 +9,7 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.FileLocation
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSFunctionDeclaration // used in generateReverseMappingFunction
+import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.sahsenvar.kmapper.processor.analyzer.CollectionWrapperDescriptor
 import com.sahsenvar.kmapper.processor.analyzer.ConverterIntrospector
@@ -71,6 +72,10 @@ class MappingProcessor(
     private val knownConverterEntries = mutableListOf<Pair<Pair<String, String>, String>>()
     private val knownCollectionWrappers = mutableMapOf<String, CollectionWrapperDescriptor>()
 
+    // Keeps the edges of classes mapped in earlier rounds, so a cycle through a class that waited
+    // for a generated type is still found.
+    private val cycleDetector by lazy { CycleDetector(logger) }
+
     // Mappers files already written for a receiver (a receiver can get mappers in several rounds).
     private val writtenMapperFiles = mutableMapOf<ReceiverKey, Int>()
 
@@ -106,14 +111,18 @@ class MappingProcessor(
         // whole batch, since any class could need it.
         val waitingConfig = configClasses.associateWith { unresolvedConfigParts(it) }.filterValues { it.isNotEmpty() }
         if (waitingConfig.isNotEmpty()) {
-            waitingClasses = describeWaiting(waitingConfig)
+            val heldBack = (mapToClasses + mapFromClasses).distinct().size
+            waitingClasses = describeWaiting(waitingConfig) + "and the $heldBack mapping class(es) that wait for it"
             logger.info("Deferring mapping generation; @KMapperConfig not resolvable yet: ${waitingClasses.joinToString()}")
             return mapToClasses + mapFromClasses + configClasses
         }
         val waitingMappings =
             (mapToClasses + mapFromClasses)
                 .distinct()
-                .associateWith { unresolvedMappingParts(it) }
+                .let { mappingClasses ->
+                    val partnerPartsCache = mutableMapOf<KSClassDeclaration, List<String>>()
+                    mappingClasses.associateWith { unresolvedMappingParts(it, partnerPartsCache) }
+                }
                 .filterValues { it.isNotEmpty() }
         waitingClasses = describeWaiting(waitingMappings)
         if (waitingMappings.isNotEmpty()) {
@@ -158,8 +167,8 @@ class MappingProcessor(
             return emptyList()
         }
 
-        // STEP 2: Compile-time cycle detection (unconditional edges only), over this round's classes.
-        CycleDetector(logger).check(readyMapToClasses)
+        // STEP 2: Compile-time cycle detection (unconditional edges only)
+        cycleDetector.check(readyMapToClasses)
 
         // Process @MapTo annotations (Source → Target)
         readyMapToClasses.forEach { sourceClass ->
@@ -194,22 +203,34 @@ class MappingProcessor(
     }
 
     /**
-     * What KMapper reads from a mapping class that does not resolve yet: its own and each
-     * mapped partner's constructor parameter types, and the arguments of their annotations.
+     * What KMapper reads from a mapping class that does not resolve yet: the constructor
+     * parameter types and the field and class annotations of the class and of each mapped
+     * partner. Deliberately narrow: a full `validate()` also walks unrelated members, and a
+     * member whose inferred type depends on a mapper KMapper is about to generate (e.g.
+     * `fun toUi() = toUserUiModel()`) would then hold the class back forever.
      */
-    private fun unresolvedMappingParts(mappingClass: KSClassDeclaration): List<String> {
-        val ownParts = unresolvedConstructorParts(mappingClass) + unresolvedAnnotationParts(mappingClass)
+    private fun unresolvedMappingParts(
+        mappingClass: KSClassDeclaration,
+        partnerPartsCache: MutableMap<KSClassDeclaration, List<String>>,
+    ): List<String> {
+        val ownParts = unresolvedFieldParts(mappingClass) + unresolvedAnnotationParts(mappingClass)
         val partnerParts =
             mappingClass.annotations
                 .filter { it.shortName.asString() == "MapTo" || it.shortName.asString() == "MapFrom" }
                 .mapNotNull { (it.arguments.firstOrNull()?.value as? KSType)?.takeUnless { type -> type.isError } }
                 .mapNotNull { it.declaration as? KSClassDeclaration }
-                .flatMap { partner -> unresolvedConstructorParts(partner).map { "${partner.simpleName.asString()}.$it" } }
-                .toList()
+                .flatMap { partner ->
+                    partnerPartsCache.getOrPut(partner) {
+                        unresolvedFieldParts(partner).map { "${partner.simpleName.asString()}.$it" }
+                    }
+                }.toList()
         return ownParts + partnerParts
     }
 
-    /** Unresolved arguments of a @KMapperConfig class and the supertypes of what it lists. */
+    /**
+     * Unresolved arguments of a @KMapperConfig class and, for every converter or wrapper it lists,
+     * unresolved types along its supertype chain, in its annotations and in its function signatures.
+     */
     private fun unresolvedConfigParts(configClass: KSClassDeclaration): List<String> {
         val listedClasses =
             configClass.annotations
@@ -220,23 +241,58 @@ class MappingProcessor(
                 .toList()
         val listedParts =
             listedClasses.flatMap { listed ->
-                val supertypeParts =
-                    listed.superTypes
-                        .filter { it.resolve().containsError() }
-                        .map { "${listed.simpleName.asString()} : $it" }
-                        .toList()
-                supertypeParts + unresolvedAnnotationParts(listed).map { "${listed.simpleName.asString()} $it" }
+                val name = listed.simpleName.asString()
+                val signatureParts =
+                    listed.declarations
+                        .filterIsInstance<KSFunctionDeclaration>()
+                        .flatMap { function ->
+                            (function.parameters.map { it.type } + listOfNotNull(function.returnType))
+                                .filter { it.resolve().containsError() }
+                                .map { "$name.${function.simpleName.asString()}: $it" }
+                        }.toList()
+                unresolvedSupertypeParts(listed).map { "$name : $it" } +
+                    unresolvedAnnotationParts(listed).map { "$name $it" } +
+                    signatureParts
             }
         return unresolvedAnnotationParts(configClass) + listedParts
     }
 
-    private fun unresolvedConstructorParts(declaration: KSClassDeclaration): List<String> = declaration.primaryConstructor
-        ?.parameters
-        .orEmpty()
-        .flatMap { parameter ->
-            val typePart = if (parameter.type.resolve().containsError()) listOf("${parameter.name?.asString()}: ${parameter.type}") else emptyList()
-            typePart + unresolvedAnnotationParts(parameter).map { "${parameter.name?.asString()} $it" }
+    private fun unresolvedSupertypeParts(
+        declaration: KSClassDeclaration,
+        visited: MutableSet<KSClassDeclaration> = mutableSetOf(),
+    ): List<String> {
+        if (!visited.add(declaration)) return emptyList()
+        return declaration.superTypes.toList().flatMap { reference ->
+            val supertype = reference.resolve()
+            if (supertype.containsError()) {
+                listOf(reference.toString())
+            } else {
+                (supertype.declaration as? KSClassDeclaration)?.let { unresolvedSupertypeParts(it, visited) }.orEmpty()
+            }
         }
+    }
+
+    /** Parameter types and annotations of every constructor, plus property-site annotations. */
+    private fun unresolvedFieldParts(declaration: KSClassDeclaration): List<String> {
+        val constructors =
+            listOfNotNull(declaration.primaryConstructor) +
+                declaration.declarations
+                    .filterIsInstance<KSFunctionDeclaration>()
+                    .filter { it.simpleName.asString() == "<init>" && it != declaration.primaryConstructor }
+        val parameterParts =
+            constructors.flatMap { constructor ->
+                constructor.parameters.flatMap { parameter ->
+                    val name = parameter.name?.asString()
+                    val typePart = if (parameter.type.resolve().containsError()) listOf("$name: ${parameter.type}") else emptyList()
+                    typePart + unresolvedAnnotationParts(parameter).map { "$name $it" }
+                }
+            }
+        val propertyParts =
+            declaration.getDeclaredProperties().toList().flatMap { property ->
+                unresolvedAnnotationParts(property).map { "${property.simpleName.asString()} $it" }
+            }
+        return (parameterParts + propertyParts).distinct()
+    }
 
     private fun unresolvedAnnotationParts(annotated: KSAnnotated): List<String> = annotated.annotations
         .flatMap { annotation ->
