@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.2] - 2026-10-27
+
 ### Fixed
 
 - **Mappers no longer disappear after a change in an upstream module.** Mapper files were written
@@ -344,7 +346,8 @@ Migration guide: [docs/guide-en/reference/migration-1x.md](docs/guide-en/referen
 
 ---
 
-[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v3.0.1...HEAD
+[Unreleased]: https://github.com/sahsenvar/KMapper/compare/v3.0.2...HEAD
+[3.0.2]: https://github.com/sahsenvar/KMapper/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/sahsenvar/KMapper/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/sahsenvar/KMapper/compare/v2.2.2...v3.0.0
 [2.2.2]: https://github.com/sahsenvar/KMapper/compare/v2.2.1...v2.2.2

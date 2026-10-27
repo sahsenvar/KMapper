@@ -50,7 +50,7 @@ default, in order of preference:
 // build.gradle.kts
 plugins {
     id("com.google.devtools.ksp") version "2.3.10-2.0.5"
-    id("io.github.sahsenvar.kmapper") version "3.0.1"
+    id("io.github.sahsenvar.kmapper") version "3.0.2"
 }
 
 import com.sahsenvar.kmapper.gradle.KMapperWrapper
