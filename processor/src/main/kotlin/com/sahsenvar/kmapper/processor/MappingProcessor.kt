@@ -47,6 +47,10 @@ class MappingProcessor(
         private const val MAP_TO_ANNOTATION = "com.sahsenvar.kmapper.annotations.MapTo"
         private const val MAP_FROM_ANNOTATION = "com.sahsenvar.kmapper.annotations.MapFrom"
         private const val KMAPPER_CONFIG_ANNOTATION = "com.sahsenvar.kmapper.annotations.KMapperConfig"
+
+        // KMapper annotations whose class arguments KMapper reads beyond the class itself.
+        private val READ_CLASS_ANNOTATIONS = setOf("ConvertWith", "ConvertTo", "ConvertFrom", "MapTo", "MapFrom")
+        private val READ_CLASS_ARGUMENTS = setOf("use", "wrapper")
     }
 
     private val fieldAnalyzer by lazy { FieldAnalyzer(logger) }
@@ -220,7 +224,11 @@ class MappingProcessor(
         mappingClass: KSClassDeclaration,
         partnerPartsCache: MutableMap<Pair<KSClassDeclaration, Set<String>>, List<String>>,
     ): List<String> {
-        val ownFieldNames = mappingClass.getConstructors().flatMap { it.parameters }.mapNotNull { it.name?.asString() }.toSet()
+        val ownParameters = mappingClass.getConstructors().flatMap { it.parameters }.toList()
+        // Names a @MapFrom source property can be matched by: our field names and their @FieldMap redirects.
+        val ownFieldNames =
+            ownParameters.mapNotNull { it.name?.asString() }.toSet() +
+                (ownParameters + mappingClass.getAllProperties().toList()).flatMap { fieldMapNames(it) }
         val partners =
             mappingClass.annotations
                 .filter { it.shortName.asString() == "MapTo" || it.shortName.asString() == "MapFrom" }
@@ -267,18 +275,7 @@ class MappingProcessor(
         val listedParts =
             listedClasses.flatMap { listed ->
                 val name = listed.simpleName.asString()
-                val signatureParts =
-                    listed.declarations
-                        .filterIsInstance<KSFunctionDeclaration>()
-                        .filter { it.simpleName.asString() == "wrap" || it.simpleName.asString() == "unwrap" }
-                        .flatMap { function ->
-                            (function.parameters.map { it.type } + listOfNotNull(function.returnType))
-                                .filter { it.resolve().containsError() }
-                                .map { "$name.${function.simpleName.asString()}: $it" }
-                        }.toList()
-                unresolvedSupertypeParts(listed).map { "$name : $it" } +
-                    unresolvedAnnotationParts(listed).map { "$name $it" } +
-                    signatureParts
+                unresolvedReadClassParts(listed).map { "$name $it" } + unresolvedAnnotationParts(listed).map { "$name $it" }
             }
         return unresolvedAnnotationParts(configClass) + listedParts
     }
@@ -333,8 +330,15 @@ class MappingProcessor(
                     val mapped =
                         name !in parameterNames &&
                             (name in matchedFieldNames || property.annotations.any { it.shortName.asString() == "FieldMap" })
-                    val typePart = if (mapped && property.type.resolve().containsError()) listOf("$name: ${property.type}") else emptyList()
-                    typePart + unresolvedAnnotationParts(property).map { "$name $it" }
+                    when {
+                        name in parameterNames -> unresolvedAnnotationParts(property).map { "$name $it" }
+
+                        !mapped -> emptyList()
+
+                        else ->
+                            listOfNotNull("$name: ${property.type}".takeIf { property.type.resolve().containsError() }) +
+                                unresolvedAnnotationParts(property).map { "$name $it" }
+                    }
                 }
         return (parameterParts + propertyParts).distinct()
     }
@@ -343,20 +347,43 @@ class MappingProcessor(
     private fun KSDeclaration.isFromSource(): Boolean = origin == Origin.KOTLIN || origin == Origin.JAVA
 
     /**
-     * Annotation arguments that do not resolve, including a referenced class (e.g. a per-field
-     * `@ConvertWith(use = …)` converter) whose own supertype chain does not resolve yet.
+     * Annotation arguments that do not resolve. A converter or return wrapper named by a KMapper
+     * annotation (`@ConvertWith(use = …)`, `@MapTo(wrapper = …)`, …) is also checked the way KMapper
+     * reads it: its supertype chain and its `wrap` signature. Other referenced classes are only
+     * required to resolve themselves; their supertypes are never read.
      */
     private fun unresolvedAnnotationParts(annotated: KSAnnotated): List<String> = annotated.annotations
         .flatMap { annotation ->
+            val readsReferencedClass = annotation.shortName.asString() in READ_CLASS_ANNOTATIONS
             annotation.arguments
                 .filter { argument ->
+                    val readsArgument = readsReferencedClass && argument.name?.asString() in READ_CLASS_ARGUMENTS
                     argument.value.referencedTypes().any { type ->
                         type.containsError() ||
-                            (type.declaration as? KSClassDeclaration)?.let { unresolvedSupertypeParts(it).isNotEmpty() } == true
+                            (readsArgument && (type.declaration as? KSClassDeclaration)?.let { unresolvedReadClassParts(it).isNotEmpty() } == true)
                     }
                 }.map { argument -> "@${annotation.shortName.asString()}(${argument.name?.asString()})" }
                 .asSequence()
         }.toList()
+
+    /** What KMapper reads from a converter or wrapper class: its supertype chain and wrap/unwrap signatures. */
+    private fun unresolvedReadClassParts(readClass: KSClassDeclaration): List<String> {
+        val signatureParts =
+            readClass.declarations
+                .filterIsInstance<KSFunctionDeclaration>()
+                .filter { it.simpleName.asString() == "wrap" || it.simpleName.asString() == "unwrap" }
+                .flatMap { function ->
+                    (function.parameters.map { it.type } + listOfNotNull(function.returnType))
+                        .filter { it.resolve().containsError() }
+                        .map { "${function.simpleName.asString()}: $it" }
+                }.toList()
+        return unresolvedSupertypeParts(readClass) + signatureParts
+    }
+
+    private fun fieldMapNames(annotated: KSAnnotated): List<String> = annotated.annotations
+        .filter { it.shortName.asString() == "FieldMap" }
+        .mapNotNull { it.arguments.firstOrNull()?.value as? String }
+        .toList()
 
     private fun Any?.referencedTypes(): List<KSType> = when (this) {
         is KSType -> listOf(this)
