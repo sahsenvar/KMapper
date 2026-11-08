@@ -20,7 +20,7 @@ kotest = "6.2.6"
 okio = "3.18.2"
 bcv = "0.18.2"
 dokka = "2.2.0"
-spotless = "8.10.4"
+spotless = "8.11.0"
 kover = "0.9.11"
 
 [libraries]
