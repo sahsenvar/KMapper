@@ -19,7 +19,7 @@ vanniktech-publish = "0.37.0"
 kotest = "6.2.7"
 okio = "3.18.2"
 bcv = "0.18.2"
-dokka = "2.2.0"
+dokka = "2.3.0"
 spotless = "8.11.0"
 kover = "0.9.11"
 
